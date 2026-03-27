@@ -44,28 +44,35 @@ const Analytics = ({ onNavigate }) => {
 
       if (stat.stat_type === 'Point') {
         p.goals += 1;
-      } else if (stat.stat_type === 'Assist') {
-        p.assists += 1;
-        p.passes += 1;
-        p.completions += 1;
-      } else if (stat.stat_type === 'Pass') {
+      } else if (stat.stat_type === 'Assist' || stat.stat_type === 'Pass') {
+        const loggedAsAssist = stat.stat_type === 'Assist';
         p.passes += 1;
         
         // Next stat in same game and point
         const nextStat = filteredStats[index + 1];
         let isCompleted = true;
+        let isValidAssist = loggedAsAssist;
 
         if (
           nextStat &&
           nextStat.game_name === stat.game_name &&
-          nextStat.point_number === stat.point_number &&
-          nextStat.stat_type === 'Turnover'
+          nextStat.point_number === stat.point_number
         ) {
-          isCompleted = false;
+          if (nextStat.stat_type === 'Turnover') {
+            isCompleted = false; // Dropped or thrown away
+            isValidAssist = false; // Deny assist
+          } else if (nextStat.stat_type !== 'Point' && loggedAsAssist) {
+            // Next event wasn't a point, meaning the point didn't end. 
+            // The throw was completed, but downgrade to normal pass.
+            isValidAssist = false; 
+          }
         }
 
         if (isCompleted) {
           p.completions += 1;
+        }
+        if (isValidAssist) {
+          p.assists += 1;
         }
 
       } else if (stat.stat_type === 'Turnover') {
@@ -77,7 +84,7 @@ const Analytics = ({ onNavigate }) => {
           prevStat &&
           prevStat.game_name === stat.game_name &&
           prevStat.point_number === stat.point_number &&
-          prevStat.stat_type === 'Pass' && 
+          (prevStat.stat_type === 'Pass' || prevStat.stat_type === 'Assist') && 
           prevStat.player === stat.player
         ) {
           p.throwaways += 1;
