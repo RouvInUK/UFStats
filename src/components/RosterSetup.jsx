@@ -1,23 +1,48 @@
 import { useState } from 'react';
+import { addPlayer, removePlayer } from '../supabaseClient';
 
-const RosterSetup = ({ roster, setRoster, activeLineup, setActiveLineup, onNavigate }) => {
+const RosterSetup = ({ players, setPlayers, onNavigate }) => {
   const [newPlayerName, setNewPlayerName] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleAddPlayer = (e) => {
+  const handleAddPlayer = async (e) => {
     e.preventDefault();
     const trimmed = newPlayerName.trim();
     if (!trimmed) return;
-    if (roster.includes(trimmed)) return alert("Player already exists!");
-    if (roster.length >= 21) return alert("Maximum 21 players allowed.");
+    
+    // Check local array quickly
+    if (players.some(p => p.name.toLowerCase() === trimmed.toLowerCase())) {
+      return alert("Player already exists!");
+    }
+    if (players.length >= 21) {
+      return alert("Maximum 21 players allowed.");
+    }
 
-    setRoster([...roster, trimmed]);
-    setNewPlayerName('');
+    setIsProcessing(true);
+    try {
+      const savedPlayer = await addPlayer(trimmed);
+      if (savedPlayer) {
+        setPlayers([...players, savedPlayer]);
+      }
+      setNewPlayerName('');
+    } catch (err) {
+      alert("Failed to add player to database. Check connection or RLS rules.");
+      console.error(err);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handleRemovePlayer = (player) => {
-    setRoster(roster.filter(p => p !== player));
-    // Also remove from active lineup if they were on the pitch
-    setActiveLineup(activeLineup.filter(p => p !== player));
+  const handleRemovePlayer = async (id) => {
+    setIsProcessing(true);
+    try {
+      await removePlayer(id);
+      setPlayers(players.filter(p => p.id !== id));
+    } catch (err) {
+      alert("Failed to remove player from database.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -27,7 +52,7 @@ const RosterSetup = ({ roster, setRoster, activeLineup, setActiveLineup, onNavig
         <div className="p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-800 border-b border-slate-700/50">
           <div>
             <h1 className="text-2xl font-extrabold text-white tracking-tight">Team Roster</h1>
-            <p className="text-slate-400 text-sm font-medium">{roster.length} / 21 Players Configured</p>
+            <p className="text-slate-400 text-sm font-medium">{players.length} / 21 Players Configured</p>
           </div>
           <button 
             onClick={() => onNavigate('dashboard')}
@@ -44,29 +69,31 @@ const RosterSetup = ({ roster, setRoster, activeLineup, setActiveLineup, onNavig
               value={newPlayerName}
               onChange={(e) => setNewPlayerName(e.target.value)}
               placeholder="Enter player name..."
-              className="flex-1 appearance-none bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
+              disabled={isProcessing}
+              className="flex-1 appearance-none bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium disabled:opacity-50"
             />
             <button 
               type="submit"
-              disabled={roster.length >= 21 || !newPlayerName.trim()}
+              disabled={players.length >= 21 || !newPlayerName.trim() || isProcessing}
               className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20"
             >
               Add
             </button>
           </form>
 
-          {roster.length === 0 ? (
+          {players.length === 0 ? (
             <div className="text-center py-10 text-slate-500 font-medium">
               No players added yet. Start building your squad!
             </div>
           ) : (
             <ul className="space-y-2">
-              {roster.map((player) => (
-                <li key={player} className="flex justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
-                  <span className="text-slate-200 font-semibold">{player}</span>
+              {players.map((player) => (
+                <li key={player.id} className="flex justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                  <span className="text-slate-200 font-semibold">{player.name}</span>
                   <button 
-                    onClick={() => handleRemovePlayer(player)}
-                    className="text-rose-400 hover:text-rose-300 font-medium text-sm px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 rounded-lg transition-all"
+                    onClick={() => handleRemovePlayer(player.id)}
+                    disabled={isProcessing}
+                    className="text-rose-400 hover:text-rose-300 font-medium text-sm px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 rounded-lg transition-all disabled:opacity-50"
                   >
                     Remove
                   </button>

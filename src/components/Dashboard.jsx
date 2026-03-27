@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { recordStatToDB } from '../supabaseClient';
 
-const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, onNavigate }) => {
+const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, setCurrentGame, onNavigate }) => {
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -26,6 +26,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, onNavigate }) 
         stat: statType,
         timestamp: new Date().toLocaleString(),
         pointNumber: currentPoint,
+        gameName: currentGame,
       };
       await recordStatToDB(statData);
       setLastSaved(`Saved ${statType} for ${selectedPlayer}`);
@@ -59,9 +60,13 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, onNavigate }) 
                 <button onClick={() => setCurrentPoint(p => p + 1)} className="text-slate-500 hover:text-white hover:bg-slate-700 px-2 rounded-lg font-bold transition-colors">+</button>
               </div>
             </div>
-            <p className="text-slate-400 text-sm font-medium">
-              Match Performance Tracker
-            </p>
+            <input 
+              type="text" 
+              value={currentGame}
+              onChange={(e) => setCurrentGame(e.target.value)}
+              className="bg-transparent border-b border-transparent hover:border-slate-700/50 text-slate-400 text-sm font-medium focus:outline-none focus:border-indigo-500 focus:text-indigo-300 transition-colors placeholder-slate-600 mb-2 pb-1 w-full max-w-[200px]"
+              placeholder="e.g. Vs Team X"
+            />
             
             {isSaving && (
               <p className="text-amber-400 text-sm font-bold mt-2 animate-pulse">
