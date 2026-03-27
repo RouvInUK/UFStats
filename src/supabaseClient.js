@@ -66,3 +66,13 @@ export const togglePlayerActiveStatus = async (id, currentStatus) => {
   if (error) throw error;
   return data[0];
 };
+
+export const fetchStats = async () => {
+  const { data, error } = await supabase
+    .from('stats')
+    .select('*')
+    .order('created_at', { ascending: true });
+    
+  if (error) throw error;
+  return data || [];
+};
