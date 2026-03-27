@@ -34,7 +34,7 @@ const Analytics = ({ onNavigate }) => {
 
     const ensurePlayer = (name) => {
       if (!playersMap[name]) {
-        playersMap[name] = { name, goals: 0, assists: 0, passes: 0, completions: 0, turnovers: 0, throwaways: 0, drops: 0 };
+        playersMap[name] = { name, goals: 0, assists: 0, passes: 0, completions: 0, turnovers: 0, throwaways: 0, drops: 0, defence: 0 };
       }
       return playersMap[name];
     };
@@ -91,10 +91,12 @@ const Analytics = ({ onNavigate }) => {
         } else {
           p.drops += 1;   // Dropped a pass from someone else, or dropped a pull
         }
+      } else if (stat.stat_type === 'Defence') {
+        p.defence += 1;
       }
     });
 
-    return Object.values(playersMap).sort((a, b) => b.goals + b.assists - (a.goals + a.assists));
+    return Object.values(playersMap).sort((a, b) => b.goals + b.assists + b.defence - (a.goals + a.assists + a.defence));
   }, [stats, selectedGame]);
 
 
@@ -150,6 +152,7 @@ const Analytics = ({ onNavigate }) => {
                   <th className="p-4 font-bold text-center">Assists</th>
                   <th className="p-4 font-bold text-center">Passes (C/A)</th>
                   <th className="p-4 font-bold text-center">Comp %</th>
+                  <th className="p-4 font-bold text-center">Defence</th>
                   <th className="p-4 font-bold text-center">Turnovers</th>
                 </tr>
               </thead>
@@ -176,6 +179,11 @@ const Analytics = ({ onNavigate }) => {
                       <td className="p-4 text-center">
                         <span className={`inline-block px-2 py-1 font-bold rounded text-xs ${pct >= 90 ? 'bg-indigo-500/20 text-indigo-300' : pct >= 75 ? 'bg-slate-700 text-slate-300' : 'bg-rose-500/10 text-rose-400'}`}>
                           {row.passes > 0 ? `${pct}%` : '-'}
+                        </span>
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className="inline-block w-8 h-8 leading-8 bg-orange-500/10 text-orange-400 font-bold rounded-lg text-sm">
+                          {row.defence}
                         </span>
                       </td>
                       <td className="p-4 text-center text-sm">
