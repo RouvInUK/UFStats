@@ -13,7 +13,7 @@ function App() {
 
   // Local Game State
   const [currentGame, setCurrentGame] = useState(() => {
-    return localStorage.getItem('ufstats_game') || 'Vs Team X';
+    return localStorage.getItem('ufstats_game') || '';
   });
 
   const [currentPoint, setCurrentPoint] = useState(() => {

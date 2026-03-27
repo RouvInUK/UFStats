@@ -64,8 +64,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
               type="text" 
               value={currentGame}
               onChange={(e) => setCurrentGame(e.target.value)}
-              className="bg-transparent border-b border-transparent hover:border-slate-700/50 text-slate-400 text-sm font-medium focus:outline-none focus:border-indigo-500 focus:text-indigo-300 transition-colors placeholder-slate-600 mb-2 pb-1 w-full max-w-[200px]"
-              placeholder="e.g. Vs Team X"
+              className="bg-transparent border-b border-transparent hover:border-slate-700/50 text-slate-400 text-sm font-medium focus:outline-none focus:border-indigo-500 focus:text-indigo-300 transition-colors placeholder-slate-600 mb-2 pb-1 w-full max-w-[250px]"
+              placeholder="Match Name (e.g. Vs Team X)"
             />
             
             {isSaving && (
