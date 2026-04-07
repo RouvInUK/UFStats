@@ -1,10 +1,24 @@
 import { useState, useEffect } from 'react';
-import { recordStatToDB } from '../supabaseClient';
+import { recordStatToDB, fetchActiveGames } from '../supabaseClient';
 
 const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, setCurrentGame, onNavigate }) => {
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
+  const [activeGames, setActiveGames] = useState([]);
+
+  // Fetch active games on mount
+  useEffect(() => {
+    fetchActiveGames().then(setActiveGames).catch(console.error);
+  }, []);
+
+  // Sync point if user selects an existing active game
+  useEffect(() => {
+    const matchedGame = activeGames.find(g => g.name === currentGame);
+    if (matchedGame && matchedGame.maxPoint) {
+      setCurrentPoint(matchedGame.maxPoint);
+    }
+  }, [currentGame, activeGames]);
 
   // Auto-select first active player if none selected and lineup exists
   useEffect(() => {
@@ -42,6 +56,29 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
     }
   };
 
+  const handleMarkCompleted = async () => {
+    if (!currentGame) return alert("Enter a game name first.");
+    if (window.confirm(`Are you sure you want to close "${currentGame}"? It will no longer appear in the active dropdown for anyone.`)) {
+      setIsSaving(true);
+      try {
+        await recordStatToDB({
+          player: 'System',
+          stat: 'Game Completed',
+          timestamp: new Date().toLocaleString(),
+          pointNumber: currentPoint,
+          gameName: currentGame,
+        });
+        setLastSaved(`Closed ${currentGame}!`);
+        setCurrentGame('');
+      } catch (err) {
+        console.error(err);
+        alert('Failed to mark completed.');
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col items-center p-4 py-8 sm:py-12 min-h-screen">
       <div className="w-full max-w-xl bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-slate-700 pb-6">
@@ -60,13 +97,31 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
                 <button onClick={() => setCurrentPoint(p => p + 1)} className="text-slate-500 hover:text-white hover:bg-slate-700 px-2 rounded-lg font-bold transition-colors">+</button>
               </div>
             </div>
-            <input 
-              type="text" 
-              value={currentGame}
-              onChange={(e) => setCurrentGame(e.target.value)}
-              className="bg-transparent border-b border-transparent hover:border-slate-700/50 text-slate-400 text-sm font-medium focus:outline-none focus:border-indigo-500 focus:text-indigo-300 transition-colors placeholder-slate-600 mb-2 pb-1 w-full max-w-[250px]"
-              placeholder="Match Name (e.g. Vs Team X)"
-            />
+            <div className="flex items-center gap-2 mb-2 w-full max-w-[300px]">
+              <input 
+                type="text" 
+                list="active-games-list"
+                value={currentGame}
+                onChange={(e) => setCurrentGame(e.target.value)}
+                className="flex-1 bg-transparent border-b border-transparent hover:border-slate-700/50 text-slate-400 text-sm font-medium focus:outline-none focus:border-indigo-500 focus:text-indigo-300 transition-colors placeholder-slate-600 pb-1"
+                placeholder="Match Name (e.g. Vs Team X)"
+              />
+              {currentGame && (
+                <button 
+                  onClick={handleMarkCompleted}
+                  className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-bold rounded-lg transition-all whitespace-nowrap"
+                  title="Close out Game"
+                >
+                  ✓ Close Game
+                </button>
+              )}
+            </div>
+
+            <datalist id="active-games-list">
+              {activeGames.map(game => (
+                <option key={game.name} value={game.name} />
+              ))}
+            </datalist>
             
             {isSaving && (
               <p className="text-amber-400 text-sm font-bold mt-2 animate-pulse">

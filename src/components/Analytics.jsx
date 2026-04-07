@@ -40,6 +40,8 @@ const Analytics = ({ onNavigate }) => {
     };
 
     filteredStats.forEach((stat, index) => {
+      if (stat.player === 'System') return;
+      
       const p = ensurePlayer(stat.player);
 
       if (stat.stat_type === 'Point') {

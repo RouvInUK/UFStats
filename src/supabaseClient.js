@@ -76,3 +76,38 @@ export const fetchStats = async () => {
   if (error) throw error;
   return data || [];
 };
+
+export const fetchActiveGames = async () => {
+  // We only need a few columns to derive active games
+  const { data, error } = await supabase
+    .from('stats')
+    .select('game_name, stat_type, point_number');
+    
+  if (error) throw error;
+  if (!data) return [];
+
+  const gameStatus = {};
+  
+  data.forEach(stat => {
+    if (!stat.game_name) return;
+    
+    if (!gameStatus[stat.game_name]) {
+      gameStatus[stat.game_name] = { isCompleted: false, maxPoint: 1 };
+    }
+    
+    // Event-sourcing check for completion
+    if (stat.stat_type === 'Game Completed') {
+      gameStatus[stat.game_name].isCompleted = true;
+    }
+    
+    // Track highest point
+    if (stat.point_number > gameStatus[stat.game_name].maxPoint) {
+      gameStatus[stat.game_name].maxPoint = stat.point_number;
+    }
+  });
+
+  // Filter out completed matches and return map of name to maxPoint
+  return Object.entries(gameStatus)
+    .filter(([name, info]) => !info.isCompleted)
+    .map(([name, info]) => ({ name, maxPoint: info.maxPoint }));
+};
