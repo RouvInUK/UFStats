@@ -34,7 +34,7 @@ const Analytics = ({ onNavigate }) => {
 
     const ensurePlayer = (name) => {
       if (!playersMap[name]) {
-        playersMap[name] = { name, goals: 0, assists: 0, passes: 0, completions: 0, turnovers: 0, throwaways: 0, drops: 0, defence: 0 };
+        playersMap[name] = { name, goals: 0, assists: 0, passes: 0, completions: 0, turnovers: 0, throwaways: 0, drops: 0, stallouts: 0, defence: 0 };
       }
       return playersMap[name];
     };
@@ -55,12 +55,13 @@ const Analytics = ({ onNavigate }) => {
         let isCompleted = true;
         let isValidAssist = loggedAsAssist;
 
+        const isTurnoverEvent = ['Turnover', 'Throwaway', 'Drop', 'Stall Out'].includes(nextStat.stat_type);
         if (
           nextStat &&
           nextStat.game_name === stat.game_name &&
           nextStat.point_number === stat.point_number
         ) {
-          if (nextStat.stat_type === 'Turnover') {
+          if (isTurnoverEvent) {
             isCompleted = false; // Dropped or thrown away
             isValidAssist = false; // Deny assist
           } else if (nextStat.stat_type !== 'Point' && loggedAsAssist) {
@@ -77,21 +78,29 @@ const Analytics = ({ onNavigate }) => {
           p.assists += 1;
         }
 
-      } else if (stat.stat_type === 'Turnover') {
+      } else if (['Turnover', 'Throwaway', 'Drop', 'Stall Out'].includes(stat.stat_type)) {
         p.turnovers += 1;
         
-        // Previous stat in same game and point
-        const prevStat = filteredStats[index - 1];
-        if (
-          prevStat &&
-          prevStat.game_name === stat.game_name &&
-          prevStat.point_number === stat.point_number &&
-          (prevStat.stat_type === 'Pass' || prevStat.stat_type === 'Assist') && 
-          prevStat.player === stat.player
-        ) {
+        if (stat.stat_type === 'Throwaway') {
           p.throwaways += 1;
+        } else if (stat.stat_type === 'Drop') {
+          p.drops += 1;
+        } else if (stat.stat_type === 'Stall Out') {
+          p.stallouts += 1;
         } else {
-          p.drops += 1;   // Dropped a pass from someone else, or dropped a pull
+          // Legacy 'Turnover' contextual logic
+          const prevStat = filteredStats[index - 1];
+          if (
+            prevStat &&
+            prevStat.game_name === stat.game_name &&
+            prevStat.point_number === stat.point_number &&
+            (prevStat.stat_type === 'Pass' || prevStat.stat_type === 'Assist') && 
+            prevStat.player === stat.player
+          ) {
+            p.throwaways += 1;
+          } else {
+            p.drops += 1;   // Dropped a pass from someone else, or dropped a pull
+          }
         }
       } else if (stat.stat_type === 'Defence') {
         p.defence += 1;
@@ -192,7 +201,7 @@ const Analytics = ({ onNavigate }) => {
                         <span className="text-rose-400 font-bold">{row.turnovers}</span>
                         {row.turnovers > 0 && (
                           <span className="text-slate-500 text-xs ml-2">
-                            ({row.throwaways}T, {row.drops}D)
+                            ({row.throwaways}T, {row.drops}D, {row.stallouts}S)
                           </span>
                         )}
                       </td>
