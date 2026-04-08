@@ -1,0 +1,175 @@
+import { useState, useEffect } from 'react';
+import { fetchGameStats, updateStat, deleteStat } from '../supabaseClient';
+
+const STAT_TYPES = ['Point', 'Pass', 'Throwaway', 'Drop', 'Stall Out', 'Defence'];
+
+const EventLog = ({ currentGame, onNavigate }) => {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState(null);
+  const [savingId, setSavingId] = useState(null);
+
+  const loadLogs = async () => {
+    if (!currentGame) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const data = await fetchGameStats(currentGame);
+      setLogs(data);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to load logs');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadLogs();
+  }, [currentGame]);
+
+  const handleUpdate = async (id, newStatType) => {
+    setSavingId(id);
+    try {
+      await updateStat(id, newStatType);
+      await loadLogs();
+      setEditingId(null);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update event');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to completely delete this event? This cannot be undone.")) return;
+    setSavingId(id);
+    try {
+      await deleteStat(id);
+      await loadLogs();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete event');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  if (!currentGame) {
+    return (
+      <div className="flex flex-col items-center justify-center p-4 min-h-screen text-slate-400 bg-slate-900">
+        <h2 className="text-xl font-bold mb-4">No Active Match</h2>
+        <p className="mb-6">Please enter a match name on the Dashboard first.</p>
+        <button 
+          onClick={() => onNavigate('dashboard')}
+          className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all"
+        >
+          Return to Dashboard
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center p-4 py-8 sm:py-12 min-h-screen">
+      <div className="w-full max-w-2xl bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-slate-700 pb-6">
+        
+        {/* Header */}
+        <div className="p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-800 border-b border-slate-700/50">
+          <div>
+            <h1 className="text-2xl font-extrabold text-white tracking-tight">Game Log</h1>
+            <p className="text-slate-400 text-sm font-medium">Viewing history for {currentGame}</p>
+          </div>
+          <button 
+            onClick={() => onNavigate('dashboard')}
+            className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold rounded-xl transition-all shadow-md"
+          >
+            ← Dashboard
+          </button>
+        </div>
+
+        {/* Content list */}
+        <div className="p-4 sm:p-6">
+          {loading ? (
+            <p className="text-center text-indigo-400 font-bold tracking-widest my-12 animate-pulse">LOADING LOGS...</p>
+          ) : logs.length === 0 ? (
+            <div className="text-center py-12 text-slate-500 font-medium bg-slate-900/50 rounded-2xl border border-slate-700/50">
+              No stats recorded yet for {currentGame}.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {logs.map((log) => {
+                const isSystem = log.player === 'System';
+                
+                return (
+                  <div key={log.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-900/60 rounded-2xl border border-slate-700/50 gap-4 hover:bg-slate-800/50 transition-colors duration-200">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 flex items-center justify-center bg-slate-800 rounded-xl border border-slate-700/50 font-bold text-slate-400 text-sm shadow-inner">
+                        Pt {log.point_number}
+                      </div>
+                      <div>
+                        {isSystem ? (
+                          <p className="text-slate-500 font-bold italic">{log.stat_type}</p>
+                        ) : (
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                            <span className="text-white font-bold text-lg">{log.player}</span>
+                            {editingId === log.id ? (
+                              <select 
+                                value={log.stat_type}
+                                onChange={(e) => handleUpdate(log.id, e.target.value)}
+                                disabled={savingId === log.id}
+                                className="bg-slate-900 border border-indigo-500 text-indigo-300 rounded-lg px-2 py-1 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                              >
+                                {STAT_TYPES.map(type => (
+                                  <option key={type} value={type}>{type}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span className={`text-sm font-bold px-2 py-0.5 rounded-md 
+                                ${log.stat_type === 'Point' ? 'bg-emerald-500/20 text-emerald-400' : 
+                                  log.stat_type === 'Pass' ? 'bg-cyan-500/20 text-cyan-400' : 
+                                  log.stat_type === 'Defence' ? 'bg-orange-500/20 text-orange-400' : 
+                                  'bg-rose-500/20 text-rose-400'}`}
+                              >
+                                {log.stat_type}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <p className="text-slate-500 text-xs mt-1 font-medium">{new Date(log.created_at).toLocaleTimeString()}</p>
+                      </div>
+                    </div>
+                    
+                    {!isSystem && (
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <button
+                          onClick={() => editingId === log.id ? setEditingId(null) : setEditingId(log.id)}
+                          disabled={savingId === log.id}
+                          className="flex-1 sm:flex-none px-4 py-2 bg-slate-800 hover:bg-slate-700 text-indigo-400 font-bold text-xs rounded-xl border border-slate-700 transition-colors disabled:opacity-50"
+                        >
+                          {editingId === log.id ? 'Cancel' : 'Edit'}
+                        </button>
+                        <button
+                          onClick={() => handleDelete(log.id)}
+                          disabled={savingId === log.id}
+                          className="flex-1 sm:flex-none px-4 py-2 bg-slate-800 hover:bg-rose-500/20 hover:text-rose-300 text-rose-500 font-bold text-xs rounded-xl border border-slate-700 transition-colors disabled:opacity-50"
+                        >
+                          {savingId === log.id ? '...' : 'Delete'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default EventLog;

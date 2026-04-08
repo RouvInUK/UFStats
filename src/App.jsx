@@ -3,6 +3,7 @@ import Dashboard from './components/Dashboard';
 import RosterSetup from './components/RosterSetup';
 import LineupSelector from './components/LineupSelector';
 import Analytics from './components/Analytics';
+import EventLog from './components/EventLog';
 import { fetchPlayers } from './supabaseClient';
 
 function App() {
@@ -87,6 +88,13 @@ function App() {
         <LineupSelector 
           players={players} 
           setPlayers={setPlayers}
+          onNavigate={setCurrentView} 
+        />
+      )}
+
+      {currentView === 'log' && (
+        <EventLog 
+          currentGame={currentGame}
           onNavigate={setCurrentView} 
         />
       )}

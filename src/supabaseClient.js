@@ -111,3 +111,34 @@ export const fetchActiveGames = async () => {
     .filter(([name, info]) => !info.isCompleted)
     .map(([name, info]) => ({ name, maxPoint: info.maxPoint }));
 };
+
+export const fetchGameStats = async (gameName) => {
+  const { data, error } = await supabase
+    .from('stats')
+    .select('*')
+    .eq('game_name', gameName)
+    .order('created_at', { ascending: false });
+    
+  if (error) throw error;
+  return data || [];
+};
+
+export const updateStat = async (id, newStatType) => {
+  const { data, error } = await supabase
+    .from('stats')
+    .update({ stat_type: newStatType })
+    .eq('id', id)
+    .select();
+    
+  if (error) throw error;
+  return data[0];
+};
+
+export const deleteStat = async (id) => {
+  const { error } = await supabase
+    .from('stats')
+    .delete()
+    .eq('id', id);
+    
+  if (error) throw error;
+};

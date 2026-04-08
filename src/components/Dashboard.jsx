@@ -137,6 +137,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
 
           <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end mt-4 sm:mt-0">
             <button 
+              onClick={() => onNavigate('log')}
+              className="flex-1 sm:flex-none px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/20 text-sm font-bold rounded-xl transition-all shadow-md"
+            >
+              📝 Log
+            </button>
+            <button 
               onClick={() => onNavigate('analytics')}
               className="flex-1 sm:flex-none px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20 text-sm font-bold rounded-xl transition-all shadow-md"
             >
