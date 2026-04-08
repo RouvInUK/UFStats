@@ -46,39 +46,36 @@ const Analytics = ({ onNavigate }) => {
 
       if (stat.stat_type === 'Point') {
         p.goals += 1;
-      } else if (stat.stat_type === 'Assist' || stat.stat_type === 'Pass') {
-        const loggedAsAssist = stat.stat_type === 'Assist';
+      } else if (stat.stat_type === 'Pass') {
         p.passes += 1;
         
         // Next stat in same game and point
         const nextStat = filteredStats[index + 1];
         let isCompleted = true;
-        let isValidAssist = loggedAsAssist;
+        let isAssist = false;
 
-        const isTurnoverEvent = ['Turnover', 'Throwaway', 'Drop', 'Stall Out'].includes(nextStat.stat_type);
+        const isTurnoverEvent = ['Throwaway', 'Drop', 'Stall Out'].includes(nextStat?.stat_type);
+        
         if (
           nextStat &&
           nextStat.game_name === stat.game_name &&
           nextStat.point_number === stat.point_number
         ) {
           if (isTurnoverEvent) {
-            isCompleted = false; // Dropped or thrown away
-            isValidAssist = false; // Deny assist
-          } else if (nextStat.stat_type !== 'Point' && loggedAsAssist) {
-            // Next event wasn't a point, meaning the point didn't end. 
-            // The throw was completed, but downgrade to normal pass.
-            isValidAssist = false; 
+            isCompleted = false;
+          } else if (nextStat.stat_type === 'Point') {
+            isAssist = true;
           }
         }
 
         if (isCompleted) {
           p.completions += 1;
         }
-        if (isValidAssist) {
+        if (isAssist) {
           p.assists += 1;
         }
 
-      } else if (['Turnover', 'Throwaway', 'Drop', 'Stall Out'].includes(stat.stat_type)) {
+      } else if (['Throwaway', 'Drop', 'Stall Out'].includes(stat.stat_type)) {
         p.turnovers += 1;
         
         if (stat.stat_type === 'Throwaway') {
@@ -87,20 +84,6 @@ const Analytics = ({ onNavigate }) => {
           p.drops += 1;
         } else if (stat.stat_type === 'Stall Out') {
           p.stallouts += 1;
-        } else {
-          // Legacy 'Turnover' contextual logic
-          const prevStat = filteredStats[index - 1];
-          if (
-            prevStat &&
-            prevStat.game_name === stat.game_name &&
-            prevStat.point_number === stat.point_number &&
-            (prevStat.stat_type === 'Pass' || prevStat.stat_type === 'Assist') && 
-            prevStat.player === stat.player
-          ) {
-            p.throwaways += 1;
-          } else {
-            p.drops += 1;   // Dropped a pass from someone else, or dropped a pull
-          }
         }
       } else if (stat.stat_type === 'Defence') {
         p.defence += 1;

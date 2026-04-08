@@ -206,13 +206,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
               Point
             </button>
             <button
-              onClick={() => handleStatRecord('Assist')}
-              disabled={isSaving || activeLineup.length === 0}
-              className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-blue-500 hover:bg-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(59,130,246,0.2)] hover:shadow-[0_0_30px_rgba(59,130,246,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Assist
-            </button>
-            <button
               onClick={() => handleStatRecord('Pass')}
               disabled={isSaving || activeLineup.length === 0}
               className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-cyan-500 hover:bg-cyan-400 focus:outline-none focus:ring-4 focus:ring-cyan-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(6,182,212,0.2)] hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
@@ -243,7 +236,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
             <button
               onClick={() => handleStatRecord('Defence')}
               disabled={isSaving || activeLineup.length === 0}
-              className="col-span-2 group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-orange-500 hover:bg-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_30px_rgba(249,115,22,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-orange-500 hover:bg-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_30px_rgba(249,115,22,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Defence
             </button>
