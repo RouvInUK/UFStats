@@ -35,7 +35,7 @@ const Analytics = ({ onNavigate }) => {
 
     const ensurePlayer = (name) => {
       if (!playersMap[name]) {
-        playersMap[name] = { name, touches: 0, goals: 0, assists: 0, passes: 0, completions: 0, turnovers: 0, throwaways: 0, drops: 0, stallouts: 0, defence: 0 };
+        playersMap[name] = { name, touches: 0, pointsSet: new Set(), goals: 0, assists: 0, passes: 0, completions: 0, turnovers: 0, throwaways: 0, drops: 0, stallouts: 0, defence: 0 };
       }
       return playersMap[name];
     };
@@ -44,6 +44,12 @@ const Analytics = ({ onNavigate }) => {
       if (stat.player === 'System') return;
       
       const p = ensurePlayer(stat.player);
+      
+      if (stat.stat_type === 'Lineup') {
+        p.pointsSet.add(`${stat.game_name}-${stat.point_number}`);
+        return; // Don't count lineup explicitly as a touch
+      }
+
       p.touches += 1;
 
       if (stat.stat_type === 'Point') {
@@ -93,7 +99,7 @@ const Analytics = ({ onNavigate }) => {
 
     const data = Object.values(playersMap).map(row => {
       const pct = row.passes > 0 ? (row.completions / row.passes) * 100 : 0;
-      return { ...row, compPct: pct };
+      return { ...row, compPct: pct, pointsPlayed: row.pointsSet.size };
     });
 
     return data.sort((a, b) => {
@@ -166,6 +172,7 @@ const Analytics = ({ onNavigate }) => {
               <thead>
                 <tr className="border-b border-slate-700/50 uppercase text-xs tracking-wider text-slate-400 select-none">
                   <th className="p-4 font-bold cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('name')}>Player {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('pointsPlayed')}>PP {sortConfig.key === 'pointsPlayed' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                   <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('touches')}>Touches {sortConfig.key === 'touches' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                   <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('goals')}>Goals {sortConfig.key === 'goals' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                   <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('assists')}>Assists {sortConfig.key === 'assists' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
@@ -180,6 +187,7 @@ const Analytics = ({ onNavigate }) => {
                   return (
                     <tr key={row.name} className="hover:bg-slate-700/20 transition-colors">
                       <td className="p-4 text-white font-bold">{row.name}</td>
+                      <td className="p-4 text-center text-indigo-300 font-bold">{row.pointsPlayed}</td>
                       <td className="p-4 text-center text-slate-300 font-bold">{row.touches}</td>
                       <td className="p-4 text-center">
                         <span className="inline-block w-8 h-8 leading-8 bg-emerald-500/10 text-emerald-400 font-bold rounded-lg text-sm">

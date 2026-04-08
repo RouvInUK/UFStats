@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { recordStatToDB, fetchActiveGames } from '../supabaseClient';
+import { recordStatToDB, fetchActiveGames, recordLineup } from '../supabaseClient';
 
 const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, setCurrentGame, onNavigate }) => {
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [activeGames, setActiveGames] = useState([]);
+  const [lineupRecordedPoint, setLineupRecordedPoint] = useState(null);
 
   // Fetch active games on mount
   useEffect(() => {
@@ -51,6 +52,24 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
     } catch (error) {
       console.error('Save failed:', error);
       alert('Failed to save. Check server logs.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleRecordLineup = async () => {
+    if (activeLineup.length === 0) return alert("Select a lineup first!");
+    if (!currentGame) return alert("Enter a game name first.");
+
+    setIsSaving(true);
+    setLastSaved(null);
+    try {
+      await recordLineup(activeLineup, currentPoint, currentGame);
+      setLineupRecordedPoint(currentPoint);
+      setLastSaved(`Recorded lineup for Point ${currentPoint}`);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to record lineup.');
     } finally {
       setIsSaving(false);
     }
@@ -199,6 +218,21 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
                   </button>
                 ))}
               </div>
+            )}
+
+            {/* Start Point Button */}
+            {activeLineup.length > 0 && (
+              <button
+                onClick={handleRecordLineup}
+                disabled={isSaving || lineupRecordedPoint === currentPoint}
+                className={`w-full py-3 px-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all shadow-md mt-4 ${
+                  lineupRecordedPoint === currentPoint
+                    ? 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
+                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20 shadow-lg'
+                }`}
+              >
+                {lineupRecordedPoint === currentPoint ? '✓ Lineup Recorded' : '▶ Start Point (Record Lineup)'}
+              </button>
             )}
           </div>
 

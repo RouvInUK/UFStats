@@ -7,17 +7,37 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export const recordStatToDB = async (statData) => {
   const { player, stat, pointNumber, gameName } = statData;
-  
+
   const { data, error } = await supabase
     .from('stats')
     .insert([
-      { 
-        player: player, 
-        stat_type: stat, 
+      {
+        player: player,
+        stat_type: stat,
         point_number: pointNumber,
         game_name: gameName || 'Unnamed Game'
       }
     ]);
+
+  if (error) {
+    throw error;
+  }
+  return data;
+};
+
+export const recordLineup = async (players, pointNumber, gameName) => {
+  if (!players || players.length === 0) return;
+  
+  const insertData = players.map(player => ({
+    player: player,
+    stat_type: 'Lineup',
+    point_number: pointNumber,
+    game_name: gameName || 'Unnamed Game'
+  }));
+
+  const { data, error } = await supabase
+    .from('stats')
+    .insert(insertData);
 
   if (error) {
     throw error;
@@ -32,7 +52,7 @@ export const fetchPlayers = async () => {
     .from('players')
     .select('*')
     .order('name', { ascending: true });
-    
+
   if (error) throw error;
   return data || [];
 };
@@ -42,7 +62,7 @@ export const addPlayer = async (name) => {
     .from('players')
     .insert([{ name, is_active: false }])
     .select();
-    
+
   if (error) throw error;
   return data[0];
 };
@@ -52,7 +72,7 @@ export const removePlayer = async (id) => {
     .from('players')
     .delete()
     .eq('id', id);
-    
+
   if (error) throw error;
 };
 
@@ -62,7 +82,7 @@ export const togglePlayerActiveStatus = async (id, currentStatus) => {
     .update({ is_active: !currentStatus })
     .eq('id', id)
     .select();
-    
+
   if (error) throw error;
   return data[0];
 };
@@ -72,7 +92,7 @@ export const fetchStats = async () => {
     .from('stats')
     .select('*')
     .order('created_at', { ascending: true });
-    
+
   if (error) throw error;
   return data || [];
 };
@@ -82,30 +102,30 @@ export const fetchActiveGames = async () => {
   const { data, error } = await supabase
     .from('stats')
     .select('game_name, stat_type, point_number');
-    
+
   if (error) throw error;
   if (!data) return [];
 
   const gameStatus = {};
-  
+
   data.forEach(stat => {
     if (!stat.game_name) return;
-    
+
     if (!gameStatus[stat.game_name]) {
       gameStatus[stat.game_name] = { isCompleted: false, maxPoint: 1, maxPointHasGoal: false };
     }
-    
+
     // Event-sourcing check for completion
     if (stat.stat_type === 'Game Completed') {
       gameStatus[stat.game_name].isCompleted = true;
     }
-    
+
     // Track highest point
     if (stat.point_number > gameStatus[stat.game_name].maxPoint) {
       gameStatus[stat.game_name].maxPoint = stat.point_number;
       gameStatus[stat.game_name].maxPointHasGoal = false; // Reset for new high point
     }
-    
+
     // Check if the current highest point has already been scored
     if (stat.point_number === gameStatus[stat.game_name].maxPoint && stat.stat_type === 'Point') {
       gameStatus[stat.game_name].maxPointHasGoal = true;
@@ -127,7 +147,7 @@ export const fetchGameStats = async (gameName) => {
     .select('*')
     .eq('game_name', gameName)
     .order('created_at', { ascending: false });
-    
+
   if (error) throw error;
   return data || [];
 };
@@ -138,7 +158,7 @@ export const updateStat = async (id, newStatType) => {
     .update({ stat_type: newStatType })
     .eq('id', id)
     .select();
-    
+
   if (error) throw error;
   return data[0];
 };
@@ -148,6 +168,6 @@ export const deleteStat = async (id) => {
     .from('stats')
     .delete()
     .eq('id', id);
-    
+
   if (error) throw error;
 };
