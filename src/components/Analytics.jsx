@@ -103,6 +103,9 @@ const Analytics = ({ onNavigate }) => {
       if (a[sortConfig.key] > b[sortConfig.key]) {
         return sortConfig.direction === 'asc' ? 1 : -1;
       }
+      // Tie breaker: Alphabetical by name
+      if (a.name < b.name) return -1;
+      if (a.name > b.name) return 1;
       return 0;
     });
   }, [stats, selectedGame, sortConfig]);
