@@ -5,6 +5,7 @@ const Analytics = ({ onNavigate }) => {
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedGame, setSelectedGame] = useState('All');
+  const [sortConfig, setSortConfig] = useState({ key: 'touches', direction: 'desc' });
 
   useEffect(() => {
     const loadStats = async () => {
@@ -34,7 +35,7 @@ const Analytics = ({ onNavigate }) => {
 
     const ensurePlayer = (name) => {
       if (!playersMap[name]) {
-        playersMap[name] = { name, goals: 0, assists: 0, passes: 0, completions: 0, turnovers: 0, throwaways: 0, drops: 0, stallouts: 0, defence: 0 };
+        playersMap[name] = { name, touches: 0, goals: 0, assists: 0, passes: 0, completions: 0, turnovers: 0, throwaways: 0, drops: 0, stallouts: 0, defence: 0 };
       }
       return playersMap[name];
     };
@@ -43,6 +44,7 @@ const Analytics = ({ onNavigate }) => {
       if (stat.player === 'System') return;
       
       const p = ensurePlayer(stat.player);
+      p.touches += 1;
 
       if (stat.stat_type === 'Point') {
         p.goals += 1;
@@ -89,9 +91,29 @@ const Analytics = ({ onNavigate }) => {
       }
     });
 
-    return Object.values(playersMap).sort((a, b) => b.goals + b.assists + b.defence - (a.goals + a.assists + a.defence));
-  }, [stats, selectedGame]);
+    const data = Object.values(playersMap).map(row => {
+      const pct = row.passes > 0 ? (row.completions / row.passes) * 100 : 0;
+      return { ...row, compPct: pct };
+    });
 
+    return data.sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (a[sortConfig.key] > b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [stats, selectedGame, sortConfig]);
+
+  const handleSort = (key) => {
+    let direction = 'desc';
+    if (sortConfig.key === key && sortConfig.direction === 'desc') {
+      direction = 'asc';
+    }
+    setSortConfig({ key, direction });
+  };
 
   if (loading) {
     return (
@@ -139,23 +161,23 @@ const Analytics = ({ onNavigate }) => {
           ) : (
             <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
-                <tr className="border-b border-slate-700/50 uppercase text-xs tracking-wider text-slate-400">
-                  <th className="p-4 font-bold">Player</th>
-                  <th className="p-4 font-bold text-center">Goals</th>
-                  <th className="p-4 font-bold text-center">Assists</th>
-                  <th className="p-4 font-bold text-center">Passes (C/A)</th>
-                  <th className="p-4 font-bold text-center">Comp %</th>
-                  <th className="p-4 font-bold text-center">Defence</th>
-                  <th className="p-4 font-bold text-center">Turnovers</th>
+                <tr className="border-b border-slate-700/50 uppercase text-xs tracking-wider text-slate-400 select-none">
+                  <th className="p-4 font-bold cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('name')}>Player {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('touches')}>Touches {sortConfig.key === 'touches' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('goals')}>Goals {sortConfig.key === 'goals' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('assists')}>Assists {sortConfig.key === 'assists' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors whitespace-nowrap" onClick={() => handleSort('passes')}>Passes <span className="text-[10px] opacity-70">(C/A)</span> {sortConfig.key === 'passes' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors whitespace-nowrap" onClick={() => handleSort('compPct')}>Comp % {sortConfig.key === 'compPct' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('defence')}>Defence {sortConfig.key === 'defence' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('turnovers')}>Turnovers {sortConfig.key === 'turnovers' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
                 {playerStats.map((row) => {
-                  const pct = row.passes > 0 ? Math.round((row.completions / row.passes) * 100) : 0;
-                  
                   return (
                     <tr key={row.name} className="hover:bg-slate-700/20 transition-colors">
                       <td className="p-4 text-white font-bold">{row.name}</td>
+                      <td className="p-4 text-center text-slate-300 font-bold">{row.touches}</td>
                       <td className="p-4 text-center">
                         <span className="inline-block w-8 h-8 leading-8 bg-emerald-500/10 text-emerald-400 font-bold rounded-lg text-sm">
                           {row.goals}
@@ -170,8 +192,8 @@ const Analytics = ({ onNavigate }) => {
                         <span className="text-white font-bold">{row.completions}</span> / {row.passes}
                       </td>
                       <td className="p-4 text-center">
-                        <span className={`inline-block px-2 py-1 font-bold rounded text-xs ${pct >= 90 ? 'bg-indigo-500/20 text-indigo-300' : pct >= 75 ? 'bg-slate-700 text-slate-300' : 'bg-rose-500/10 text-rose-400'}`}>
-                          {row.passes > 0 ? `${pct}%` : '-'}
+                        <span className={`inline-block px-2 py-1 font-bold rounded text-xs ${row.compPct >= 90 ? 'bg-indigo-500/20 text-indigo-300' : row.compPct >= 75 ? 'bg-slate-700 text-slate-300' : 'bg-rose-500/10 text-rose-400'}`}>
+                          {row.passes > 0 ? `${Math.round(row.compPct)}%` : '-'}
                         </span>
                       </td>
                       <td className="p-4 text-center">
