@@ -92,7 +92,7 @@ export const fetchActiveGames = async () => {
     if (!stat.game_name) return;
     
     if (!gameStatus[stat.game_name]) {
-      gameStatus[stat.game_name] = { isCompleted: false, maxPoint: 1 };
+      gameStatus[stat.game_name] = { isCompleted: false, maxPoint: 1, maxPointHasGoal: false };
     }
     
     // Event-sourcing check for completion
@@ -103,13 +103,22 @@ export const fetchActiveGames = async () => {
     // Track highest point
     if (stat.point_number > gameStatus[stat.game_name].maxPoint) {
       gameStatus[stat.game_name].maxPoint = stat.point_number;
+      gameStatus[stat.game_name].maxPointHasGoal = false; // Reset for new high point
+    }
+    
+    // Check if the current highest point has already been scored
+    if (stat.point_number === gameStatus[stat.game_name].maxPoint && stat.stat_type === 'Point') {
+      gameStatus[stat.game_name].maxPointHasGoal = true;
     }
   });
 
-  // Filter out completed matches and return map of name to maxPoint
+  // Filter out completed matches and return map of name to calculated current Point
   return Object.entries(gameStatus)
     .filter(([name, info]) => !info.isCompleted)
-    .map(([name, info]) => ({ name, maxPoint: info.maxPoint }));
+    .map(([name, info]) => ({ 
+      name, 
+      maxPoint: info.maxPointHasGoal ? info.maxPoint + 1 : info.maxPoint 
+    }));
 };
 
 export const fetchGameStats = async (gameName) => {
