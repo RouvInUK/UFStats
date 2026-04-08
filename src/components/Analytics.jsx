@@ -54,14 +54,12 @@ const Analytics = ({ onNavigate }) => {
         let isCompleted = true;
         let isAssist = false;
 
-        const isTurnoverEvent = ['Throwaway', 'Drop', 'Stall Out'].includes(nextStat?.stat_type);
-        
         if (
           nextStat &&
           nextStat.game_name === stat.game_name &&
           nextStat.point_number === stat.point_number
         ) {
-          if (isTurnoverEvent) {
+          if (nextStat.stat_type === 'Drop') {
             isCompleted = false;
           } else if (nextStat.stat_type === 'Point') {
             isAssist = true;
@@ -79,6 +77,7 @@ const Analytics = ({ onNavigate }) => {
         p.turnovers += 1;
         
         if (stat.stat_type === 'Throwaway') {
+          p.passes += 1; // A throwaway is a pass attempt!
           p.throwaways += 1;
         } else if (stat.stat_type === 'Drop') {
           p.drops += 1;
