@@ -246,29 +246,29 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
               </div>
             )}
 
-            {/* Start Point Button */}
+            {/* Control Buttons */}
             {activeLineup.length > 0 && (
-              !isTrackingActive ? (
+              <div className="flex flex-col sm:flex-row gap-3 mt-4">
                 <button
                   onClick={handleStartNextPoint}
                   disabled={isSaving || !currentGame}
-                  className="w-full py-3 px-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all shadow-md mt-4 bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20 shadow-lg"
+                  className="w-full py-3 px-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all shadow-md bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20 shadow-lg"
                 >
                   ▶ Start Next Point (+1)
                 </button>
-              ) : (
+                
                 <button
                   onClick={handleSubstitution}
-                  disabled={isSaving || lineupRecordedPoint === currentPoint}
-                  className={`w-full py-3 px-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all shadow-md mt-4 ${
-                    lineupRecordedPoint === currentPoint
-                      ? 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
+                  disabled={isSaving || !currentGame || !isTrackingActive}
+                  className={`w-full py-3 px-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all shadow-md ${
+                    !isTrackingActive
+                      ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50'
                       : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20 shadow-lg'
                   }`}
                 >
-                  {lineupRecordedPoint === currentPoint ? '✓ Lineup Locked' : '↻ Substitution'}
+                  ↻ Substitution
                 </button>
-              )
+              </div>
             )}
           </div>
 
