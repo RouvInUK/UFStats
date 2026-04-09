@@ -7,6 +7,7 @@ const Analytics = ({ onNavigate }) => {
   const [selectedGames, setSelectedGames] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'touches', direction: 'desc' });
+  const currentGame = localStorage.getItem('ufstats_game');
 
   useEffect(() => {
     const loadStats = async () => {
@@ -161,18 +162,29 @@ const Analytics = ({ onNavigate }) => {
 
         {/* Multi-Select Filters */}
         <div className="w-full px-6 sm:px-8 py-4 border-b border-slate-700/50">
-          <button 
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="w-full sm:w-64 px-4 py-2.5 bg-slate-900 border border-slate-700 text-slate-100 rounded-xl font-bold flex justify-between items-center gap-4 hover:bg-slate-700 transition-colors shadow-inner"
-          >
-            <span>
-              {selectedGames.length === 0 
-                ? 'Filter Games (All)' 
-                : `Filtered (${selectedGames.length} Game${selectedGames.length > 1 ? 's' : ''})`
-              }
-            </span>
-            <span className="text-slate-400 text-xs">{isDropdownOpen ? '▲' : '▼'}</span>
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button 
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="w-full sm:w-64 px-4 py-2.5 bg-slate-900 border border-slate-700 text-slate-100 rounded-xl font-bold flex justify-between items-center gap-4 hover:bg-slate-700 transition-colors shadow-inner"
+            >
+              <span>
+                {selectedGames.length === 0 
+                  ? 'Filter Games (All)' 
+                  : `Filtered (${selectedGames.length} Game${selectedGames.length > 1 ? 's' : ''})`
+                }
+              </span>
+              <span className="text-slate-400 text-xs">{isDropdownOpen ? '▲' : '▼'}</span>
+            </button>
+
+            {currentGame && (
+              <button 
+                onClick={() => setSelectedGames([currentGame])}
+                className="w-full sm:w-auto px-4 py-2.5 bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 text-indigo-300 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-inner"
+              >
+                🎯 Active Game Only
+              </button>
+            )}
+          </div>
           
           {isDropdownOpen && (
             <div className="mt-3 bg-slate-900/80 border border-slate-700 rounded-xl overflow-hidden shadow-inner">

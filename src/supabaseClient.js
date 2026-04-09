@@ -100,6 +100,7 @@ export const fetchStats = async () => {
   const { data, error } = await supabase
     .from('stats')
     .select('*')
+    .limit(100000)
     .order('created_at', { ascending: true });
 
   if (error) throw error;
@@ -110,7 +111,8 @@ export const fetchActiveGames = async () => {
   // We only need a few columns to derive active games
   const { data, error } = await supabase
     .from('stats')
-    .select('game_name, stat_type, point_number');
+    .select('game_name, stat_type, point_number')
+    .limit(100000);
 
   if (error) throw error;
   if (!data) return [];
@@ -154,6 +156,7 @@ export const fetchGameStats = async (gameName) => {
   const { data, error } = await supabase
     .from('stats')
     .select('*')
+    .limit(100000)
     .eq('game_name', gameName)
     .order('created_at', { ascending: false });
 
