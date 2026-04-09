@@ -78,24 +78,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
     }
   };
 
-  const handleSubstitution = async () => {
-    if (activeLineup.length === 0) return alert("Select a lineup first!");
-    if (!currentGame) return alert("Enter a game name first.");
-
-    setIsSaving(true);
-    setLastSaved(null);
-    try {
-      await recordLineup(activeLineup, currentPoint, currentGame);
-      setLineupRecordedPoint(currentPoint);
-      setLastSaved(`Lineup Updated for Point ${currentPoint}`);
-    } catch (err) {
-      console.error(err);
-      alert('Failed to update lineup.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleMarkCompleted = async () => {
     if (!currentGame) return alert("Enter a game name first.");
     if (window.confirm(`Are you sure you want to close "${currentGame}"? It will no longer appear in the active dropdown for anyone.`)) {
@@ -258,7 +240,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
                 </button>
                 
                 <button
-                  onClick={handleSubstitution}
+                  onClick={() => onNavigate('lineup')}
                   disabled={isSaving || !currentGame || !isTrackingActive}
                   className={`w-full py-3 px-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all shadow-md ${
                     !isTrackingActive
