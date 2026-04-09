@@ -5,6 +5,7 @@ const Analytics = ({ onNavigate }) => {
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedGames, setSelectedGames] = useState([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'touches', direction: 'desc' });
 
   useEffect(() => {
@@ -159,22 +160,53 @@ const Analytics = ({ onNavigate }) => {
         </div>
 
         {/* Multi-Select Filters */}
-        <div className="flex items-center gap-2 overflow-x-auto w-full pb-4 px-6 sm:px-8 border-b border-slate-700/50 scrollbar-hide">
+        <div className="w-full px-6 sm:px-8 py-4 border-b border-slate-700/50">
           <button 
-            onClick={() => setSelectedGames([])}
-            className={`px-4 py-2 whitespace-nowrap text-sm font-bold rounded-xl transition-all ${selectedGames.length === 0 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-900 text-slate-400 border border-slate-700 hover:bg-slate-700'}`}
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="w-full sm:w-64 px-4 py-2.5 bg-slate-900 border border-slate-700 text-slate-100 rounded-xl font-bold flex justify-between items-center gap-4 hover:bg-slate-700 transition-colors shadow-inner"
           >
-            All Games
+            <span>
+              {selectedGames.length === 0 
+                ? 'Filter Games (All)' 
+                : `Filtered (${selectedGames.length} Game${selectedGames.length > 1 ? 's' : ''})`
+              }
+            </span>
+            <span className="text-slate-400 text-xs">{isDropdownOpen ? '▲' : '▼'}</span>
           </button>
-          {games.filter(g => g !== 'All').map(game => (
-            <button
-              key={game}
-              onClick={() => toggleGame(game)}
-              className={`px-4 py-2 whitespace-nowrap text-sm font-bold rounded-xl transition-all ${selectedGames.includes(game) ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 shadow-inner' : 'bg-slate-900 text-slate-400 border border-slate-700 hover:bg-slate-700'}`}
-            >
-              {game}
-            </button>
-          ))}
+          
+          {isDropdownOpen && (
+            <div className="mt-3 bg-slate-900/80 border border-slate-700 rounded-xl overflow-hidden shadow-inner">
+              <div className="p-3 border-b border-slate-700 bg-slate-800/50">
+                <label className="flex items-center gap-3 w-full cursor-pointer group px-2">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedGames.length === 0} 
+                    onChange={() => setSelectedGames([])}
+                    className="w-5 h-5 rounded bg-slate-900 border-slate-600 text-indigo-600 focus:ring-0 cursor-pointer"
+                  />
+                  <span className={`${selectedGames.length === 0 ? 'text-white font-bold' : 'text-slate-400 group-hover:text-slate-200'} transition-colors`}>
+                    All Games
+                  </span>
+                </label>
+              </div>
+              
+              <div className="max-h-[250px] overflow-y-auto p-2 scrollbar-hide">
+                {games.filter(g => g !== 'All').map(game => (
+                  <label key={game} className="flex items-center gap-3 w-full p-2 hover:bg-slate-800 rounded-lg cursor-pointer transition-colors group">
+                    <input 
+                      type="checkbox"
+                      checked={selectedGames.includes(game)}
+                      onChange={() => toggleGame(game)}
+                      className="w-5 h-5 rounded border-slate-600 text-emerald-500 focus:ring-0 cursor-pointer bg-slate-900"
+                    />
+                    <span className={`${selectedGames.includes(game) ? 'text-white font-bold' : 'text-slate-400 group-hover:text-slate-200'} transition-colors line-clamp-1`}>
+                      {game}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Content Table */}
