@@ -114,7 +114,7 @@ const Analytics = ({ onNavigate }) => {
       if (a.name > b.name) return 1;
       return 0;
     });
-  }, [stats, selectedGame, sortConfig]);
+  }, [stats, selectedGames, sortConfig]);
 
   const handleSort = (key) => {
     let direction = 'desc';
