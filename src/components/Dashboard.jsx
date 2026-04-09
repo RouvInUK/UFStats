@@ -110,6 +110,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
         });
         setLastSaved(`Closed ${currentGame}!`);
         setCurrentGame('');
+        setCurrentPoint(0);
+        setIsTrackingActive(false);
       } catch (err) {
         console.error(err);
         alert('Failed to mark completed.');
