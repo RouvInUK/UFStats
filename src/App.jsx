@@ -20,7 +20,11 @@ function App() {
 
   const [currentPoint, setCurrentPoint] = useState(() => {
     const saved = localStorage.getItem('ufstats_point');
-    return saved ? parseInt(saved, 10) : 1;
+    return saved ? parseInt(saved, 10) : 0;
+  });
+
+  const [isTrackingActive, setIsTrackingActive] = useState(() => {
+    return localStorage.getItem('ufstats_tracking') === 'true';
   });
 
   useEffect(() => {
@@ -46,6 +50,10 @@ function App() {
     localStorage.setItem('ufstats_point', currentPoint.toString());
   }, [currentPoint]);
 
+  useEffect(() => {
+    localStorage.setItem('ufstats_tracking', isTrackingActive.toString());
+  }, [isTrackingActive]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center text-indigo-400 font-bold tracking-widest text-lg">
@@ -66,6 +74,8 @@ function App() {
           setCurrentPoint={setCurrentPoint}
           currentGame={currentGame}
           setCurrentGame={setCurrentGame}
+          isTrackingActive={isTrackingActive}
+          setIsTrackingActive={setIsTrackingActive}
           onNavigate={setCurrentView} 
         />
       )}

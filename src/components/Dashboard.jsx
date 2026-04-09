@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { recordStatToDB, fetchActiveGames, recordLineup } from '../supabaseClient';
 
-const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, setCurrentGame, onNavigate }) => {
+const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, setCurrentGame, isTrackingActive, setIsTrackingActive, onNavigate }) => {
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -47,7 +47,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
       setLastSaved(`Saved ${statType} for ${selectedPlayer}`);
       
       if (statType === 'Point') {
-        setCurrentPoint(prev => prev + 1);
+        setIsTrackingActive(false);
       }
     } catch (error) {
       console.error('Save failed:', error);
@@ -57,7 +57,28 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
     }
   };
 
-  const handleRecordLineup = async () => {
+  const handleStartNextPoint = async () => {
+    if (activeLineup.length === 0) return alert("Select a lineup first!");
+    if (!currentGame) return alert("Enter a game name first.");
+
+    setIsSaving(true);
+    setLastSaved(null);
+    try {
+      const nextPoint = currentPoint + 1;
+      await recordLineup(activeLineup, nextPoint, currentGame);
+      setCurrentPoint(nextPoint);
+      setLineupRecordedPoint(nextPoint);
+      setIsTrackingActive(true);
+      setLastSaved(`Started Point ${nextPoint}`);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to start point.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSubstitution = async () => {
     if (activeLineup.length === 0) return alert("Select a lineup first!");
     if (!currentGame) return alert("Enter a game name first.");
 
@@ -66,10 +87,10 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
     try {
       await recordLineup(activeLineup, currentPoint, currentGame);
       setLineupRecordedPoint(currentPoint);
-      setLastSaved(`Recorded lineup for Point ${currentPoint}`);
+      setLastSaved(`Lineup Updated for Point ${currentPoint}`);
     } catch (err) {
       console.error(err);
-      alert('Failed to record lineup.');
+      alert('Failed to update lineup.');
     } finally {
       setIsSaving(false);
     }
@@ -113,7 +134,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
                 </h1>
                 <div className="flex items-center gap-1 bg-slate-900/80 px-2 py-1 rounded-xl border border-slate-700 shadow-inner">
                   <span className="text-slate-400 text-xs font-bold uppercase tracking-wider pl-2 pr-1">Point</span>
-                  <button onClick={() => setCurrentPoint(p => Math.max(1, p - 1))} className="text-slate-500 hover:text-white hover:bg-slate-700 px-2 rounded-lg font-bold transition-colors">-</button>
+                  <button onClick={() => setCurrentPoint(p => Math.max(0, p - 1))} className="text-slate-500 hover:text-white hover:bg-slate-700 px-2 rounded-lg font-bold transition-colors">-</button>
                   <span className="text-white font-bold text-lg w-5 text-center">{currentPoint}</span>
                   <button onClick={() => setCurrentPoint(p => p + 1)} className="text-slate-500 hover:text-white hover:bg-slate-700 px-2 rounded-lg font-bold transition-colors">+</button>
                 </div>
@@ -225,17 +246,27 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
 
             {/* Start Point Button */}
             {activeLineup.length > 0 && (
-              <button
-                onClick={handleRecordLineup}
-                disabled={isSaving || lineupRecordedPoint === currentPoint}
-                className={`w-full py-3 px-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all shadow-md mt-4 ${
-                  lineupRecordedPoint === currentPoint
-                    ? 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
-                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20 shadow-lg'
-                }`}
-              >
-                {lineupRecordedPoint === currentPoint ? '✓ Lineup Recorded' : '▶ Start Point (Record Lineup)'}
-              </button>
+              !isTrackingActive ? (
+                <button
+                  onClick={handleStartNextPoint}
+                  disabled={isSaving || !currentGame}
+                  className="w-full py-3 px-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all shadow-md mt-4 bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20 shadow-lg"
+                >
+                  ▶ Start Next Point (+1)
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubstitution}
+                  disabled={isSaving || lineupRecordedPoint === currentPoint}
+                  className={`w-full py-3 px-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all shadow-md mt-4 ${
+                    lineupRecordedPoint === currentPoint
+                      ? 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
+                      : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20 shadow-lg'
+                  }`}
+                >
+                  {lineupRecordedPoint === currentPoint ? '✓ Lineup Locked' : '↻ Substitution'}
+                </button>
+              )
             )}
           </div>
 
@@ -243,42 +274,42 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
           <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-700/50">
             <button
               onClick={() => handleStatRecord('Point')}
-              disabled={isSaving || activeLineup.length === 0}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive}
               className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-emerald-500 hover:bg-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Point
             </button>
             <button
               onClick={() => handleStatRecord('Pass')}
-              disabled={isSaving || activeLineup.length === 0}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive}
               className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-cyan-500 hover:bg-cyan-400 focus:outline-none focus:ring-4 focus:ring-cyan-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(6,182,212,0.2)] hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Pass
             </button>
             <button
               onClick={() => handleStatRecord('Throwaway')}
-              disabled={isSaving || activeLineup.length === 0}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive}
               className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-500 hover:bg-rose-400 focus:outline-none focus:ring-4 focus:ring-rose-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(244,63,94,0.2)] hover:shadow-[0_0_30px_rgba(244,63,94,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Throwaway
             </button>
             <button
               onClick={() => handleStatRecord('Drop')}
-              disabled={isSaving || activeLineup.length === 0}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive}
               className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-600 hover:bg-rose-500 focus:outline-none focus:ring-4 focus:ring-rose-600/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(225,29,72,0.2)] hover:shadow-[0_0_30px_rgba(225,29,72,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Drop
             </button>
             <button
               onClick={() => handleStatRecord('Stall Out')}
-              disabled={isSaving || activeLineup.length === 0}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive}
               className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-violet-600 hover:bg-violet-500 focus:outline-none focus:ring-4 focus:ring-violet-600/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(124,58,237,0.2)] hover:shadow-[0_0_30px_rgba(124,58,237,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Stall Out
             </button>
             <button
               onClick={() => handleStatRecord('Defence')}
-              disabled={isSaving || activeLineup.length === 0}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive}
               className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-orange-500 hover:bg-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_30px_rgba(249,115,22,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Defence
