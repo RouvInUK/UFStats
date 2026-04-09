@@ -104,19 +104,20 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
         
         {/* Header Section */}
         <div className="p-6 sm:p-8 bg-slate-800 border-b border-slate-700/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-          <div>
-            <div className="flex items-center gap-4 mb-2">
-              <img src="/logo.png" alt="UFStats Logo" className="w-10 h-10 rounded-xl shadow-lg border border-slate-700/50" />
-              <h1 className="text-3xl font-extrabold text-white tracking-tight">
-                Ultimate Stats
-              </h1>
-              <div className="flex items-center gap-1 bg-slate-900/80 px-2 py-1 rounded-xl border border-slate-700 shadow-inner">
-                <span className="text-slate-400 text-xs font-bold uppercase tracking-wider pl-2 pr-1">Point</span>
-                <button onClick={() => setCurrentPoint(p => Math.max(1, p - 1))} className="text-slate-500 hover:text-white hover:bg-slate-700 px-2 rounded-lg font-bold transition-colors">-</button>
-                <span className="text-white font-bold text-lg w-5 text-center">{currentPoint}</span>
-                <button onClick={() => setCurrentPoint(p => p + 1)} className="text-slate-500 hover:text-white hover:bg-slate-700 px-2 rounded-lg font-bold transition-colors">+</button>
+          <div className="flex items-start gap-4 sm:gap-5 w-full">
+            <img src="/logo.png" alt="UFStats Logo" className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl shadow-lg border border-slate-700/50 shrink-0" />
+            <div className="flex flex-col w-full">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-100 tracking-tight leading-none mt-1">
+                  Ultimate Stats
+                </h1>
+                <div className="flex items-center gap-1 bg-slate-900/80 px-2 py-1 rounded-xl border border-slate-700 shadow-inner">
+                  <span className="text-slate-400 text-xs font-bold uppercase tracking-wider pl-2 pr-1">Point</span>
+                  <button onClick={() => setCurrentPoint(p => Math.max(1, p - 1))} className="text-slate-500 hover:text-white hover:bg-slate-700 px-2 rounded-lg font-bold transition-colors">-</button>
+                  <span className="text-white font-bold text-lg w-5 text-center">{currentPoint}</span>
+                  <button onClick={() => setCurrentPoint(p => p + 1)} className="text-slate-500 hover:text-white hover:bg-slate-700 px-2 rounded-lg font-bold transition-colors">+</button>
+                </div>
               </div>
-            </div>
             <div className="flex items-center gap-2 mb-2 w-full max-w-[300px]">
               <input 
                 type="text" 
@@ -153,6 +154,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
                 ✓ {lastSaved}
               </p>
             )}
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end mt-4 sm:mt-0">
