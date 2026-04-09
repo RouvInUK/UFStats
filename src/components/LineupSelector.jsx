@@ -1,8 +1,9 @@
-import { togglePlayerActiveStatus } from '../supabaseClient';
+import { togglePlayerActiveStatus, clearActiveLineup } from '../supabaseClient';
 import { useState } from 'react';
 
 const LineupSelector = ({ players, setPlayers, onNavigate }) => {
   const [processingId, setProcessingId] = useState(null);
+  const [isClearing, setIsClearing] = useState(false);
 
   const togglePlayer = async (player) => {
     // Optimistically update UI locally
@@ -30,6 +31,21 @@ const LineupSelector = ({ players, setPlayers, onNavigate }) => {
     }
   };
 
+  const handleClearLineup = async () => {
+    const optimisticPlayers = players.map(p => ({ ...p, is_active: false }));
+    setPlayers(optimisticPlayers);
+    
+    setIsClearing(true);
+    try {
+      await clearActiveLineup();
+    } catch (err) {
+      alert("Failed to clear lineup in cloud.");
+      setPlayers(players); // revert
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
   const activeCount = players.filter(p => p.is_active).length;
 
   return (
@@ -41,12 +57,21 @@ const LineupSelector = ({ players, setPlayers, onNavigate }) => {
             <h1 className="text-2xl font-extrabold text-white tracking-tight">Active Lineup</h1>
             <p className="text-slate-400 text-sm font-medium">{activeCount} Players on Pitch</p>
           </div>
-          <button 
-            onClick={() => onNavigate('dashboard')}
-            className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl transition-all w-full sm:w-auto text-center shadow-lg shadow-indigo-500/20"
-          >
-            ← Done
-          </button>
+          <div className="flex gap-3 w-full sm:w-auto">
+            <button 
+              onClick={handleClearLineup}
+              disabled={isClearing || activeCount === 0}
+              className="px-4 py-2 bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 text-sm font-bold rounded-xl transition-all w-full sm:w-auto text-center disabled:opacity-50"
+            >
+              {isClearing ? 'Clearing...' : 'Clear All'}
+            </button>
+            <button 
+              onClick={() => onNavigate('dashboard')}
+              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl transition-all w-full sm:w-auto text-center shadow-lg shadow-indigo-500/20"
+            >
+              ← Done
+            </button>
+          </div>
         </div>
 
         <div className="p-6 sm:p-8">

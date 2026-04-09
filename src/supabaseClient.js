@@ -87,6 +87,15 @@ export const togglePlayerActiveStatus = async (id, currentStatus) => {
   return data[0];
 };
 
+export const clearActiveLineup = async () => {
+  const { error } = await supabase
+    .from('players')
+    .update({ is_active: false })
+    .eq('is_active', true);
+
+  if (error) throw error;
+};
+
 export const fetchStats = async () => {
   const { data, error } = await supabase
     .from('stats')
