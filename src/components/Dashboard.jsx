@@ -106,6 +106,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
         <div className="p-6 sm:p-8 bg-slate-800 border-b border-slate-700/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
           <div>
             <div className="flex items-center gap-4 mb-2">
+              <img src="/logo.png" alt="UFStats Logo" className="w-10 h-10 rounded-xl shadow-lg border border-slate-700/50" />
               <h1 className="text-3xl font-extrabold text-white tracking-tight">
                 Ultimate Stats
               </h1>
