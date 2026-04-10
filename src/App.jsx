@@ -46,9 +46,14 @@ function App() {
     let wakeLock = null;
 
     const requestWakeLock = async () => {
+      if (wakeLock !== null && !wakeLock.released) return;
+
       try {
         if ('wakeLock' in navigator) {
           wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener('release', () => {
+            wakeLock = null;
+          });
         }
       } catch (err) {
         console.warn('Wake Lock error:', err);
@@ -63,9 +68,15 @@ function App() {
 
     requestWakeLock();
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // iOS deeply requires direct user interaction to trigger wake requests
+    document.addEventListener('touchstart', requestWakeLock, { passive: true });
+    document.addEventListener('click', requestWakeLock, { passive: true });
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('touchstart', requestWakeLock);
+      document.removeEventListener('click', requestWakeLock);
       if (wakeLock !== null) {
         wakeLock.release().catch(() => {});
       }
