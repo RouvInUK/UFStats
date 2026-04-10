@@ -31,22 +31,22 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
   }, [activeLineup, selectedPlayer]);
 
   const handleStatRecord = async (statType) => {
-    if (!selectedPlayer) return alert("Select a player first!");
+    if (statType !== 'Opponent Point' && !selectedPlayer) return alert("Select a player first!");
     
     setIsSaving(true);
     setLastSaved(null);
     try {
       const statData = {
-        player: selectedPlayer,
+        player: statType === 'Opponent Point' ? 'Opponent' : selectedPlayer,
         stat: statType,
         timestamp: new Date().toLocaleString(),
         pointNumber: currentPoint,
         gameName: currentGame,
       };
       await recordStatToDB(statData);
-      setLastSaved(`Saved ${statType} for ${selectedPlayer}`);
+      setLastSaved(statType === 'Opponent Point' ? `Saved Opponent Point` : `Saved ${statType} for ${selectedPlayer}`);
       
-      if (statType === 'Point') {
+      if (statType === 'Point' || statType === 'Opponent Point') {
         setIsTrackingActive(false);
       }
     } catch (error) {
@@ -233,8 +233,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
               <div className="flex flex-col sm:flex-row gap-3 mt-4">
                 <button
                   onClick={handleStartNextPoint}
-                  disabled={isSaving || !currentGame}
-                  className="w-full py-3 px-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all shadow-md bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20 shadow-lg"
+                  disabled={isSaving || !currentGame || isTrackingActive}
+                  className={`w-full py-3 px-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all shadow-md ${
+                    isTrackingActive
+                      ? 'bg-emerald-900/40 text-emerald-700/50 cursor-not-allowed border border-emerald-900/50'
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20 shadow-lg'
+                  }`}
                 >
                   ▶ Start Next Point (+1)
                 </button>
@@ -254,46 +258,56 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
             )}
           </div>
 
-          {/* Action Buttons */}
+           {/* Action Buttons */}
           <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-700/50">
-            <button
-              onClick={() => handleStatRecord('Point')}
-              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive}
-              className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-emerald-500 hover:bg-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Point
-            </button>
+            <div className="col-span-2 grid grid-cols-2 gap-4">
+              <button
+                onClick={() => handleStatRecord('Point')}
+                disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
+                className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-emerald-500 hover:bg-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                We Scored!
+              </button>
+              <button
+                onClick={() => handleStatRecord('Opponent Point')}
+                disabled={isSaving || activeLineup.length === 0 || !isTrackingActive}
+                className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-700 hover:bg-rose-600 focus:outline-none focus:ring-4 focus:ring-rose-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(225,29,72,0.2)] hover:shadow-[0_0_30px_rgba(225,29,72,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Opponent Scored
+              </button>
+            </div>
+            
             <button
               onClick={() => handleStatRecord('Pass')}
-              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
               className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-cyan-500 hover:bg-cyan-400 focus:outline-none focus:ring-4 focus:ring-cyan-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(6,182,212,0.2)] hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Pass
             </button>
             <button
               onClick={() => handleStatRecord('Throwaway')}
-              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
               className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-500 hover:bg-rose-400 focus:outline-none focus:ring-4 focus:ring-rose-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(244,63,94,0.2)] hover:shadow-[0_0_30px_rgba(244,63,94,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Throwaway
             </button>
             <button
               onClick={() => handleStatRecord('Drop')}
-              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive}
-              className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-600 hover:bg-rose-500 focus:outline-none focus:ring-4 focus:ring-rose-600/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(225,29,72,0.2)] hover:shadow-[0_0_30px_rgba(225,29,72,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
+              className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-600 hover:bg-rose-500 focus:outline-none focus:ring-4 focus:ring-rose-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(225,29,72,0.2)] hover:shadow-[0_0_30px_rgba(225,29,72,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Drop
             </button>
             <button
               onClick={() => handleStatRecord('Stall Out')}
-              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
               className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-violet-600 hover:bg-violet-500 focus:outline-none focus:ring-4 focus:ring-violet-600/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(124,58,237,0.2)] hover:shadow-[0_0_30px_rgba(124,58,237,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Stall Out
             </button>
             <button
               onClick={() => handleStatRecord('Defence')}
-              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
               className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-orange-500 hover:bg-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_30px_rgba(249,115,22,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Defence
