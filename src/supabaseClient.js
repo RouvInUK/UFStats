@@ -107,6 +107,18 @@ export const fetchStats = async () => {
   return data || [];
 };
 
+export const fetchAllGameNames = async () => {
+  const { data, error } = await supabase
+    .from('stats')
+    .select('game_name')
+    .limit(100000);
+
+  if (error) throw error;
+  if (!data) return [];
+  
+  return [...new Set(data.map(s => s.game_name))].filter(Boolean);
+};
+
 export const fetchActiveGames = async () => {
   // We only need a few columns to derive active games
   const { data, error } = await supabase

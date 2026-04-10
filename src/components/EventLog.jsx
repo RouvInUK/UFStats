@@ -1,22 +1,39 @@
 import { useState, useEffect } from 'react';
-import { fetchGameStats, updateStat, deleteStat } from '../supabaseClient';
+import { fetchGameStats, updateStat, deleteStat, fetchAllGameNames } from '../supabaseClient';
 
 const STAT_TYPES = ['Point', 'Pass', 'Throwaway', 'Drop', 'Stall Out', 'Defence'];
 
 const EventLog = ({ currentGame, onNavigate }) => {
+  const [selectedGame, setSelectedGame] = useState(currentGame);
+  const [allGames, setAllGames] = useState([]);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [savingId, setSavingId] = useState(null);
 
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const names = await fetchAllGameNames();
+        setAllGames(names);
+        if (!selectedGame && names.length > 0) {
+           setSelectedGame(names[names.length - 1]); // Default to latest if no active game
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    init();
+  }, []);
+
   const loadLogs = async () => {
-    if (!currentGame) {
+    if (!selectedGame) {
       setLoading(false);
       return;
     }
     setLoading(true);
     try {
-      const data = await fetchGameStats(currentGame);
+      const data = await fetchGameStats(selectedGame);
       setLogs(data);
     } catch (err) {
       console.error(err);
@@ -28,7 +45,7 @@ const EventLog = ({ currentGame, onNavigate }) => {
 
   useEffect(() => {
     loadLogs();
-  }, [currentGame]);
+  }, [selectedGame]);
 
   const handleUpdate = async (id, newStatType) => {
     setSavingId(id);
@@ -58,10 +75,10 @@ const EventLog = ({ currentGame, onNavigate }) => {
     }
   };
 
-  if (!currentGame) {
+  if (!loading && allGames.length === 0 && !selectedGame) {
     return (
       <div className="flex flex-col items-center justify-center p-4 min-h-screen text-slate-400 bg-slate-900">
-        <h2 className="text-xl font-bold mb-4">No Active Match</h2>
+        <h2 className="text-xl font-bold mb-4">No Games Recorded</h2>
         <p className="mb-6">Please enter a match name on the Dashboard first.</p>
         <button 
           onClick={() => onNavigate('dashboard')}
@@ -79,9 +96,17 @@ const EventLog = ({ currentGame, onNavigate }) => {
         
         {/* Header */}
         <div className="p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-800 border-b border-slate-700/50">
-          <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Game Log</h1>
-            <p className="text-slate-400 text-sm font-medium">Viewing history for {currentGame}</p>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <h1 className="text-2xl font-extrabold text-white tracking-tight shrink-0">Game Log</h1>
+            <select
+              value={selectedGame || ''}
+              onChange={(e) => setSelectedGame(e.target.value)}
+              className="bg-slate-900 border border-slate-600 text-slate-100 rounded-lg px-4 py-2 font-bold outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto shadow-inner"
+            >
+              {allGames.map(game => (
+                <option key={game} value={game}>{game}</option>
+              ))}
+            </select>
           </div>
           <button 
             onClick={() => onNavigate('dashboard')}
@@ -97,7 +122,7 @@ const EventLog = ({ currentGame, onNavigate }) => {
             <p className="text-center text-indigo-400 font-bold tracking-widest my-12 animate-pulse">LOADING LOGS...</p>
           ) : logs.length === 0 ? (
             <div className="text-center py-12 text-slate-500 font-medium bg-slate-900/50 rounded-2xl border border-slate-700/50">
-              No stats recorded yet for {currentGame}.
+              No stats recorded yet for {selectedGame}.
             </div>
           ) : (
             <div className="space-y-3">
