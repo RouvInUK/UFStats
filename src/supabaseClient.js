@@ -148,7 +148,7 @@ export const fetchActiveGames = async () => {
     .filter(([name, info]) => !info.isCompleted)
     .map(([name, info]) => ({ 
       name, 
-      maxPoint: info.maxPointHasGoal ? info.maxPoint + 1 : info.maxPoint 
+      maxPoint: info.maxPoint
     }));
 };
 
