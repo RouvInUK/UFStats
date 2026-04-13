@@ -65,6 +65,12 @@ const LineupSelector = ({ players, setPlayers, onNavigate }) => {
             >
               {isClearing ? 'Clearing...' : 'Clear All'}
             </button>
+            <button 
+              onClick={() => onNavigate('roster')}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-white text-sm font-bold rounded-xl transition-all w-full sm:w-auto text-center shadow-md"
+            >
+              Edit Roster
+            </button>
           </div>
         </div>
 
