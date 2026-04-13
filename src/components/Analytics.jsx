@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { fetchStats } from '../supabaseClient';
 
-const Analytics = ({ onNavigate }) => {
+const Analytics = () => {
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedGames, setSelectedGames] = useState([]);
