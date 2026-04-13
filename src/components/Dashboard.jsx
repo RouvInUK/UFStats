@@ -326,6 +326,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
           
         </div>
       </div>
+      </div>
     </>
   );
 };
