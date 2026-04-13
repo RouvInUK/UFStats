@@ -108,7 +108,7 @@ function App() {
   const activeLineup = players.filter(p => p.is_active).map(p => p.name);
 
   return (
-    <div className="min-h-screen bg-slate-900 selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-900 selection:bg-indigo-500 selection:text-white pb-24">
       {currentView === 'dashboard' && (
         <Dashboard 
           activeLineup={activeLineup} 
@@ -150,8 +150,28 @@ function App() {
           onNavigate={setCurrentView} 
         />
       )}
+
+      {/* Fixed Bottom Navigation Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 flex justify-around items-center px-2 py-3 sm:py-4 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] pb-safe">
+        <button onClick={() => setCurrentView('dashboard')} className={`flex flex-col items-center gap-1.5 w-16 transition-colors ${currentView === 'dashboard' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
+          <span className={`text-xl leading-none transition-transform ${currentView === 'dashboard' ? 'scale-125' : 'scale-100'}`}>🎯</span>
+          <span className="text-[10px] uppercase tracking-wider">Track</span>
+        </button>
+        <button onClick={() => setCurrentView('lineup')} className={`flex flex-col items-center gap-1.5 w-16 transition-colors ${currentView === 'lineup' || currentView === 'roster' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
+          <span className={`text-xl leading-none transition-transform ${currentView === 'lineup' || currentView === 'roster' ? 'scale-125' : 'scale-100'}`}>👕</span>
+          <span className="text-[10px] uppercase tracking-wider">Lineup</span>
+        </button>
+        <button onClick={() => setCurrentView('log')} className={`flex flex-col items-center gap-1.5 w-16 transition-colors ${currentView === 'log' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
+          <span className={`text-xl leading-none transition-transform ${currentView === 'log' ? 'scale-125' : 'scale-100'}`}>📜</span>
+          <span className="text-[10px] uppercase tracking-wider">Log</span>
+        </button>
+        <button onClick={() => setCurrentView('analytics')} className={`flex flex-col items-center gap-1.5 w-16 transition-colors ${currentView === 'analytics' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
+          <span className={`text-xl leading-none transition-transform ${currentView === 'analytics' ? 'scale-125' : 'scale-100'}`}>📊</span>
+          <span className="text-[10px] uppercase tracking-wider">Data</span>
+        </button>
+      </nav>
     </div>
-  )
+  );
 }
 
 export default App;

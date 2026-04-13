@@ -7,6 +7,23 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
   const [lastSaved, setLastSaved] = useState(null);
   const [activeGames, setActiveGames] = useState([]);
   const [lineupRecordedPoint, setLineupRecordedPoint] = useState(null);
+  const [flashType, setFlashType] = useState(null);
+
+  const triggerFeedback = (type) => {
+    setFlashType(type);
+    
+    try {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        if (type === 'success') navigator.vibrate([50, 50, 50]);
+        else if (type === 'error') navigator.vibrate([100, 50, 100]);
+        else navigator.vibrate(40);
+      }
+    } catch (e) {
+      // Ignore haptic errors securely
+    }
+
+    setTimeout(() => setFlashType(null), 250); 
+  };
 
   // Fetch active games on mount
   useEffect(() => {
@@ -48,6 +65,14 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
       
       if (statType === 'Point' || statType === 'Opponent Point') {
         setIsTrackingActive(false);
+      }
+
+      if (statType === 'Point') {
+        triggerFeedback('success');
+      } else if (['Throwaway', 'Drop', 'Stall Out', 'Opponent Point'].includes(statType)) {
+        triggerFeedback('error');
+      } else {
+        triggerFeedback('neutral');
       }
     } catch (error) {
       console.error('Save failed:', error);
@@ -104,7 +129,18 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
   };
 
   return (
-    <div className="flex flex-col items-center p-4 py-8 sm:py-12 min-h-screen">
+    <>
+      {/* Visual Feedback Flash Overlay */}
+      <div 
+        className={`pointer-events-none fixed inset-0 z-[100] transition-colors duration-200 ${
+          flashType === 'success' ? 'bg-emerald-500/20' :
+          flashType === 'error' ? 'bg-rose-600/30' :
+          flashType === 'neutral' ? 'bg-cyan-500/10' :
+          'bg-transparent'
+        }`}
+      />
+      
+      <div className="flex flex-col items-center p-4 py-8 sm:py-12 min-h-screen">
       <div className="w-full max-w-xl bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-slate-700 pb-6">
         
         {/* Header Section */}
@@ -162,33 +198,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end mt-4 sm:mt-0">
-            <button 
-              onClick={() => onNavigate('log')}
-              className="flex-1 sm:flex-none px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/20 text-sm font-bold rounded-xl transition-all shadow-md"
-            >
-              📝 Log
-            </button>
-            <button 
-              onClick={() => onNavigate('analytics')}
-              className="flex-1 sm:flex-none px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20 text-sm font-bold rounded-xl transition-all shadow-md"
-            >
-              📊 Stats
-            </button>
-            <button 
-              onClick={() => onNavigate('roster')}
-              className="flex-1 sm:flex-none px-4 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-white text-sm font-bold rounded-xl transition-all shadow-md"
-            >
-              Roster
-            </button>
-            <button 
-              onClick={() => onNavigate('lineup')}
-              className="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/30"
-            >
-              Lineup
-            </button>
           </div>
-        </div>
 
         {/* Content Section */}
         <div className="p-6 sm:p-8 space-y-8">
@@ -316,7 +326,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
           
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

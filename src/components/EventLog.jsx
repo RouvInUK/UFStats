@@ -108,12 +108,6 @@ const EventLog = ({ currentGame, onNavigate }) => {
               ))}
             </select>
           </div>
-          <button 
-            onClick={() => onNavigate('dashboard')}
-            className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold rounded-xl transition-all shadow-md"
-          >
-            ← Dashboard
-          </button>
         </div>
 
         {/* Content list */}

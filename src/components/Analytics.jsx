@@ -152,12 +152,6 @@ const Analytics = ({ onNavigate }) => {
             <h1 className="text-2xl font-extrabold text-white tracking-tight">Analytics</h1>
             <p className="text-slate-400 text-sm font-medium">Advanced Performance Metrics</p>
           </div>
-          <button 
-            onClick={() => onNavigate('dashboard')}
-            className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold rounded-xl transition-all shadow-md w-full sm:w-auto"
-          >
-            ← Dashboard
-          </button>
         </div>
 
         {/* Multi-Select Filters */}

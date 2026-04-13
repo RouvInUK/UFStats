@@ -65,12 +65,6 @@ const LineupSelector = ({ players, setPlayers, onNavigate }) => {
             >
               {isClearing ? 'Clearing...' : 'Clear All'}
             </button>
-            <button 
-              onClick={() => onNavigate('dashboard')}
-              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl transition-all w-full sm:w-auto text-center shadow-lg shadow-indigo-500/20"
-            >
-              ← Done
-            </button>
           </div>
         </div>
 
