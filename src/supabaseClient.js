@@ -47,20 +47,33 @@ export const recordLineup = async (players, pointNumber, gameName) => {
 
 // --- Roster & Lineup API Helpers ---
 
-export const fetchPlayers = async () => {
+export const fetchAllTeamNames = async () => {
   const { data, error } = await supabase
     .from('players')
-    .select('*')
-    .order('name', { ascending: true });
+    .select('team_name')
+    .limit(100000);
+
+  if (error) throw error;
+  if (!data) return [];
+  
+  return [...new Set(data.map(p => p.team_name))].filter(Boolean);
+};
+
+export const fetchPlayers = async (teamName) => {
+  let query = supabase.from('players').select('*').order('name', { ascending: true });
+  if (teamName) {
+    query = query.eq('team_name', teamName);
+  }
+  const { data, error } = await query;
 
   if (error) throw error;
   return data || [];
 };
 
-export const addPlayer = async (name) => {
+export const addPlayer = async (name, teamName) => {
   const { data, error } = await supabase
     .from('players')
-    .insert([{ name, is_active: false }])
+    .insert([{ name, is_active: false, team_name: teamName || 'Default Team' }])
     .select();
 
   if (error) throw error;
@@ -87,11 +100,12 @@ export const togglePlayerActiveStatus = async (id, currentStatus) => {
   return data[0];
 };
 
-export const clearActiveLineup = async () => {
-  const { error } = await supabase
-    .from('players')
-    .update({ is_active: false })
-    .eq('is_active', true);
+export const clearActiveLineup = async (teamName) => {
+  let query = supabase.from('players').update({ is_active: false }).eq('is_active', true);
+  if (teamName) {
+    query = query.eq('team_name', teamName);
+  }
+  const { error } = await query;
 
   if (error) throw error;
 };

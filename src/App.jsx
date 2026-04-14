@@ -27,19 +27,28 @@ function App() {
     return localStorage.getItem('ufstats_tracking') === 'true';
   });
 
+  const [currentTeam, setCurrentTeam] = useState(() => {
+    return localStorage.getItem('ufstats_team') || 'Default Team';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('ufstats_team', currentTeam);
+  }, [currentTeam]);
+
   useEffect(() => {
     const loadData = async () => {
+      setLoading(true);
       try {
-        const data = await fetchPlayers();
+        const data = await fetchPlayers(currentTeam);
         setPlayers(data);
       } catch (err) {
-        console.error("Failed to load players. Ensure your table exists and RLS is disabled for inserts.", err);
+        console.error("Failed to load players for team.", err);
       } finally {
         setLoading(false);
       }
     };
     loadData();
-  }, []);
+  }, [currentTeam]);
 
   // Screen Wake Lock
   useEffect(() => {
@@ -116,6 +125,7 @@ function App() {
           setCurrentPoint={setCurrentPoint}
           currentGame={currentGame}
           setCurrentGame={setCurrentGame}
+          currentTeam={currentTeam}
           isTrackingActive={isTrackingActive}
           setIsTrackingActive={setIsTrackingActive}
           onNavigate={setCurrentView} 
@@ -123,15 +133,15 @@ function App() {
       )}
 
       {currentView === 'analytics' && (
-        <Analytics 
-          onNavigate={setCurrentView} 
-        />
+        <Analytics />
       )}
       
       {currentView === 'roster' && (
         <RosterSetup 
           players={players} 
           setPlayers={setPlayers}
+          currentTeam={currentTeam}
+          setCurrentTeam={setCurrentTeam}
           onNavigate={setCurrentView} 
         />
       )}
@@ -140,6 +150,7 @@ function App() {
         <LineupSelector 
           players={players} 
           setPlayers={setPlayers}
+          currentTeam={currentTeam}
           onNavigate={setCurrentView} 
         />
       )}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { recordStatToDB, fetchActiveGames, recordLineup } from '../supabaseClient';
 
-const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, setCurrentGame, isTrackingActive, setIsTrackingActive, onNavigate }) => {
+const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, setCurrentGame, currentTeam, isTrackingActive, setIsTrackingActive, onNavigate }) => {
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -149,9 +149,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
             <img src="/logo.png" alt="UFStats Logo" className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl shadow-lg border border-slate-700/50 shrink-0" />
             <div className="flex flex-col w-full">
               <div className="flex flex-wrap items-center justify-between gap-4 mb-2">
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-100 tracking-tight leading-none mt-1">
-                  Ultimate Stats
-                </h1>
+                <div className="flex flex-col">
+                  <span className="text-indigo-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest">{currentTeam}</span>
+                  <h1 className="text-xl sm:text-2xl font-bold text-slate-100 tracking-tight leading-none mt-0.5">
+                    Ultimate Stats
+                  </h1>
+                </div>
                 <div className="flex items-center gap-1 bg-slate-900/80 px-2 py-1 rounded-xl border border-slate-700 shadow-inner">
                   <span className="text-slate-400 text-xs font-bold uppercase tracking-wider pl-2 pr-1">Point</span>
                   <button onClick={() => setCurrentPoint(p => Math.max(0, p - 1))} className="text-slate-500 hover:text-white hover:bg-slate-700 px-2 rounded-lg font-bold transition-colors">-</button>

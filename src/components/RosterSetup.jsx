@@ -1,9 +1,14 @@
-import { useState } from 'react';
-import { addPlayer, removePlayer } from '../supabaseClient';
+import { useState, useEffect } from 'react';
+import { addPlayer, removePlayer, fetchAllTeamNames } from '../supabaseClient';
 
-const RosterSetup = ({ players, setPlayers, onNavigate }) => {
+const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, onNavigate }) => {
   const [newPlayerName, setNewPlayerName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [allTeams, setAllTeams] = useState([]);
+
+  useEffect(() => {
+    fetchAllTeamNames().then(setAllTeams).catch(console.error);
+  }, [players]);
 
   const handleAddPlayer = async (e) => {
     e.preventDefault();
@@ -12,7 +17,7 @@ const RosterSetup = ({ players, setPlayers, onNavigate }) => {
     
     // Check local array quickly
     if (players.some(p => p.name.toLowerCase() === trimmed.toLowerCase())) {
-      return alert("Player already exists!");
+      return alert("Player already exists in this team!");
     }
     if (players.length >= 21) {
       return alert("Maximum 21 players allowed.");
@@ -20,7 +25,7 @@ const RosterSetup = ({ players, setPlayers, onNavigate }) => {
 
     setIsProcessing(true);
     try {
-      const savedPlayer = await addPlayer(trimmed);
+      const savedPlayer = await addPlayer(trimmed, currentTeam);
       if (savedPlayer) {
         setPlayers([...players, savedPlayer]);
       }
@@ -45,21 +50,39 @@ const RosterSetup = ({ players, setPlayers, onNavigate }) => {
     }
   };
 
+  const handleCreateNewTeam = () => {
+    const newTeam = prompt("Enter new team name:");
+    if (newTeam && newTeam.trim()) {
+      setCurrentTeam(newTeam.trim());
+    }
+  };
+
   return (
     <div className="flex flex-col items-center p-4 py-8 sm:py-12 min-h-screen">
       <div className="w-full max-w-xl bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-slate-700 pb-6">
         
         <div className="p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-800 border-b border-slate-700/50">
-          <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Team Roster</h1>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
+            <div className="flex items-center gap-2">
+              <select
+                value={currentTeam}
+                onChange={(e) => setCurrentTeam(e.target.value)}
+                className="bg-slate-900 border border-slate-600 text-white rounded-lg px-3 py-2 font-bold outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner max-w-[200px]"
+              >
+                {[...new Set([...allTeams, currentTeam])].map(team => (
+                  <option key={team} value={team}>{team}</option>
+                ))}
+              </select>
+              <button 
+                onClick={handleCreateNewTeam}
+                className="p-2 px-3 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 rounded-lg transition-all font-bold"
+                title="Create New Team"
+              >
+                +
+              </button>
+            </div>
             <p className="text-slate-400 text-sm font-medium">{players.length} / 21 Players Configured</p>
           </div>
-          <button 
-            onClick={() => onNavigate('dashboard')}
-            className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold rounded-xl transition-all w-full sm:w-auto text-center"
-          >
-            ← Dashboard
-          </button>
         </div>
 
         <div className="p-6 sm:p-8 space-y-6">

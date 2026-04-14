@@ -1,7 +1,7 @@
 import { togglePlayerActiveStatus, clearActiveLineup } from '../supabaseClient';
 import { useState } from 'react';
 
-const LineupSelector = ({ players, setPlayers, onNavigate }) => {
+const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate }) => {
   const [processingId, setProcessingId] = useState(null);
   const [isClearing, setIsClearing] = useState(false);
 
@@ -37,7 +37,7 @@ const LineupSelector = ({ players, setPlayers, onNavigate }) => {
     
     setIsClearing(true);
     try {
-      await clearActiveLineup();
+      await clearActiveLineup(currentTeam);
     } catch (err) {
       alert("Failed to clear lineup in cloud.");
       setPlayers(players); // revert
