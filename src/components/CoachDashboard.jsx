@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { fetchGameStats, fetchAllGameNames } from '../supabaseClient';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ScatterChart, Scatter, ZAxis, Cell, CartesianGrid } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Lock, Zap, Target, AlertTriangle, Presentation, Users, Clock, ChevronDown, Check } from 'lucide-react';
 
 const CoachDashboard = ({ currentGame }) => {
@@ -428,51 +428,7 @@ const CoachDashboard = ({ currentGame }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:gap-8">
-            {/* Scatter Chart */}
-            <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
-              <h3 className="text-lg font-bold text-white flex items-center justify-between mb-6">
-                 <span className="flex items-center gap-2"><Target className="w-5 h-5 text-indigo-400" /> Utility vs Volume Map</span>
-                 <span className="text-xs bg-slate-950 border border-slate-800 px-3 py-1 rounded-lg text-slate-500 font-medium">Radius = Completion %</span>
-              </h3>
-              <div className="h-80 w-full relative">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: -20 }}>
-                    <defs>
-                      <filter id="engineGlow" x="-50%" y="-50%" width="200%" height="200%">
-                        <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#f59e0b" floodOpacity="0.8" />
-                      </filter>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
-                    <XAxis type="number" dataKey="touchesPerPoint" name="Touches/Pt" stroke="#64748b" tick={{fill: '#64748b'}} label={{ value: 'Touches per Point (Workload)', position: 'insideBottom', offset: -10, fill: '#64748b' }} />
-                    <YAxis type="number" dataKey="nis" name="Net Impact" stroke="#64748b" tick={{fill: '#64748b'}} label={{ value: 'Net Impact Score / Pt', angle: -90, position: 'insideLeft', offset: 10, fill: '#64748b' }} />
-                    <ZAxis type="number" dataKey="completion" range={[50, 400]} name="Completion %" />
-                    <Tooltip 
-                      cursor={{strokeDasharray: '3 3'}}
-                      contentStyle={{ backgroundColor: '#020617', borderColor: '#1e293b', borderRadius: '12px' }}
-                      itemStyle={{ fontWeight: 'bold', color: '#cbd5e1' }}
-                      formatter={(value, name, props) => {
-                        if (name === 'Touches/Pt') return [value, 'Touches / Pt'];
-                        if (name === 'Net Impact') return [value, 'NIS'];
-                        if (name === 'Completion %') return [`${value}%`, 'Completion'];
-                        return [value, name];
-                      }}
-                    />
-                    <Scatter name="Handlers" data={playerStats} fill="#8884d8">
-                      {playerStats.map((entry, index) => {
-                        let color = '#3b82f6'; // Cold
-                        if (entry.nis > 1.5) color = '#f59e0b'; // Gold
-                        else if (entry.nis > 0.5) color = '#f43f5e'; // Hot
-                        else if (entry.nis > 0) color = '#8b5cf6'; // Warm
 
-                        return <Cell key={`cell-${index}`} fill={color} filter={entry.tags.includes("The Engine") ? 'url(#engineGlow)' : ''} />;
-                      })}
-                    </Scatter>
-                  </ScatterChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
 
           {/* Master Sortable Analytics Table */}
           <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl overflow-hidden mt-6">
@@ -492,7 +448,7 @@ const CoachDashboard = ({ currentGame }) => {
                       Player {sortField === 'name' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
                     <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('touchesPerPoint')} title="Avg Touches per Point">
-                      Rate {sortField === 'touchesPerPoint' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                      Touches/Pt {sortField === 'touchesPerPoint' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
                     <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('gad')}>
                       G / A / D {sortField === 'gad' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
@@ -519,21 +475,7 @@ const CoachDashboard = ({ currentGame }) => {
                           <div className="flex flex-col gap-1 items-start">
                             <span className="flex items-center gap-2">
                               {p.name}
-                              {p.tags.includes("The Engine") && (
-                                <span className="px-2 py-0.5 bg-amber-500/20 border border-amber-500/50 text-amber-400 text-[9px] uppercase tracking-widest font-black rounded-sm shadow-[0_0_10px_rgba(245,158,11,0.2)]">
-                                  Engine
-                                </span>
-                              )}
                             </span>
-                            {p.tags.filter(t => t !== "The Engine").length > 0 && (
-                              <div className="flex gap-1 flex-wrap">
-                                {p.tags.filter(t => t !== "The Engine").map(t => (
-                                  <span key={t} className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 text-slate-400 text-[8px] uppercase tracking-wider rounded">
-                                    {t}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
                           </div>
                         </td>
                         <td className="p-4 text-center font-mono font-medium text-slate-300">
