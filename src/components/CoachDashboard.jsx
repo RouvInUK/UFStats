@@ -54,6 +54,9 @@ const CoachDashboard = ({ currentGame }) => {
     let totalAssists = 0;
     let totalTurnovers = 0;
     let totalBlocks = 0;
+    let totalThrowaways = 0;
+    let totalDrops = 0;
+    let totalStalls = 0;
     let activeNames = new Set();
     let highestPoint = 0;
 
@@ -129,6 +132,9 @@ const CoachDashboard = ({ currentGame }) => {
       totalAssists += p.assists;
       totalTurnovers += turnovers;
       totalBlocks += p.blocks;
+      totalThrowaways += p.throwaways;
+      totalDrops += p.drops;
+      totalStalls += p.stalls;
 
       const pointsPlayed = Math.max(1, p.pointsPlayedSet.size);
       const touchesPerPoint = p.touches / pointsPlayed;
@@ -182,7 +188,7 @@ const CoachDashboard = ({ currentGame }) => {
       timeline: timelineData,
       activeLineup: Array.from(activeNames),
       score: { us: currentUs, them: currentThem },
-      teamSummary: { totalTouches: teamTouchesCount, totalGoals, totalAssists, totalTurnovers, totalBlocks },
+      teamSummary: { totalTouches: teamTouchesCount, totalGoals, totalAssists, totalTurnovers, totalBlocks, totalThrowaways, totalDrops, totalStalls },
       coachInsight: insight
     };
   }, [stats]);
@@ -399,7 +405,10 @@ const CoachDashboard = ({ currentGame }) => {
               <div className="bg-slate-950/80 rounded-2xl p-4 border border-white/5 flex items-center justify-between">
                 <div>
                   <div className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Total Turnovers</div>
-                  <div className="text-2xl font-black text-rose-500">{teamSummary.totalTurnovers}</div>
+                  <div className="flex items-baseline gap-2">
+                    <div className="text-2xl font-black text-rose-500">{teamSummary.totalTurnovers}</div>
+                    <div className="text-sm font-medium text-slate-500 tracking-tight">({teamSummary.totalThrowaways}T / {teamSummary.totalDrops}D / {teamSummary.totalStalls}S)</div>
+                  </div>
                 </div>
                 <div className="w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500">
                   <AlertTriangle className="w-5 h-5" />
