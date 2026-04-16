@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { fetchGameStats, fetchAllGameNames } from '../supabaseClient';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Lock, Zap, Target, AlertTriangle, Presentation, Users, Clock, ChevronDown, Check } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
+import { Lock, Zap, Target, AlertTriangle, Presentation, Users, Clock, ChevronDown, Check, Activity } from 'lucide-react';
 
 const CoachDashboard = ({ currentGame }) => {
   const [stats, setStats] = useState([]);
@@ -12,6 +12,7 @@ const CoachDashboard = ({ currentGame }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [sortField, setSortField] = useState('nis');
   const [sortDirection, setSortDirection] = useState('desc');
+  const [highlightedPlayerName, setHighlightedPlayerName] = useState(null);
 
   useEffect(() => {
     fetchAllGameNames().then(setAllGames).catch(console.error);
@@ -44,7 +45,7 @@ const CoachDashboard = ({ currentGame }) => {
     );
   };
 
-  const { playerStats, timeline, activeLineup, score, teamSummary, coachInsight } = useMemo(() => {
+  const { playerStats, timeline, activeLineup, score, teamSummary, coachInsight, connectionsMap } = useMemo(() => {
     const playersMap = {};
     const timelineData = [];
     let currentUs = 0;
@@ -60,24 +61,29 @@ const CoachDashboard = ({ currentGame }) => {
     let activeNames = new Set();
     let highestPoint = 0;
 
+    const pointOutcomes = {};
+    const connectionsMap = {};
+
     const ensurePlayer = (name) => {
       if (!playersMap[name]) {
-        playersMap[name] = { name, goals: 0, assists: 0, blocks: 0, throwaways: 0, drops: 0, stalls: 0, touches: 0, passes: 0, usage: 0, pointsPlayedSet: new Set() };
+        playersMap[name] = { name, goals: 0, assists: 0, secondaryAssists: 0, blocks: 0, throwaways: 0, drops: 0, stalls: 0, touches: 0, passes: 0, usage: 0, pointsPlayedSet: new Set() };
       }
       return playersMap[name];
     };
 
-    timelineData.push({ point: 0, Us: 0, Them: 0 });
+    timelineData.push({ point: 0, pointNumber: 0, Us: 0, Them: 0 });
 
     stats.forEach((stat, index) => {
       
       // Track points and timeline
       if (stat.stat_type === 'Point') {
         currentUs += 1;
-        timelineData.push({ point: currentUs + currentThem, Us: currentUs, Them: currentThem });
+        pointOutcomes[stat.point_number] = 'won';
+        timelineData.push({ point: currentUs + currentThem, pointNumber: stat.point_number, Us: currentUs, Them: currentThem });
       } else if (stat.stat_type === 'Opponent Point') {
         currentThem += 1;
-        timelineData.push({ point: currentUs + currentThem, Us: currentUs, Them: currentThem });
+        pointOutcomes[stat.point_number] = 'lost';
+        timelineData.push({ point: currentUs + currentThem, pointNumber: stat.point_number, Us: currentUs, Them: currentThem });
       }
 
       // Track active lineup based on max point
@@ -107,6 +113,20 @@ const CoachDashboard = ({ currentGame }) => {
 
       if (stat.stat_type === 'Point') {
         p.goals += 1;
+        
+        // Track the connection
+        const assister = stats[index - 1];
+        if (assister && assister.point_number === stat.point_number && assister.stat_type === 'Pass') {
+           const pairKey = `${assister.player} → ${stat.player}`;
+           connectionsMap[pairKey] = (connectionsMap[pairKey] || 0) + 1;
+           
+           // Secondary Assist Logic
+           const hockeyAssister = stats[index - 2];
+           if (hockeyAssister && hockeyAssister.point_number === stat.point_number && hockeyAssister.stat_type === 'Pass') {
+              const saPlayer = ensurePlayer(hockeyAssister.player);
+              saPlayer.secondaryAssists += 1;
+           }
+        }
       } else if (stat.stat_type === 'Pass') {
         p.passes += 1;
         // Look ahead for assist
@@ -145,6 +165,12 @@ const CoachDashboard = ({ currentGame }) => {
       
       const nis = ((p.goals * 2) + (p.assists * 1.5) + (p.blocks * 2) + (p.passes * 0.3) - (turnovers * 2)) / pointsPlayed;
 
+      let plusMinus = 0;
+      p.pointsPlayedSet.forEach(ptNum => {
+         if (pointOutcomes[ptNum] === 'won') plusMinus += 1;
+         if (pointOutcomes[ptNum] === 'lost') plusMinus -= 1;
+      });
+
       let tags = [];
       if (touchesPerPoint > 3 && completion >= 90) tags.push("The Engine");
       if (touchesPerPoint < 2 && (p.goals + p.assists) / pointsPlayed > 0.4) tags.push("The Finisher");
@@ -157,6 +183,7 @@ const CoachDashboard = ({ currentGame }) => {
         completion: parseFloat(completion.toFixed(1)),
         nis: parseFloat(nis.toFixed(2)),
         touchesPerPoint: parseFloat(touchesPerPoint.toFixed(1)),
+        plusMinus,
         tags
       };
     }).sort((a, b) => b.touches - a.touches);
@@ -189,7 +216,8 @@ const CoachDashboard = ({ currentGame }) => {
       activeLineup: Array.from(activeNames),
       score: { us: currentUs, them: currentThem },
       teamSummary: { totalTouches: teamTouchesCount, totalGoals, totalAssists, totalTurnovers, totalBlocks, totalThrowaways, totalDrops, totalStalls },
-      coachInsight: insight
+      coachInsight: insight,
+      connectionsMap
     };
   }, [stats]);
 
@@ -245,8 +273,8 @@ const CoachDashboard = ({ currentGame }) => {
 
     // Derived fields combined for sorting G/A/D
     if (sortField === 'gad') {
-       aVal = a.goals + a.assists + a.blocks;
-       bVal = b.goals + b.assists + b.blocks;
+       aVal = a.goals + a.assists + a.secondaryAssists + a.blocks;
+       bVal = b.goals + b.assists + b.secondaryAssists + b.blocks;
     }
 
     if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
@@ -355,6 +383,23 @@ const CoachDashboard = ({ currentGame }) => {
                       contentStyle={{ backgroundColor: '#020617', borderColor: '#1e293b', borderRadius: '12px' }}
                       itemStyle={{ fontWeight: 'bold' }}
                     />
+                    
+                    {/* Add Reference Area Highlights for highlighted player */}
+                    {highlightedPlayerName && (
+                      timeline.map((d, i) => {
+                         const playerObj = playerStats.find(p => p.name === highlightedPlayerName);
+                         if (playerObj && playerObj.pointsPlayedSet.has(d.pointNumber)) {
+                            // Render a reference area from this point to the next
+                            const nextD = timeline[i + 1];
+                            const endPoint = nextD ? nextD.point : d.point + 1; // Approximate right edge
+                            return (
+                               <ReferenceArea key={i} x1={d.point} x2={endPoint} fill="#f8fafc" fillOpacity={0.1} />
+                            )
+                         }
+                         return null;
+                      })
+                    )}
+                    
                     <Area type="stepAfter" dataKey="Us" stroke="#818cf8" strokeWidth={3} fillOpacity={1} fill="url(#colorUs)" />
                     <Area type="stepAfter" dataKey="Them" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorThem)" />
                   </AreaChart>
@@ -424,6 +469,32 @@ const CoachDashboard = ({ currentGame }) => {
       {/* True Impact Analytics Suite */}
       {playerStats.length > 0 && (
         <div className="space-y-6 sm:space-y-8 mt-6">
+          
+          {/* Connection Map UI */}
+          {Object.keys(connectionsMap).length > 0 && (
+            <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-6">
+                <Activity className="w-5 h-5 text-indigo-400" /> Connection Map (Assist Pairs)
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.entries(connectionsMap)
+                  .sort((a, b) => b[1] - a[1])
+                  .slice(0, 6)
+                  .map(([pair, count], index) => (
+                    <div key={pair} className={`p-4 rounded-2xl border ${index === 0 ? 'bg-indigo-500/10 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'bg-slate-950/50 border-white/5'}`}>
+                      <div className="text-xs font-bold uppercase tracking-widest mb-2">
+                        {index === 0 ? <span className="text-indigo-400 flex items-center gap-1"><Zap className="w-3 h-3" /> Deadly Duo</span> : <span className="text-slate-500">Rank #{index + 1}</span>}
+                      </div>
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="font-bold text-slate-200 text-sm truncate">{pair}</span>
+                        <span className="font-black text-xl text-emerald-400 shrink-0">{count}</span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
           {/* Master Sortable Analytics Table */}
           <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl overflow-hidden mt-6">
             <div className="p-6 border-b border-white/10 flex items-center justify-between">
@@ -445,7 +516,7 @@ const CoachDashboard = ({ currentGame }) => {
                       Touches/Pt {sortField === 'touchesPerPoint' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
                     <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('gad')}>
-                      G / A / D {sortField === 'gad' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                      G / A / SA / D {sortField === 'gad' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
                     <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('turnovers')} title="Throwaways / Drops / Stalls">
                       Turnovers {sortField === 'turnovers' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
@@ -463,12 +534,16 @@ const CoachDashboard = ({ currentGame }) => {
                 </thead>
                 <tbody className="text-sm">
                   {sortedPlayers.map((p, i) => {
+                    const isSelected = highlightedPlayerName === p.name;
                     return (
-                      <tr key={p.name} className={`border-b border-white/5 ${i % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-950/30'} hover:bg-slate-800 transition-colors`}>
+                      <tr key={p.name} onClick={() => setHighlightedPlayerName(isSelected ? null : p.name)} className={`border-b border-white/5 cursor-pointer ${isSelected ? 'bg-indigo-500/20' : (i % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-950/30')} hover:bg-slate-800 transition-colors`}>
                         <td className="p-4 font-bold text-slate-200">
                           <div className="flex flex-col gap-1 items-start">
                             <span className="flex items-center gap-2">
                               {p.name}
+                              <span className={`px-1.5 py-0.5 text-[9px] uppercase tracking-widest font-black rounded-sm ${p.plusMinus > 0 ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-400' : p.plusMinus < 0 ? 'bg-rose-500/20 border border-rose-500/50 text-rose-400' : 'bg-slate-500/20 border border-slate-500/50 text-slate-400'}`}>
+                                {p.plusMinus > 0 ? '+' : ''}{p.plusMinus} On/Off
+                              </span>
                             </span>
                           </div>
                         </td>
@@ -477,11 +552,13 @@ const CoachDashboard = ({ currentGame }) => {
                         </td>
                         <td className="p-4 text-center">
                           <div className="flex items-center justify-center gap-1 font-mono font-medium">
-                            <span className="text-emerald-400 w-4">{p.goals}</span>
+                            <span className="text-emerald-400 w-3">{p.goals}</span>
                             <span className="text-slate-600">/</span>
-                            <span className="text-indigo-400 w-4">{p.assists}</span>
+                            <span className="text-indigo-400 w-3">{p.assists}</span>
                             <span className="text-slate-600">/</span>
-                            <span className="text-amber-400 w-4">{p.blocks}</span>
+                            <span className="text-purple-400 w-3" title="Secondary Assists">{p.secondaryAssists}</span>
+                            <span className="text-slate-600">/</span>
+                            <span className="text-amber-400 w-3">{p.blocks}</span>
                           </div>
                         </td>
                         <td className="p-4 text-center">
