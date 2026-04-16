@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { fetchGameStats, fetchAllGameNames } from '../supabaseClient';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ScatterChart, Scatter, ZAxis, Cell, CartesianGrid } from 'recharts';
 import { Lock, Zap, Target, AlertTriangle, Presentation, Users, Clock, ChevronDown, Check } from 'lucide-react';
 
 const CoachDashboard = ({ currentGame }) => {
@@ -42,7 +42,7 @@ const CoachDashboard = ({ currentGame }) => {
     );
   };
 
-  const { playerStats, timeline, activeLineup, score, teamSummary } = useMemo(() => {
+  const { playerStats, timeline, activeLineup, score, teamSummary, coachInsight } = useMemo(() => {
     const playersMap = {};
     const timelineData = [];
     let currentUs = 0;
@@ -57,7 +57,7 @@ const CoachDashboard = ({ currentGame }) => {
 
     const ensurePlayer = (name) => {
       if (!playersMap[name]) {
-        playersMap[name] = { name, goals: 0, assists: 0, blocks: 0, throwaways: 0, drops: 0, stalls: 0, touches: 0, usage: 0 };
+        playersMap[name] = { name, goals: 0, assists: 0, blocks: 0, throwaways: 0, drops: 0, stalls: 0, touches: 0, passes: 0, usage: 0 };
       }
       return playersMap[name];
     };
@@ -95,6 +95,7 @@ const CoachDashboard = ({ currentGame }) => {
       if (stat.stat_type === 'Point') {
         p.goals += 1;
       } else if (stat.stat_type === 'Pass') {
+        p.passes += 1;
         // Look ahead for assist
         const nextStat = stats[index + 1];
         if (nextStat && nextStat.point_number === stat.point_number && nextStat.stat_type === 'Point') {
@@ -111,7 +112,7 @@ const CoachDashboard = ({ currentGame }) => {
       }
     });
 
-    // Calculate usage rates
+    // Calculate usage rates, NIS, and Completion %
     const calculatedPlayerStats = Object.values(playersMap).map(p => {
       const turnovers = p.throwaways + p.drops + p.stalls;
       totalGoals += p.goals;
@@ -119,19 +120,49 @@ const CoachDashboard = ({ currentGame }) => {
       totalTurnovers += turnovers;
       totalBlocks += p.blocks;
 
+      const passAttempts = p.passes + p.throwaways;
+      const completion = passAttempts > 0 ? (p.passes / passAttempts) * 100 : 0;
+      const nis = (p.goals * 1) + (p.assists * 1) + (p.blocks * 1.5) + (p.passes * 0.1) - (turnovers * 1.5);
+
       return {
         ...p,
         usage: teamTouchesCount > 0 ? ((p.touches / teamTouchesCount) * 100).toFixed(1) : 0,
-        turnovers: turnovers
+        turnovers: turnovers,
+        completion: parseFloat(completion.toFixed(1)),
+        nis: parseFloat(nis.toFixed(2))
       };
     }).sort((a, b) => b.touches - a.touches);
+
+    // Generate Coach Insight
+    const sortedByTouches = [...calculatedPlayerStats].sort((a,b) => b.touches - a.touches);
+    const sortedByNis = [...calculatedPlayerStats].sort((a,b) => b.nis - a.nis);
+    let insight = "Not enough data to analyze impact trends.";
+    
+    if (sortedByTouches.length > 0 && teamTouchesCount > 10) {
+      const topToucher = sortedByTouches[0];
+      const topNis = sortedByNis[0];
+      const bottomNis = sortedByNis[sortedByNis.length - 1];
+
+      if (topToucher.name === topNis.name) {
+        insight = `${topToucher.name} is dictating the game flawlessly—leading the team in volume while maintaining the highest Net Impact Score.`;
+      } else if (topToucher.nis < 0) {
+        insight = `Warning: ${topToucher.name} is your primary engine (Highest Touches), but their turnover weight is dragging their Net Impact into the negative.`;
+      } else if (bottomNis.turnovers > 3) {
+        insight = `${bottomNis.name} is struggling with efficiency. Turnovers are heavily punishing their Net Impact Score.`;
+      } else if (topNis.touches < 10 && topNis.touches > 2) {
+        insight = `${topNis.name} is highly surgical—maximizing their Net Impact Score despite low offensive volume.`;
+      } else {
+        insight = `The offense is moving through ${topToucher.name}, but ${topNis.name} is currently the most efficient asset on the field.`;
+      }
+    }
 
     return {
       playerStats: calculatedPlayerStats,
       timeline: timelineData,
       activeLineup: Array.from(activeNames),
       score: { us: currentUs, them: currentThem },
-      teamSummary: { totalTouches: teamTouchesCount, totalGoals, totalAssists, totalTurnovers, totalBlocks }
+      teamSummary: { totalTouches: teamTouchesCount, totalGoals, totalAssists, totalTurnovers, totalBlocks },
+      coachInsight: insight
     };
   }, [stats]);
 
@@ -381,6 +412,113 @@ const CoachDashboard = ({ currentGame }) => {
         </div>
 
       </div>
+
+      {/* True Impact Analytics Suite */}
+      {playerStats.length > 0 && (
+        <div className="space-y-6 sm:space-y-8 mt-6">
+          <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl flex items-center gap-6">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-500/20 flex flex-shrink-0 items-center justify-center text-indigo-400 border border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.15)]">
+              <Presentation className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="text-xs font-bold uppercase tracking-widest text-indigo-400 mb-1 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+                Coach's Neural Insight
+              </div>
+              <p className="text-slate-200 font-medium text-lg leading-relaxed">{coachInsight}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
+            {/* Scatter Chart */}
+            <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
+              <h3 className="text-lg font-bold text-white flex items-center justify-between mb-6">
+                 <span className="flex items-center gap-2"><Target className="w-5 h-5 text-indigo-400" /> Utility vs Volume Map</span>
+                 <span className="text-xs bg-slate-950 border border-slate-800 px-3 py-1 rounded-lg text-slate-500 font-medium">Radius = Completion %</span>
+              </h3>
+              <div className="h-80 w-full relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: -20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
+                    <XAxis type="number" dataKey="touches" name="Touches" stroke="#64748b" tick={{fill: '#64748b'}} label={{ value: 'Touches (Volume)', position: 'insideBottom', offset: -10, fill: '#64748b' }} />
+                    <YAxis type="number" dataKey="nis" name="Net Impact" stroke="#64748b" tick={{fill: '#64748b'}} label={{ value: 'Net Impact Score', angle: -90, position: 'insideLeft', offset: 10, fill: '#64748b' }} />
+                    <ZAxis type="number" dataKey="completion" range={[50, 400]} name="Completion %" />
+                    <Tooltip 
+                      cursor={{strokeDasharray: '3 3'}}
+                      contentStyle={{ backgroundColor: '#020617', borderColor: '#1e293b', borderRadius: '12px' }}
+                      itemStyle={{ fontWeight: 'bold', color: '#cbd5e1' }}
+                      formatter={(value, name, props) => {
+                        if (name === 'Touches') return [value, 'Total Touches'];
+                        if (name === 'Net Impact') return [value, 'NIS'];
+                        if (name === 'Completion %') return [`${value}%`, 'Completion'];
+                        return [value, name];
+                      }}
+                    />
+                    <Scatter name="Handlers" data={playerStats} fill="#8884d8">
+                      {playerStats.map((entry, index) => {
+                        let color = '#3b82f6'; // Cold
+                        if (entry.nis > 10) color = '#f59e0b'; // Gold
+                        else if (entry.nis > 5) color = '#f43f5e'; // Hot
+                        else if (entry.nis > 0) color = '#8b5cf6'; // Warm
+
+                        return <Cell key={`cell-${index}`} fill={color} />;
+                      })}
+                    </Scatter>
+                  </ScatterChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Utility Leaderboard */}
+            <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-white/10">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2"><Lock className="w-5 h-5 text-amber-400" /> True Impact Leaderboard</h3>
+              </div>
+              <div className="overflow-x-auto flex-1">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-950/80 text-slate-400 text-[10px] uppercase tracking-widest">
+                      <th className="p-4 font-bold">Rank</th>
+                      <th className="p-4 font-bold">Player</th>
+                      <th className="p-4 font-bold text-center">Net Impact</th>
+                      <th className="p-4 font-bold text-right">Completion</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-sm">
+                    {[...playerStats].sort((a,b) => b.nis - a.nis).map((p, i) => {
+                      const isEliteHandler = p.touches > 20 && p.completion >= 95;
+                      
+                      return (
+                        <tr key={p.name} className={`border-b border-white/5 ${i % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-950/30'} hover:bg-slate-800 transition-colors`}>
+                          <td className="p-4 font-mono font-bold text-slate-500">#{i + 1}</td>
+                          <td className="p-4 font-bold text-slate-200">
+                            <div className="flex items-center gap-2">
+                              {p.name}
+                              {isEliteHandler && (
+                                <span className="px-2 py-0.5 bg-amber-500/20 border border-amber-500/50 text-amber-400 text-[9px] uppercase tracking-widest font-black rounded-sm shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                                  Elite Engine
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-4 text-center">
+                            <span className={`font-mono font-bold ${p.nis > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{p.nis > 0 ? '+' : ''}{p.nis}</span>
+                          </td>
+                          <td className="p-4 text-right font-mono font-bold text-slate-300">
+                            {p.completion}%
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
