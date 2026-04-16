@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { addPlayer, removePlayer, fetchAllTeamNames } from '../supabaseClient';
 
-const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, onNavigate }) => {
+const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam }) => {
   const [newPlayerName, setNewPlayerName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [allTeams, setAllTeams] = useState([]);
@@ -43,7 +43,7 @@ const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, onNavig
     try {
       await removePlayer(id);
       setPlayers(players.filter(p => p.id !== id));
-    } catch (err) {
+    } catch {
       alert("Failed to remove player from database.");
     } finally {
       setIsProcessing(false);

@@ -22,7 +22,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate }) => {
       if (updatedPlayer) {
         setPlayers(players.map(p => p.id === player.id ? updatedPlayer : p));
       }
-    } catch (err) {
+    } catch {
       alert("Failed to update status in cloud.");
       // Revert optimistic update on failure
       setPlayers(players);
@@ -38,7 +38,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate }) => {
     setIsClearing(true);
     try {
       await clearActiveLineup(currentTeam);
-    } catch (err) {
+    } catch {
       alert("Failed to clear lineup in cloud.");
       setPlayers(players); // revert
     } finally {

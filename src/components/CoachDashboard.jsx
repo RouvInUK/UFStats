@@ -45,7 +45,7 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
     );
   };
 
-  const { playerStats, timeline, activeLineup, score, teamSummary, coachInsight, connectionsMap } = useMemo(() => {
+  const { playerStats, timeline, score, teamSummary, connectionsMap } = useMemo(() => {
     const playersMap = {};
     const timelineData = [];
     let currentUs = 0;

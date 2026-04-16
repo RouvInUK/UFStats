@@ -187,7 +187,7 @@ export const fetchActiveGames = async (teamName) => {
 
   // Filter out completed matches and return map of name to calculated current Point
   return Object.entries(gameStatus)
-    .filter(([name, info]) => !info.isCompleted)
+    .filter(([, info]) => !info.isCompleted)
     .map(([name, info]) => ({ 
       name, 
       maxPoint: info.maxPoint

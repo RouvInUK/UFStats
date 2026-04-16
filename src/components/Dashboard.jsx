@@ -17,7 +17,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
         else if (type === 'error') navigator.vibrate([100, 50, 100]);
         else navigator.vibrate(40);
       }
-    } catch (e) {
+    } catch {
       // Ignore haptic errors securely
     }
 
@@ -116,8 +116,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
           gameName: currentGame,
           gameType: gameType,
           teamName: currentTeam
-        };
-        await recordStatToDB(statData);
+        });
         setLastSaved(`Closed ${currentGame}!`);
         setCurrentGame('');
         setCurrentPoint(0);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchGameStats, updateStat, deleteStat, fetchAllGameNames } from '../supabaseClient';
 
 const STAT_TYPES = ['Point', 'Pass', 'Throwaway', 'Drop', 'Stall Out', 'Defence'];
@@ -24,9 +24,9 @@ const EventLog = ({ currentGame, onNavigate }) => {
       }
     };
     init();
-  }, []);
+  }, [selectedGame]);
 
-  const loadLogs = async () => {
+  const loadLogs = useCallback(async () => {
     if (!selectedGame) {
       setLoading(false);
       return;
@@ -41,11 +41,11 @@ const EventLog = ({ currentGame, onNavigate }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedGame]);
 
   useEffect(() => {
     loadLogs();
-  }, [selectedGame]);
+  }, [selectedGame, loadLogs]);
 
   const handleUpdate = async (id, newStatType) => {
     setSavingId(id);
