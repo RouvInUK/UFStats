@@ -35,7 +35,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
     if (matchedGame && matchedGame.maxPoint) {
       setCurrentPoint(matchedGame.maxPoint);
     }
-  }, [currentGame, activeGames]);
+  }, [currentGame, activeGames, setCurrentPoint]);
 
   // Auto-select first active player if none selected and lineup exists
   useEffect(() => {
