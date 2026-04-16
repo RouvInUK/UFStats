@@ -60,6 +60,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
         pointNumber: currentPoint,
         gameName: currentGame,
         gameType: gameType,
+        teamName: currentTeam,
       };
       await recordStatToDB(statData);
       setLastSaved(statType === 'Opponent Point' ? `Saved Opponent Point` : `Saved ${statType} for ${selectedPlayer}`);
@@ -91,7 +92,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
     setLastSaved(null);
     try {
       const nextPoint = currentPoint + 1;
-      await recordLineup(activeLineup, nextPoint, currentGame, gameType);
+      await recordLineup(activeLineup, nextPoint, currentGame, gameType, currentTeam);
       setCurrentPoint(nextPoint);
       setLineupRecordedPoint(nextPoint);
       setIsTrackingActive(true);
@@ -115,7 +116,10 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
           timestamp: new Date().toLocaleString(),
           pointNumber: currentPoint,
           gameName: currentGame,
-        });
+          gameType: gameType,
+          teamName: currentTeam
+        };
+        await recordStatToDB(statData);
         setLastSaved(`Closed ${currentGame}!`);
         setCurrentGame('');
         setCurrentPoint(0);
@@ -126,6 +130,31 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
       } finally {
         setIsSaving(false);
       }
+    }
+  };
+
+  const handleSystemEvent = async (type) => {
+    if (!currentGame) return alert("Enter a game name first.");
+    setIsSaving(true);
+    setLastSaved(null);
+    try {
+      const statData = {
+        player: 'System',
+        stat: type,
+        timestamp: new Date().toLocaleString(),
+        pointNumber: currentPoint,
+        gameName: currentGame,
+        gameType: gameType,
+        teamName: currentTeam
+      };
+      await recordStatToDB(statData);
+      setLastSaved(`Logged: ${type}`);
+      triggerFeedback('success');
+    } catch (error) {
+      console.error('Save failed:', error);
+      alert('Failed to log system event.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -177,6 +206,31 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
                   className={`flex-1 py-1 px-4 transition-colors ${gameType === 'grass' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
                 >
                   🌿 7v7 Grass
+                </button>
+              </div>
+              <div className="flex bg-slate-900 border border-slate-700/50 rounded-xl overflow-hidden shadow-inner font-bold w-full text-xs sm:text-sm">
+                <button
+                  onClick={() => handleSystemEvent('Start Offense')}
+                  disabled={isSaving || !currentGame}
+                  className="flex-1 py-1 px-1 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+                >
+                  Start (O)
+                </button>
+                <div className="w-[1px] bg-slate-800"></div>
+                <button
+                  onClick={() => handleSystemEvent('Start Defense')}
+                  disabled={isSaving || !currentGame}
+                  className="flex-1 py-1 px-1 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+                >
+                  Start (D)
+                </button>
+                <div className="w-[1px] bg-slate-800"></div>
+                <button
+                  onClick={() => handleSystemEvent('Half Time')}
+                  disabled={isSaving || !currentGame}
+                  className="flex-1 py-1 px-1 text-amber-500 hover:text-amber-400 hover:bg-slate-800 transition-colors disabled:opacity-50 whitespace-nowrap"
+                >
+                  Half Time
                 </button>
               </div>
               <div className="flex items-center gap-2 w-full">

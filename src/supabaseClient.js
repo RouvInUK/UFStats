@@ -6,7 +6,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export const recordStatToDB = async (statData) => {
-  const { player, stat, pointNumber, gameName, gameType } = statData;
+  const { player, stat, pointNumber, gameName, gameType, teamName } = statData;
 
   const { data, error } = await supabase
     .from('stats')
@@ -16,7 +16,8 @@ export const recordStatToDB = async (statData) => {
         stat_type: stat,
         point_number: pointNumber,
         game_name: gameName || 'Unnamed Game',
-        game_type: gameType || 'grass'
+        game_type: gameType || 'grass',
+        team_name: teamName || 'Default Team'
       }
     ]);
 
@@ -26,7 +27,7 @@ export const recordStatToDB = async (statData) => {
   return data;
 };
 
-export const recordLineup = async (players, pointNumber, gameName, gameType) => {
+export const recordLineup = async (players, pointNumber, gameName, gameType, teamName) => {
   if (!players || players.length === 0) return;
   
   const insertData = players.map(player => ({
@@ -34,7 +35,8 @@ export const recordLineup = async (players, pointNumber, gameName, gameType) => 
     stat_type: 'Lineup',
     point_number: pointNumber,
     game_name: gameName || 'Unnamed Game',
-    game_type: gameType || 'grass'
+    game_type: gameType || 'grass',
+    team_name: teamName || 'Default Team'
   }));
 
   const { data, error } = await supabase
@@ -123,11 +125,17 @@ export const fetchStats = async () => {
   return data || [];
 };
 
-export const fetchAllGameNames = async () => {
-  const { data, error } = await supabase
+export const fetchAllGameNames = async (teamName) => {
+  let query = supabase
     .from('stats')
     .select('game_name')
     .limit(100000);
+
+  if (teamName) {
+    query = query.eq('team_name', teamName);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   if (!data) return [];
@@ -135,12 +143,18 @@ export const fetchAllGameNames = async () => {
   return [...new Set(data.map(s => s.game_name))].filter(Boolean);
 };
 
-export const fetchActiveGames = async () => {
+export const fetchActiveGames = async (teamName) => {
   // We only need a few columns to derive active games
-  const { data, error } = await supabase
+  let query = supabase
     .from('stats')
     .select('game_name, stat_type, point_number')
     .limit(100000);
+
+  if (teamName) {
+    query = query.eq('team_name', teamName);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   if (!data) return [];

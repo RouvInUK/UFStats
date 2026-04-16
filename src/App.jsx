@@ -183,6 +183,7 @@ function App() {
       {currentView === 'coach' && (
         <CoachDashboard 
           currentGame={currentGame}
+          currentTeam={currentTeam}
         />
       )}
 

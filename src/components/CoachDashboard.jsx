@@ -3,7 +3,7 @@ import { fetchGameStats, fetchAllGameNames } from '../supabaseClient';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
 import { Lock, Zap, Target, AlertTriangle, Presentation, Users, Clock, ChevronDown, Check, Activity } from 'lucide-react';
 
-const CoachDashboard = ({ currentGame }) => {
+const CoachDashboard = ({ currentGame, currentTeam }) => {
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [visualGameType, setVisualGameType] = useState('beach');
@@ -15,8 +15,8 @@ const CoachDashboard = ({ currentGame }) => {
   const [highlightedPlayerName, setHighlightedPlayerName] = useState(null);
 
   useEffect(() => {
-    fetchAllGameNames().then(setAllGames).catch(console.error);
-  }, []);
+    fetchAllGameNames(currentTeam).then(setAllGames).catch(console.error);
+  }, [currentTeam]);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -66,24 +66,41 @@ const CoachDashboard = ({ currentGame }) => {
 
     const ensurePlayer = (name) => {
       if (!playersMap[name]) {
-        playersMap[name] = { name, goals: 0, assists: 0, secondaryAssists: 0, blocks: 0, throwaways: 0, drops: 0, stalls: 0, touches: 0, passes: 0, usage: 0, pointsPlayedSet: new Set() };
+        playersMap[name] = { name, goals: 0, assists: 0, secondaryAssists: 0, blocks: 0, throwaways: 0, drops: 0, stalls: 0, touches: 0, passes: 0, usage: 0, pointsPlayedSet: new Set(), holdsPlayed: 0, holdsWon: 0, breaksPlayed: 0, breaksWon: 0 };
       }
       return playersMap[name];
     };
+
+    const pointODState = {};
+    let currentLineState = 'O';
 
     timelineData.push({ point: 0, pointNumber: 0, Us: 0, Them: 0 });
 
     stats.forEach((stat, index) => {
       
+      // Track O/D State Initializations
+      if (stat.stat_type === 'Start Offense') currentLineState = 'O';
+      if (stat.stat_type === 'Start Defense') currentLineState = 'D';
+      if (stat.stat_type === 'Half Time') {
+        currentLineState = currentLineState === 'O' ? 'D' : 'O';
+      }
+
+      const isLineupOrScore = stat.stat_type === 'Lineup' || stat.stat_type === 'Point' || stat.stat_type === 'Opponent Point';
+      if (isLineupOrScore && !pointODState[stat.point_number]) {
+          pointODState[stat.point_number] = currentLineState;
+      }
+
       // Track points and timeline
       if (stat.stat_type === 'Point') {
         currentUs += 1;
         pointOutcomes[stat.point_number] = 'won';
         timelineData.push({ point: currentUs + currentThem, pointNumber: stat.point_number, Us: currentUs, Them: currentThem });
+        currentLineState = 'D'; // Scored, now pull on D
       } else if (stat.stat_type === 'Opponent Point') {
         currentThem += 1;
         pointOutcomes[stat.point_number] = 'lost';
         timelineData.push({ point: currentUs + currentThem, pointNumber: stat.point_number, Us: currentUs, Them: currentThem });
+        currentLineState = 'O'; // Got scored on, now receive on O
       }
 
       // Track active lineup based on max point
@@ -145,7 +162,21 @@ const CoachDashboard = ({ currentGame }) => {
       }
     });
 
-    // Calculate usage rates, NIS, Tags, and Completion %
+    let globalHoldsPlayed = 0; let globalHoldsWon = 0;
+    let globalBreaksPlayed = 0; let globalBreaksWon = 0;
+
+    Object.entries(pointOutcomes).forEach(([ptStr, outcome]) => {
+       const ptNum = parseInt(ptStr, 10);
+       if (pointODState[ptNum] === 'O') {
+          globalHoldsPlayed++;
+          if (outcome === 'won') globalHoldsWon++;
+       } else {
+          globalBreaksPlayed++;
+          if (outcome === 'won') globalBreaksWon++;
+       }
+    });
+
+    // Calculate usage rates, NIS, Tags, Completion %, and System Impact
     const calculatedPlayerStats = Object.values(playersMap).map(p => {
       const turnovers = p.throwaways + p.drops + p.stalls;
       totalGoals += p.goals;
@@ -167,9 +198,32 @@ const CoachDashboard = ({ currentGame }) => {
 
       let plusMinus = 0;
       p.pointsPlayedSet.forEach(ptNum => {
-         if (pointOutcomes[ptNum] === 'won') plusMinus += 1;
-         if (pointOutcomes[ptNum] === 'lost') plusMinus -= 1;
+         const outcome = pointOutcomes[ptNum];
+         if (outcome === 'won') plusMinus += 1;
+         if (outcome === 'lost') plusMinus -= 1;
+
+         if (pointODState[ptNum] === 'O') {
+             p.holdsPlayed += 1;
+             if (outcome === 'won') p.holdsWon += 1;
+         } else {
+             p.breaksPlayed += 1;
+             if (outcome === 'won') p.breaksWon += 1;
+         }
       });
+
+      const sOn = (p.holdsPlayed + p.breaksPlayed) > 0 
+           ? ((p.holdsWon + p.breaksWon) / (p.holdsPlayed + p.breaksPlayed)) * 100 : 0;
+           
+      const offHoldsPlayed = globalHoldsPlayed - p.holdsPlayed;
+      const offBreaksPlayed = globalBreaksPlayed - p.breaksPlayed;
+      const offHoldsWon = globalHoldsWon - p.holdsWon;
+      const offBreaksWon = globalBreaksWon - p.breaksWon;
+      
+      const sOff = (offHoldsPlayed + offBreaksPlayed) > 0 
+           ? ((offHoldsWon + offBreaksWon) / (offHoldsPlayed + offBreaksPlayed)) * 100 : 0;
+           
+      // If team has 0 points off, neutral offset
+      const systemImpact = (offHoldsPlayed + offBreaksPlayed) > 0 ? parseFloat((sOn - sOff).toFixed(1)) : 0;
 
       let tags = [];
       if (touchesPerPoint > 3 && completion >= 90) tags.push("The Engine");
@@ -184,6 +238,7 @@ const CoachDashboard = ({ currentGame }) => {
         nis: parseFloat(nis.toFixed(2)),
         touchesPerPoint: parseFloat(touchesPerPoint.toFixed(1)),
         plusMinus,
+        systemImpact,
         tags
       };
     }).sort((a, b) => b.touches - a.touches);
@@ -192,10 +247,13 @@ const CoachDashboard = ({ currentGame }) => {
     const engines = calculatedPlayerStats.filter(p => p.tags.includes("The Engine"));
     const finishers = calculatedPlayerStats.filter(p => p.tags.includes("The Finisher"));
     const sortedByTouches = [...calculatedPlayerStats].sort((a,b) => b.touches - a.touches);
+    const highestImpactPlayer = [...calculatedPlayerStats].sort((a,b) => b.systemImpact - a.systemImpact)[0];
     
     let insight = "Not enough data to analyze impact trends.";
     
-    if (engines.length > 0 && finishers.length > 0) {
+    if (highestImpactPlayer && highestImpactPlayer.systemImpact > 10 && highestImpactPlayer.touchesPerPoint <= 2) {
+       insight = `Despite low traditional stats, ${highestImpactPlayer.name} has a massive +${highestImpactPlayer.systemImpact}% System Impact. Their structural positioning allows the team to drastically increase scoring efficiency when they step on the field.`;
+    } else if (engines.length > 0 && finishers.length > 0) {
       insight = `${engines[0].name} is averaging ${engines[0].touchesPerPoint} touches per point (The Engine), providing absolute foundational stability for ${finishers[0].name} (The Finisher) to attack.`;
     } else if (engines.length > 0) {
       insight = `${engines[0].name} is effectively running the entire offense as The Engine, boasting a ${engines[0].completion}% completion rate over high volume.`;
@@ -524,6 +582,9 @@ const CoachDashboard = ({ currentGame }) => {
                     <th className="p-4 font-bold text-right hover:text-white transition-colors" onClick={() => handleSort('completion')} title="Pass Completion %">
                       Comp % {sortField === 'completion' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
+                    <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('systemImpact')} title="The % change in team scoring efficiency when this player is on the field. Corrects for O/D starting bias.">
+                      System Impact % {sortField === 'systemImpact' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                    </th>
                     <th className="p-4 font-bold text-right hover:text-white transition-colors" onClick={() => handleSort('usage')} title="Share of Team Touches">
                       Usage {sortField === 'usage' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
@@ -569,6 +630,27 @@ const CoachDashboard = ({ currentGame }) => {
                         </td>
                         <td className="p-4 text-right font-mono font-bold text-slate-300">
                           {p.completion}%
+                        </td>
+                        <td className="p-4 align-middle group relative min-w-[120px]">
+                          <div className="flex items-center justify-center w-full relative h-[18px]">
+                             {/* Center line */}
+                             <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-white/20 z-10" />
+                             {/* Negative bar (moves left from center) */}
+                             <div className="w-1/2 flex justify-end h-full">
+                                {p.systemImpact < 0 && (
+                                   <div className="bg-rose-500/80 h-full rounded-l-sm" style={{ width: `${Math.min(100, Math.abs(p.systemImpact))}%` }} />
+                                )}
+                             </div>
+                             {/* Positive bar (moves right from center) */}
+                             <div className="w-1/2 flex justify-start h-full">
+                                {p.systemImpact > 0 && (
+                                   <div className="bg-emerald-500/80 h-full rounded-r-sm" style={{ width: `${Math.min(100, p.systemImpact)}%` }} />
+                                )}
+                             </div>
+                             <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white dropshadow-md z-20 pointer-events-none">
+                                {p.systemImpact > 0 ? '+' : ''}{p.systemImpact}%
+                             </span>
+                          </div>
                         </td>
                         <td className="p-4 text-right font-mono font-bold text-slate-500">
                           {p.usage}%
