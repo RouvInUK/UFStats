@@ -180,13 +180,23 @@ export const fetchActiveGames = async () => {
     }));
 };
 
-export const fetchGameStats = async (gameName) => {
-  const { data, error } = await supabase
+export const fetchGameStats = async (gameNames) => {
+  const isArray = Array.isArray(gameNames);
+  if (isArray && gameNames.length === 0) return [];
+
+  let query = supabase
     .from('stats')
     .select('*')
     .limit(100000)
-    .eq('game_name', gameName)
     .order('created_at', { ascending: false });
+
+  if (isArray) {
+    query = query.in('game_name', gameNames);
+  } else {
+    query = query.eq('game_name', gameNames);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data || [];

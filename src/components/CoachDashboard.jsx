@@ -1,21 +1,29 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { fetchGameStats } from '../supabaseClient';
+import { fetchGameStats, fetchAllGameNames } from '../supabaseClient';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Lock, Zap, Target, AlertTriangle, Presentation, Users, Clock } from 'lucide-react';
+import { Lock, Zap, Target, AlertTriangle, Presentation, Users, Clock, ChevronDown, Check } from 'lucide-react';
 
 const CoachDashboard = ({ currentGame }) => {
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedGames, setSelectedGames] = useState(currentGame ? [currentGame] : []);
+  const [allGames, setAllGames] = useState([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    fetchAllGameNames().then(setAllGames).catch(console.error);
+  }, []);
 
   useEffect(() => {
     const loadStats = async () => {
-      if (!currentGame) {
+      if (selectedGames.length === 0) {
+        setStats([]);
         setLoading(false);
         return;
       }
       setLoading(true);
       try {
-        const rawStats = await fetchGameStats(currentGame);
+        const rawStats = await fetchGameStats(selectedGames);
         // fetchGameStats returns desc, we want chronological for the timeline
         setStats(rawStats.reverse());
       } catch (err) {
@@ -25,7 +33,13 @@ const CoachDashboard = ({ currentGame }) => {
       }
     };
     loadStats();
-  }, [currentGame]);
+  }, [selectedGames]);
+
+  const toggleGameSelection = (game) => {
+    setSelectedGames(prev => 
+      prev.includes(game) ? prev.filter(g => g !== game) : [...prev, game]
+    );
+  };
 
   const { playerStats, timeline, activeLineup, gameType, score } = useMemo(() => {
     const playersMap = {};
@@ -110,33 +124,88 @@ const CoachDashboard = ({ currentGame }) => {
     };
   }, [stats]);
 
-  if (!currentGame) {
+  if (selectedGames.length === 0) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 pb-32">
         <Presentation className="w-16 h-16 text-indigo-500/50 mb-4" />
-        <h2 className="text-2xl font-black text-white tracking-widest uppercase mb-2">Coach Dashboard</h2>
-        <p className="text-slate-400 font-medium">Please select an active match in tracking to view the dashboard.</p>
+        <h2 className="text-2xl font-black text-white tracking-widest uppercase mb-6">Coach Dashboard</h2>
+        
+        <div className="relative w-full max-w-sm">
+          <button 
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="w-full flex items-center justify-between px-6 py-4 bg-slate-800 rounded-2xl border border-slate-700 text-left transition-all hover:bg-slate-700"
+          >
+            <span className="font-bold text-slate-200">Select Matches to Analyze</span>
+            <ChevronDown className="w-5 h-5 text-slate-400" />
+          </button>
+          
+          {isDropdownOpen && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-2xl shadow-xl overflow-hidden z-50 max-h-64 overflow-y-auto">
+              {allGames.map(game => (
+                <div 
+                  key={game} 
+                  onClick={() => toggleGameSelection(game)}
+                  className="flex items-center justify-between px-6 py-3 cursor-pointer hover:bg-slate-700 transition-colors border-b border-slate-700/50 last:border-0 text-slate-200 font-medium"
+                >
+                  {game}
+                  {selectedGames.includes(game) && <Check className="w-5 h-5 text-indigo-500" />}
+                </div>
+              ))}
+              {allGames.length === 0 && <div className="p-4 text-center text-slate-500 text-sm">No games logged yet.</div>}
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
   if (loading) {
-    return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-indigo-400 font-bold">LOADING DATA...</div>;
+    return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-indigo-400 font-bold tracking-widest text-lg animate-pulse">SYNCING DATABASES...</div>;
   }
+
+  const isMultiGame = selectedGames.length > 1;
 
   return (
     <div className="min-h-screen bg-slate-950 p-4 sm:p-8 pb-32 space-y-6 sm:space-y-8 max-w-7xl mx-auto font-sans">
       
-      {/* Live Header */}
+      {/* Live Header / Selector Panel */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
-        <div>
-          <h1 className="text-3xl font-black text-white tracking-tight uppercase">{currentGame}</h1>
-          <div className="flex items-center gap-3 mt-2">
-            <span className={`px-3 py-1 font-bold text-xs uppercase tracking-widest rounded-full ${gameType === 'beach' ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}`}>
-              {gameType === 'beach' ? '5v5 Beach' : '7v7 Grass'}
-            </span>
-            <span className="flex items-center gap-1 text-slate-400 text-sm font-medium">
-              <Clock className="w-4 h-4" /> Live Data
+        <div className="w-full sm:w-auto relative group">
+          <button 
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="flex items-center gap-2 group-hover:opacity-80 transition-opacity"
+          >
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase">
+              {isMultiGame ? 'Aggregate Analysis' : selectedGames[0]}
+            </h1>
+            <ChevronDown className="w-6 h-6 text-indigo-400 bg-indigo-500/10 rounded-full p-1" />
+          </button>
+          
+          {isDropdownOpen && (
+            <div className="absolute top-full left-0 mt-4 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-50 max-h-64 overflow-y-auto">
+              <div className="p-3 border-b border-slate-800 text-xs font-bold text-slate-400 tracking-wider">SELECT MATCHES</div>
+              {allGames.map(game => (
+                <div 
+                  key={game} 
+                  onClick={() => toggleGameSelection(game)}
+                  className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-800 transition-colors border-b border-slate-800/50 last:border-0 text-slate-200 text-sm font-medium"
+                >
+                  <span className="truncate">{game}</span>
+                  {selectedGames.includes(game) && <Check className="w-4 h-4 text-indigo-500 shrink-0" />}
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <div className="flex flex-wrap items-center gap-3 mt-2">
+            {!isMultiGame && (
+              <span className={`px-3 py-1 font-bold text-xs uppercase tracking-widest rounded-full ${gameType === 'beach' ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}`}>
+                {gameType === 'beach' ? '5v5 Beach' : '7v7 Grass'}
+              </span>
+            )}
+            <span className="flex items-center gap-1 text-slate-400 text-sm font-medium bg-slate-800/50 px-3 py-1 rounded-full">
+              <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+              {selectedGames.length} Game{selectedGames.length !== 1 ? 's' : ''} Mode
             </span>
           </div>
         </div>
@@ -158,33 +227,35 @@ const CoachDashboard = ({ currentGame }) => {
         {/* Main Content Area (Left 2 columns) */}
         <div className="col-span-1 lg:col-span-2 space-y-6 sm:space-y-8">
           
-          {/* Active Lineup */}
-          <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2"><Users className="w-5 h-5 text-indigo-400" /> On-Field Personnel</h3>
-            </div>
-            {activeLineup.length === 0 ? (
-              <div className="p-6 text-center text-slate-500 font-medium bg-slate-950/50 rounded-2xl border border-white/5">No active players</div>
-            ) : (
-              <div className={`grid gap-4 ${gameType === 'beach' ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-7'}`}>
-                {activeLineup.map(player => {
-                  const pStat = playerStats.find(p => p.name === player) || { usage: 0, goals: 0, assists: 0 };
-                  const isHighUsage = parseFloat(pStat.usage) > 15;
-                  
-                  return (
-                    <div key={player} className="flex flex-col items-center p-4 bg-slate-950/80 border border-white/5 rounded-2xl text-center shadow-md relative overflow-hidden group">
-                      {isHighUsage && <div className="absolute inset-0 bg-indigo-500/10 blur-xl"></div>}
-                      <div className={`w-12 h-12 rounded-full mb-3 flex items-center justify-center text-lg font-bold shadow-inner border-2 ${isHighUsage ? 'bg-indigo-500/20 text-indigo-400 border-indigo-400/50' : 'bg-slate-800 text-slate-300 border-slate-700'}`}>
-                        {player.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="text-slate-200 font-bold text-sm truncate w-full mb-1">{player}</span>
-                      <span className="text-slate-500 text-[10px] uppercase tracking-wider font-bold">Usage: <span className={isHighUsage ? 'text-indigo-400' : 'text-slate-400'}>{pStat.usage}%</span></span>
-                    </div>
-                  );
-                })}
+          {/* Active Lineup Area */}
+          {!isMultiGame && (
+            <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2"><Users className="w-5 h-5 text-indigo-400" /> On-Field Personnel</h3>
               </div>
-            )}
-          </div>
+              {activeLineup.length === 0 ? (
+                <div className="p-6 text-center text-slate-500 font-medium bg-slate-950/50 rounded-2xl border border-white/5">No active players</div>
+              ) : (
+                <div className={`grid gap-4 ${gameType === 'beach' ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-7'}`}>
+                  {activeLineup.map(player => {
+                    const pStat = playerStats.find(p => p.name === player) || { usage: 0, goals: 0, assists: 0 };
+                    const isHighUsage = parseFloat(pStat.usage) > 15;
+                    
+                    return (
+                      <div key={player} className="flex flex-col items-center p-4 bg-slate-950/80 border border-white/5 rounded-2xl text-center shadow-md relative overflow-hidden group">
+                        {isHighUsage && <div className="absolute inset-0 bg-indigo-500/10 blur-xl"></div>}
+                        <div className={`w-12 h-12 rounded-full mb-3 flex items-center justify-center text-lg font-bold shadow-inner border-2 ${isHighUsage ? 'bg-indigo-500/20 text-indigo-400 border-indigo-400/50' : 'bg-slate-800 text-slate-300 border-slate-700'}`}>
+                          {player.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="text-slate-200 font-bold text-sm truncate w-full mb-1">{player}</span>
+                        <span className="text-slate-500 text-[10px] uppercase tracking-wider font-bold">Usage: <span className={isHighUsage ? 'text-indigo-400' : 'text-slate-400'}>{pStat.usage}%</span></span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Performance Table */}
           <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl overflow-hidden">
@@ -237,7 +308,12 @@ const CoachDashboard = ({ currentGame }) => {
 
           {/* Pulse Chart */}
           <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-6"><Zap className="w-5 h-5 text-amber-400" /> Match Pulse</h3>
+            <h3 className="text-lg font-bold text-white flex items-center justify-between mb-6">
+              <span className="flex items-center gap-2"><Zap className="w-5 h-5 text-amber-400" /> {isMultiGame ? 'Cumulative Tournament Pulse' : 'Match Pulse'}</span>
+              <span className="text-xs bg-slate-950 border border-slate-800 px-3 py-1 rounded-lg text-slate-500 font-medium text-right">
+                {isMultiGame ? 'Across all selected games sequentially' : 'Live Score Differential'}
+              </span>
+            </h3>
             <div className="h-64 w-full">
               {timeline.length > 1 ? (
                 <ResponsiveContainer width="100%" height="100%">
