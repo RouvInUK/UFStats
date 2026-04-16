@@ -66,7 +66,11 @@ export const fetchAllTeamNames = async () => {
 export const fetchPlayers = async (teamName) => {
   let query = supabase.from('players').select('*').order('name', { ascending: true });
   if (teamName) {
-    query = query.eq('team_name', teamName);
+    if (teamName === 'Default Team') {
+      query = query.or('team_name.eq.Default Team,team_name.is.null');
+    } else {
+      query = query.eq('team_name', teamName);
+    }
   }
   const { data, error } = await query;
 
@@ -107,7 +111,11 @@ export const togglePlayerActiveStatus = async (id, currentStatus) => {
 export const clearActiveLineup = async (teamName) => {
   let query = supabase.from('players').update({ is_active: false }).eq('is_active', true);
   if (teamName) {
-    query = query.eq('team_name', teamName);
+    if (teamName === 'Default Team') {
+      query = query.or('team_name.eq.Default Team,team_name.is.null');
+    } else {
+      query = query.eq('team_name', teamName);
+    }
   }
   const { error } = await query;
 
@@ -132,7 +140,11 @@ export const fetchAllGameNames = async (teamName) => {
     .limit(100000);
 
   if (teamName) {
-    query = query.eq('team_name', teamName);
+    if (teamName === 'Default Team') {
+      query = query.or('team_name.eq.Default Team,team_name.is.null');
+    } else {
+      query = query.eq('team_name', teamName);
+    }
   }
 
   const { data, error } = await query;
@@ -151,7 +163,11 @@ export const fetchActiveGames = async (teamName) => {
     .limit(100000);
 
   if (teamName) {
-    query = query.eq('team_name', teamName);
+    if (teamName === 'Default Team') {
+      query = query.or('team_name.eq.Default Team,team_name.is.null');
+    } else {
+      query = query.eq('team_name', teamName);
+    }
   }
 
   const { data, error } = await query;
