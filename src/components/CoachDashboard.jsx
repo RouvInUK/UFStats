@@ -241,35 +241,6 @@ const CoachDashboard = ({ currentGame }) => {
         {/* Main Content Area (Left 2 columns) */}
         <div className="col-span-1 lg:col-span-2 space-y-6 sm:space-y-8">
           
-          {/* Active Lineup Area */}
-          {!isMultiGame && (
-            <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2"><Users className="w-5 h-5 text-indigo-400" /> On-Field Personnel</h3>
-              </div>
-              {activeLineup.length === 0 ? (
-                <div className="p-6 text-center text-slate-500 font-medium bg-slate-950/50 rounded-2xl border border-white/5">No active players</div>
-              ) : (
-                <div className={`grid gap-4 ${visualGameType === 'beach' ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-7'}`}>
-                  {activeLineup.map(player => {
-                    const pStat = playerStats.find(p => p.name === player) || { usage: 0, goals: 0, assists: 0 };
-                    const isHighUsage = parseFloat(pStat.usage) > 15;
-                    
-                    return (
-                      <div key={player} className="flex flex-col items-center p-4 bg-slate-950/80 border border-white/5 rounded-2xl text-center shadow-md relative overflow-hidden group">
-                        {isHighUsage && <div className="absolute inset-0 bg-indigo-500/10 blur-xl"></div>}
-                        <div className={`w-12 h-12 rounded-full mb-3 flex items-center justify-center text-lg font-bold shadow-inner border-2 ${isHighUsage ? 'bg-indigo-500/20 text-indigo-400 border-indigo-400/50' : 'bg-slate-800 text-slate-300 border-slate-700'}`}>
-                          {player.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="text-slate-200 font-bold text-sm truncate w-full mb-1">{player}</span>
-                        <span className="text-slate-500 text-[10px] uppercase tracking-wider font-bold">Usage: <span className={isHighUsage ? 'text-indigo-400' : 'text-slate-400'}>{pStat.usage}%</span></span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Performance Table */}
           <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl overflow-hidden">
@@ -302,7 +273,7 @@ const CoachDashboard = ({ currentGame }) => {
                       <td className="p-4 text-center">
                         <div className="flex items-center justify-center gap-1 font-mono text-xs">
                           <span className="text-rose-400 font-bold">{p.turnovers}</span>
-                          <span className="text-slate-500 font-medium">({p.throwaways}/{p.drops}/{p.stalls})</span>
+                          <span className="text-slate-500 font-medium tracking-tight">({p.throwaways}T / {p.drops}D / {p.stalls}S)</span>
                         </div>
                       </td>
                       <td className="p-4 text-right font-mono font-bold text-slate-300">
