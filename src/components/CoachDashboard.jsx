@@ -10,6 +10,8 @@ const CoachDashboard = ({ currentGame }) => {
   const [selectedGames, setSelectedGames] = useState(currentGame ? [currentGame] : []);
   const [allGames, setAllGames] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [sortField, setSortField] = useState('nis');
+  const [sortDirection, setSortDirection] = useState('desc');
 
   useEffect(() => {
     fetchAllGameNames().then(setAllGames).catch(console.error);
@@ -222,6 +224,32 @@ const CoachDashboard = ({ currentGame }) => {
 
   const isMultiGame = selectedGames.length > 1;
 
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  const sortedPlayers = playerStats ? [...playerStats].sort((a, b) => {
+    let aVal = a[sortField];
+    let bVal = b[sortField];
+
+    // Derived fields combined for sorting G/A/D
+    if (sortField === 'gad') {
+       aVal = a.goals + a.assists + a.blocks;
+       bVal = b.goals + b.assists + b.blocks;
+    }
+
+    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  }) : [];
+
+
+
   return (
     <div className="min-h-screen bg-slate-950 p-4 sm:p-8 pb-32 space-y-6 sm:space-y-8 max-w-7xl mx-auto font-sans">
       
@@ -292,54 +320,6 @@ const CoachDashboard = ({ currentGame }) => {
         <div className="col-span-1 lg:col-span-2 space-y-6 sm:space-y-8">
           
 
-          {/* Performance Table */}
-          <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl overflow-hidden">
-            <div className="p-6 border-b border-white/10">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2"><Target className="w-5 h-5 text-emerald-400" /> Performance Matrix</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-950/80 text-slate-400 text-[10px] uppercase tracking-widest">
-                    <th className="p-4 font-bold">Player</th>
-                    <th className="p-4 font-bold text-center">G / A / D</th>
-                    <th className="p-4 font-bold text-center" title="Throwaway / Drop / Stall">Turnovers</th>
-                    <th className="p-4 font-bold text-right">Usage</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm">
-                  {playerStats.map((p, i) => (
-                    <tr key={p.name} className={`border-b border-white/5 ${i % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-950/30'} hover:bg-slate-800 transition-colors`}>
-                      <td className="p-4 font-bold text-slate-200">{p.name}</td>
-                      <td className="p-4 text-center">
-                        <div className="flex items-center justify-center gap-1 font-mono font-medium">
-                          <span className="text-emerald-400 w-4">{p.goals}</span>
-                          <span className="text-slate-600">/</span>
-                          <span className="text-indigo-400 w-4">{p.assists}</span>
-                          <span className="text-slate-600">/</span>
-                          <span className="text-amber-400 w-4">{p.blocks}</span>
-                        </div>
-                      </td>
-                      <td className="p-4 text-center">
-                        <div className="flex items-center justify-center gap-1 font-mono text-xs">
-                          <span className="text-rose-400 font-bold">{p.turnovers}</span>
-                          <span className="text-slate-500 font-medium tracking-tight">({p.throwaways}T / {p.drops}D / {p.stalls}S)</span>
-                        </div>
-                      </td>
-                      <td className="p-4 text-right font-mono font-bold text-slate-300">
-                        {p.usage}%
-                      </td>
-                    </tr>
-                  ))}
-                  {playerStats.length === 0 && (
-                    <tr>
-                      <td colSpan="4" className="p-8 text-center text-slate-500 font-medium">No recorded actions yet.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
 
           {/* Pulse Chart */}
           <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
@@ -448,7 +428,7 @@ const CoachDashboard = ({ currentGame }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
+          <div className="grid grid-cols-1 gap-6 sm:gap-8">
             {/* Scatter Chart */}
             <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
               <h3 className="text-lg font-bold text-white flex items-center justify-between mb-6">
@@ -492,65 +472,105 @@ const CoachDashboard = ({ currentGame }) => {
                 </ResponsiveContainer>
               </div>
             </div>
-
-            {/* Utility Leaderboard */}
-            <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl overflow-hidden flex flex-col">
-              <div className="p-6 border-b border-white/10">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2"><Lock className="w-5 h-5 text-amber-400" /> True Impact Leaderboard</h3>
-              </div>
-              <div className="overflow-x-auto flex-1">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-950/80 text-slate-400 text-[10px] uppercase tracking-widest">
-                      <th className="p-4 font-bold">Rank</th>
-                      <th className="p-4 font-bold">Player</th>
-                      <th className="p-4 font-bold text-center">Net Impact</th>
-                      <th className="p-4 font-bold text-right">Completion</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-sm">
-                    {[...playerStats].sort((a,b) => b.nis - a.nis).map((p, i) => {
-                      const isEliteHandler = p.touches > 20 && p.completion >= 95;
-                      
-                      return (
-                        <tr key={p.name} className={`border-b border-white/5 ${i % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-950/30'} hover:bg-slate-800 transition-colors`}>
-                          <td className="p-4 font-mono font-bold text-slate-500">#{i + 1}</td>
-                          <td className="p-4 font-bold text-slate-200">
-                            <div className="flex flex-col gap-1 items-start">
-                              <span className="flex items-center gap-2">
-                                {p.name}
-                                {p.tags.includes("The Engine") && (
-                                  <span className="px-2 py-0.5 bg-amber-500/20 border border-amber-500/50 text-amber-400 text-[9px] uppercase tracking-widest font-black rounded-sm shadow-[0_0_10px_rgba(245,158,11,0.2)]">
-                                    The Engine
-                                  </span>
-                                )}
-                              </span>
-                              {p.tags.filter(t => t !== "The Engine").length > 0 && (
-                                <div className="flex gap-1 flex-wrap">
-                                  {p.tags.filter(t => t !== "The Engine").map(t => (
-                                    <span key={t} className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 text-slate-400 text-[8px] uppercase tracking-wider rounded">
-                                      {t}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-4 text-center">
-                            <span className={`font-mono font-bold ${p.nis > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{p.nis > 0 ? '+' : ''}{p.nis}</span>
-                          </td>
-                          <td className="p-4 text-right font-mono font-bold text-slate-300">
-                            {p.completion}%
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
           </div>
+
+          {/* Master Sortable Analytics Table */}
+          <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl overflow-hidden mt-6">
+            <div className="p-6 border-b border-white/10 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Lock className="w-5 h-5 text-amber-400" /> True Impact Master Roster
+              </h3>
+              <span className="text-xs bg-slate-950 border border-slate-800 px-3 py-1 rounded-lg text-slate-500 font-medium">
+                Click column headers to sort
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-950/80 text-slate-400 text-[10px] uppercase tracking-widest cursor-pointer select-none">
+                    <th className="p-4 font-bold hover:text-white transition-colors" onClick={() => handleSort('name')}>
+                      Player {sortField === 'name' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                    </th>
+                    <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('touchesPerPoint')} title="Avg Touches per Point">
+                      Rate {sortField === 'touchesPerPoint' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                    </th>
+                    <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('gad')}>
+                      G / A / D {sortField === 'gad' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                    </th>
+                    <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('turnovers')} title="Throwaways / Drops / Stalls">
+                      Turnovers {sortField === 'turnovers' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                    </th>
+                    <th className="p-4 font-bold text-right hover:text-white transition-colors" onClick={() => handleSort('completion')} title="Pass Completion %">
+                      Comp % {sortField === 'completion' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                    </th>
+                    <th className="p-4 font-bold text-right hover:text-white transition-colors" onClick={() => handleSort('usage')} title="Share of Team Touches">
+                      Usage {sortField === 'usage' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                    </th>
+                    <th className="p-4 font-bold text-right hover:text-white transition-colors" onClick={() => handleSort('nis')} title="Net Impact Score (Efficiency per Point)">
+                      NIS {sortField === 'nis' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="text-sm">
+                  {sortedPlayers.map((p, i) => {
+                    return (
+                      <tr key={p.name} className={`border-b border-white/5 ${i % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-950/30'} hover:bg-slate-800 transition-colors`}>
+                        <td className="p-4 font-bold text-slate-200">
+                          <div className="flex flex-col gap-1 items-start">
+                            <span className="flex items-center gap-2">
+                              {p.name}
+                              {p.tags.includes("The Engine") && (
+                                <span className="px-2 py-0.5 bg-amber-500/20 border border-amber-500/50 text-amber-400 text-[9px] uppercase tracking-widest font-black rounded-sm shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                                  Engine
+                                </span>
+                              )}
+                            </span>
+                            {p.tags.filter(t => t !== "The Engine").length > 0 && (
+                              <div className="flex gap-1 flex-wrap">
+                                {p.tags.filter(t => t !== "The Engine").map(t => (
+                                  <span key={t} className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 text-slate-400 text-[8px] uppercase tracking-wider rounded">
+                                    {t}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4 text-center font-mono font-medium text-slate-300">
+                          {p.touchesPerPoint}
+                        </td>
+                        <td className="p-4 text-center">
+                          <div className="flex items-center justify-center gap-1 font-mono font-medium">
+                            <span className="text-emerald-400 w-4">{p.goals}</span>
+                            <span className="text-slate-600">/</span>
+                            <span className="text-indigo-400 w-4">{p.assists}</span>
+                            <span className="text-slate-600">/</span>
+                            <span className="text-amber-400 w-4">{p.blocks}</span>
+                          </div>
+                        </td>
+                        <td className="p-4 text-center">
+                          <div className="flex items-center justify-center gap-1 font-mono text-xs">
+                            <span className="text-rose-400 font-bold">{p.turnovers}</span>
+                            <span className="text-slate-500 font-medium tracking-tight">({p.throwaways}T / {p.drops}D / {p.stalls}S)</span>
+                          </div>
+                        </td>
+                        <td className="p-4 text-right font-mono font-bold text-slate-300">
+                          {p.completion}%
+                        </td>
+                        <td className="p-4 text-right font-mono font-bold text-slate-500">
+                          {p.usage}%
+                        </td>
+                        <td className="p-4 text-right">
+                          <span className={`font-mono font-bold text-base ${p.nis > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{p.nis > 0 ? '+' : ''}{p.nis}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
       )}
 
