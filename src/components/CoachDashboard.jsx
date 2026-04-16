@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { fetchGameStats, fetchAllGameNames } from '../supabaseClient';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
-import { Lock, Zap, Target, AlertTriangle, Presentation, Users, Clock, ChevronDown, Check, Activity } from 'lucide-react';
+import { Lock, Zap, Target, AlertTriangle, Presentation, Users, ChevronDown, Check, Activity } from 'lucide-react';
 
 const CoachDashboard = ({ currentGame, currentTeam }) => {
   const [stats, setStats] = useState([]);
