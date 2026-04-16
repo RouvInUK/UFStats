@@ -57,7 +57,7 @@ const CoachDashboard = ({ currentGame }) => {
 
     const ensurePlayer = (name) => {
       if (!playersMap[name]) {
-        playersMap[name] = { name, goals: 0, assists: 0, blocks: 0, throwaways: 0, drops: 0, stalls: 0, touches: 0, passes: 0, usage: 0 };
+        playersMap[name] = { name, goals: 0, assists: 0, blocks: 0, throwaways: 0, drops: 0, stalls: 0, touches: 0, passes: 0, usage: 0, pointsPlayedSet: new Set() };
       }
       return playersMap[name];
     };
@@ -86,7 +86,15 @@ const CoachDashboard = ({ currentGame }) => {
         }
       }
 
-      if (stat.player === 'System' || stat.player === 'Opponent' || stat.stat_type === 'Lineup') return;
+      if (stat.stat_type === 'Lineup') {
+        if (stat.player !== 'System' && stat.player !== 'Opponent') {
+          const lp = ensurePlayer(stat.player);
+          lp.pointsPlayedSet.add(stat.point_number);
+        }
+        return;
+      }
+
+      if (stat.player === 'System' || stat.player === 'Opponent') return;
 
       const p = ensurePlayer(stat.player);
       p.touches += 1;
@@ -112,7 +120,7 @@ const CoachDashboard = ({ currentGame }) => {
       }
     });
 
-    // Calculate usage rates, NIS, and Completion %
+    // Calculate usage rates, NIS, Tags, and Completion %
     const calculatedPlayerStats = Object.values(playersMap).map(p => {
       const turnovers = p.throwaways + p.drops + p.stalls;
       totalGoals += p.goals;
@@ -120,39 +128,50 @@ const CoachDashboard = ({ currentGame }) => {
       totalTurnovers += turnovers;
       totalBlocks += p.blocks;
 
+      const pointsPlayed = Math.max(1, p.pointsPlayedSet.size);
+      const touchesPerPoint = p.touches / pointsPlayed;
+      const blocksPerPoint = p.blocks / pointsPlayed;
+
       const passAttempts = p.passes + p.throwaways;
       const completion = passAttempts > 0 ? (p.passes / passAttempts) * 100 : 0;
-      const nis = (p.goals * 1) + (p.assists * 1) + (p.blocks * 1.5) + (p.passes * 0.1) - (turnovers * 1.5);
+      
+      const nis = ((p.goals * 2) + (p.assists * 1.5) + (p.blocks * 2) + (p.passes * 0.3) - (turnovers * 2)) / pointsPlayed;
+
+      let tags = [];
+      if (touchesPerPoint > 3 && completion >= 90) tags.push("The Engine");
+      if (touchesPerPoint < 2 && (p.goals + p.assists) / pointsPlayed > 0.4) tags.push("The Finisher");
+      if (blocksPerPoint > 0.3) tags.push("The Lockdown");
 
       return {
         ...p,
         usage: teamTouchesCount > 0 ? ((p.touches / teamTouchesCount) * 100).toFixed(1) : 0,
         turnovers: turnovers,
         completion: parseFloat(completion.toFixed(1)),
-        nis: parseFloat(nis.toFixed(2))
+        nis: parseFloat(nis.toFixed(2)),
+        touchesPerPoint: parseFloat(touchesPerPoint.toFixed(1)),
+        tags
       };
     }).sort((a, b) => b.touches - a.touches);
 
     // Generate Coach Insight
+    const engines = calculatedPlayerStats.filter(p => p.tags.includes("The Engine"));
+    const finishers = calculatedPlayerStats.filter(p => p.tags.includes("The Finisher"));
     const sortedByTouches = [...calculatedPlayerStats].sort((a,b) => b.touches - a.touches);
-    const sortedByNis = [...calculatedPlayerStats].sort((a,b) => b.nis - a.nis);
+    
     let insight = "Not enough data to analyze impact trends.";
     
-    if (sortedByTouches.length > 0 && teamTouchesCount > 10) {
+    if (engines.length > 0 && finishers.length > 0) {
+      insight = `${engines[0].name} is averaging ${engines[0].touchesPerPoint} touches per point (The Engine), providing absolute foundational stability for ${finishers[0].name} (The Finisher) to attack.`;
+    } else if (engines.length > 0) {
+      insight = `${engines[0].name} is effectively running the entire offense as The Engine, boasting a ${engines[0].completion}% completion rate over high volume.`;
+    } else if (finishers.length > 0) {
+      insight = `The team currently lacks a true Engine handler, but ${finishers[0].name} is ruthlessly finishing opportunities in the cutting lanes.`;
+    } else if (sortedByTouches.length > 0 && teamTouchesCount > 10) {
       const topToucher = sortedByTouches[0];
-      const topNis = sortedByNis[0];
-      const bottomNis = sortedByNis[sortedByNis.length - 1];
-
-      if (topToucher.name === topNis.name) {
-        insight = `${topToucher.name} is dictating the game flawlessly—leading the team in volume while maintaining the highest Net Impact Score.`;
-      } else if (topToucher.nis < 0) {
-        insight = `Warning: ${topToucher.name} is your primary engine (Highest Touches), but their turnover weight is dragging their Net Impact into the negative.`;
-      } else if (bottomNis.turnovers > 3) {
-        insight = `${bottomNis.name} is struggling with efficiency. Turnovers are heavily punishing their Net Impact Score.`;
-      } else if (topNis.touches < 10 && topNis.touches > 2) {
-        insight = `${topNis.name} is highly surgical—maximizing their Net Impact Score despite low offensive volume.`;
+      if (topToucher.nis < 0) {
+         insight = `Warning: ${topToucher.name} is your primary handler (Highest Touches), but their turnover weight is dragging their Net Impact into the negative.`;
       } else {
-        insight = `The offense is moving through ${topToucher.name}, but ${topNis.name} is currently the most efficient asset on the field.`;
+         insight = `The offense is moving through ${topToucher.name}, but no player has established a dominant Engine/Finisher archetype yet.`;
       }
     }
 
@@ -439,16 +458,21 @@ const CoachDashboard = ({ currentGame }) => {
               <div className="h-80 w-full relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: -20 }}>
+                    <defs>
+                      <filter id="engineGlow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#f59e0b" floodOpacity="0.8" />
+                      </filter>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
-                    <XAxis type="number" dataKey="touches" name="Touches" stroke="#64748b" tick={{fill: '#64748b'}} label={{ value: 'Touches (Volume)', position: 'insideBottom', offset: -10, fill: '#64748b' }} />
-                    <YAxis type="number" dataKey="nis" name="Net Impact" stroke="#64748b" tick={{fill: '#64748b'}} label={{ value: 'Net Impact Score', angle: -90, position: 'insideLeft', offset: 10, fill: '#64748b' }} />
+                    <XAxis type="number" dataKey="touchesPerPoint" name="Touches/Pt" stroke="#64748b" tick={{fill: '#64748b'}} label={{ value: 'Touches per Point (Workload)', position: 'insideBottom', offset: -10, fill: '#64748b' }} />
+                    <YAxis type="number" dataKey="nis" name="Net Impact" stroke="#64748b" tick={{fill: '#64748b'}} label={{ value: 'Net Impact Score / Pt', angle: -90, position: 'insideLeft', offset: 10, fill: '#64748b' }} />
                     <ZAxis type="number" dataKey="completion" range={[50, 400]} name="Completion %" />
                     <Tooltip 
                       cursor={{strokeDasharray: '3 3'}}
                       contentStyle={{ backgroundColor: '#020617', borderColor: '#1e293b', borderRadius: '12px' }}
                       itemStyle={{ fontWeight: 'bold', color: '#cbd5e1' }}
                       formatter={(value, name, props) => {
-                        if (name === 'Touches') return [value, 'Total Touches'];
+                        if (name === 'Touches/Pt') return [value, 'Touches / Pt'];
                         if (name === 'Net Impact') return [value, 'NIS'];
                         if (name === 'Completion %') return [`${value}%`, 'Completion'];
                         return [value, name];
@@ -457,11 +481,11 @@ const CoachDashboard = ({ currentGame }) => {
                     <Scatter name="Handlers" data={playerStats} fill="#8884d8">
                       {playerStats.map((entry, index) => {
                         let color = '#3b82f6'; // Cold
-                        if (entry.nis > 10) color = '#f59e0b'; // Gold
-                        else if (entry.nis > 5) color = '#f43f5e'; // Hot
+                        if (entry.nis > 1.5) color = '#f59e0b'; // Gold
+                        else if (entry.nis > 0.5) color = '#f43f5e'; // Hot
                         else if (entry.nis > 0) color = '#8b5cf6'; // Warm
 
-                        return <Cell key={`cell-${index}`} fill={color} />;
+                        return <Cell key={`cell-${index}`} fill={color} filter={entry.tags.includes("The Engine") ? 'url(#engineGlow)' : ''} />;
                       })}
                     </Scatter>
                   </ScatterChart>
@@ -492,12 +516,23 @@ const CoachDashboard = ({ currentGame }) => {
                         <tr key={p.name} className={`border-b border-white/5 ${i % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-950/30'} hover:bg-slate-800 transition-colors`}>
                           <td className="p-4 font-mono font-bold text-slate-500">#{i + 1}</td>
                           <td className="p-4 font-bold text-slate-200">
-                            <div className="flex items-center gap-2">
-                              {p.name}
-                              {isEliteHandler && (
-                                <span className="px-2 py-0.5 bg-amber-500/20 border border-amber-500/50 text-amber-400 text-[9px] uppercase tracking-widest font-black rounded-sm shadow-[0_0_10px_rgba(245,158,11,0.2)]">
-                                  Elite Engine
-                                </span>
+                            <div className="flex flex-col gap-1 items-start">
+                              <span className="flex items-center gap-2">
+                                {p.name}
+                                {p.tags.includes("The Engine") && (
+                                  <span className="px-2 py-0.5 bg-amber-500/20 border border-amber-500/50 text-amber-400 text-[9px] uppercase tracking-widest font-black rounded-sm shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                                    The Engine
+                                  </span>
+                                )}
+                              </span>
+                              {p.tags.filter(t => t !== "The Engine").length > 0 && (
+                                <div className="flex gap-1 flex-wrap">
+                                  {p.tags.filter(t => t !== "The Engine").map(t => (
+                                    <span key={t} className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 text-slate-400 text-[8px] uppercase tracking-wider rounded">
+                                      {t}
+                                    </span>
+                                  ))}
+                                </div>
                               )}
                             </div>
                           </td>
