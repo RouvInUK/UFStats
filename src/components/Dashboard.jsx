@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { recordStatToDB, fetchActiveGames, recordLineup } from '../supabaseClient';
 
-const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, setCurrentGame, currentTeam, isTrackingActive, setIsTrackingActive, onNavigate }) => {
+const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, setCurrentGame, gameType, setGameType, currentTeam, isTrackingActive, setIsTrackingActive, onNavigate }) => {
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -59,6 +59,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
         timestamp: new Date().toLocaleString(),
         pointNumber: currentPoint,
         gameName: currentGame,
+        gameType: gameType,
       };
       await recordStatToDB(statData);
       setLastSaved(statType === 'Opponent Point' ? `Saved Opponent Point` : `Saved ${statType} for ${selectedPlayer}`);
@@ -90,7 +91,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
     setLastSaved(null);
     try {
       const nextPoint = currentPoint + 1;
-      await recordLineup(activeLineup, nextPoint, currentGame);
+      await recordLineup(activeLineup, nextPoint, currentGame, gameType);
       setCurrentPoint(nextPoint);
       setLineupRecordedPoint(nextPoint);
       setIsTrackingActive(true);
@@ -162,24 +163,41 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
                   <button onClick={() => setCurrentPoint(p => p + 1)} className="text-slate-500 hover:text-white hover:bg-slate-700 px-2 rounded-lg font-bold transition-colors">+</button>
                 </div>
               </div>
-            <div className="flex items-center gap-2 mb-2 w-full max-w-[300px]">
-              <input 
-                type="text" 
-                list="active-games-list"
-                value={currentGame}
-                onChange={(e) => setCurrentGame(e.target.value)}
-                className="flex-1 bg-transparent border-b border-transparent hover:border-slate-700/50 text-slate-400 text-sm font-medium focus:outline-none focus:border-indigo-500 focus:text-indigo-300 transition-colors placeholder-slate-600 pb-1"
-                placeholder="Match Name (e.g. Vs Team X)"
-              />
-              {currentGame && (
-                <button 
-                  onClick={handleMarkCompleted}
-                  className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-bold rounded-lg transition-all whitespace-nowrap"
-                  title="Close out Game"
+            <div className="flex flex-col gap-2 w-full max-w-[300px] mb-2">
+              <div className="flex bg-slate-900 border border-slate-700/50 rounded-xl overflow-hidden shadow-inner text-sm font-bold w-full">
+                <button
+                  onClick={() => setGameType('beach')}
+                  className={`flex-1 py-1 px-4 transition-colors ${gameType === 'beach' ? 'bg-teal-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
                 >
-                  ✓ Close Game
+                  🏖️ 5v5 Beach
                 </button>
-              )}
+                <div className="w-[1px] bg-slate-800"></div>
+                <button
+                  onClick={() => setGameType('grass')}
+                  className={`flex-1 py-1 px-4 transition-colors ${gameType === 'grass' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
+                >
+                  🌿 7v7 Grass
+                </button>
+              </div>
+              <div className="flex items-center gap-2 w-full">
+                <input 
+                  type="text" 
+                  list="active-games-list"
+                  value={currentGame}
+                  onChange={(e) => setCurrentGame(e.target.value)}
+                  className="flex-1 bg-transparent border-b border-transparent hover:border-slate-700/50 text-slate-400 text-sm font-medium focus:outline-none focus:border-indigo-500 focus:text-indigo-300 transition-colors placeholder-slate-600 pb-1"
+                  placeholder="Match Name (e.g. Vs Team X)"
+                />
+                {currentGame && (
+                  <button 
+                    onClick={handleMarkCompleted}
+                    className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-bold rounded-lg transition-all whitespace-nowrap"
+                    title="Close out Game"
+                  >
+                    ✓ Close Game
+                  </button>
+                )}
+              </div>
             </div>
 
             <datalist id="active-games-list">

@@ -4,6 +4,7 @@ import RosterSetup from './components/RosterSetup';
 import LineupSelector from './components/LineupSelector';
 import Analytics from './components/Analytics';
 import EventLog from './components/EventLog';
+import CoachDashboard from './components/CoachDashboard';
 import { fetchPlayers } from './supabaseClient';
 
 function App() {
@@ -26,6 +27,14 @@ function App() {
   const [isTrackingActive, setIsTrackingActive] = useState(() => {
     return localStorage.getItem('ufstats_tracking') === 'true';
   });
+
+  const [gameType, setGameType] = useState(() => {
+    return localStorage.getItem('ufstats_game_type') || 'grass';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('ufstats_game_type', gameType);
+  }, [gameType]);
 
   const [currentTeam, setCurrentTeam] = useState(() => {
     return localStorage.getItem('ufstats_team') || 'Default Team';
@@ -118,6 +127,20 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-900 selection:bg-indigo-500 selection:text-white pb-24">
+      
+      {/* Premium Desktop Header */}
+      <div className="hidden sm:flex justify-between items-center px-8 py-4 bg-slate-950/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 shadow-xl">
+        <div className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-2">
+          UF<span className="text-indigo-500 font-light">STATS</span>
+        </div>
+        <button 
+          onClick={() => setCurrentView('coach')}
+          className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-extrabold rounded-xl shadow-[0_0_25px_rgba(245,158,11,0.2)] hover:shadow-[0_0_35px_rgba(245,158,11,0.4)] transition-all flex items-center gap-2 uppercase tracking-wide text-sm scale-100 hover:scale-[1.02]"
+        >
+          Coach Pro ★
+        </button>
+      </div>
+
       {currentView === 'dashboard' && (
         <Dashboard 
           activeLineup={activeLineup} 
@@ -125,6 +148,8 @@ function App() {
           setCurrentPoint={setCurrentPoint}
           currentGame={currentGame}
           setCurrentGame={setCurrentGame}
+          gameType={gameType}
+          setGameType={setGameType}
           currentTeam={currentTeam}
           isTrackingActive={isTrackingActive}
           setIsTrackingActive={setIsTrackingActive}
@@ -152,6 +177,12 @@ function App() {
           setPlayers={setPlayers}
           currentTeam={currentTeam}
           onNavigate={setCurrentView} 
+        />
+      )}
+
+      {currentView === 'coach' && (
+        <CoachDashboard 
+          currentGame={currentGame}
         />
       )}
 

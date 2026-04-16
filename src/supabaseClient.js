@@ -6,7 +6,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export const recordStatToDB = async (statData) => {
-  const { player, stat, pointNumber, gameName } = statData;
+  const { player, stat, pointNumber, gameName, gameType } = statData;
 
   const { data, error } = await supabase
     .from('stats')
@@ -15,7 +15,8 @@ export const recordStatToDB = async (statData) => {
         player: player,
         stat_type: stat,
         point_number: pointNumber,
-        game_name: gameName || 'Unnamed Game'
+        game_name: gameName || 'Unnamed Game',
+        game_type: gameType || 'grass'
       }
     ]);
 
@@ -25,14 +26,15 @@ export const recordStatToDB = async (statData) => {
   return data;
 };
 
-export const recordLineup = async (players, pointNumber, gameName) => {
+export const recordLineup = async (players, pointNumber, gameName, gameType) => {
   if (!players || players.length === 0) return;
   
   const insertData = players.map(player => ({
     player: player,
     stat_type: 'Lineup',
     point_number: pointNumber,
-    game_name: gameName || 'Unnamed Game'
+    game_name: gameName || 'Unnamed Game',
+    game_type: gameType || 'grass'
   }));
 
   const { data, error } = await supabase
