@@ -424,21 +424,6 @@ const CoachDashboard = ({ currentGame }) => {
       {/* True Impact Analytics Suite */}
       {playerStats.length > 0 && (
         <div className="space-y-6 sm:space-y-8 mt-6">
-          <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl flex items-center gap-6">
-            <div className="w-14 h-14 rounded-2xl bg-indigo-500/20 flex flex-shrink-0 items-center justify-center text-indigo-400 border border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.15)]">
-              <Presentation className="w-7 h-7" />
-            </div>
-            <div>
-              <div className="text-xs font-bold uppercase tracking-widest text-indigo-400 mb-1 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
-                Coach's Neural Insight
-              </div>
-              <p className="text-slate-200 font-medium text-lg leading-relaxed">{coachInsight}</p>
-            </div>
-          </div>
-
-
-
           {/* Master Sortable Analytics Table */}
           <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl overflow-hidden mt-6">
             <div className="p-6 border-b border-white/10 flex items-center justify-between">
