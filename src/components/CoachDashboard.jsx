@@ -647,7 +647,7 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
                                    <div className="bg-emerald-500/80 h-full rounded-r-sm" style={{ width: `${Math.min(100, p.systemImpact)}%` }} />
                                 )}
                              </div>
-                             <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white dropshadow-md z-20 pointer-events-none">
+                             <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white drop-shadow-md z-20 pointer-events-none">
                                 {p.systemImpact > 0 ? '+' : ''}{p.systemImpact}%
                              </span>
                           </div>

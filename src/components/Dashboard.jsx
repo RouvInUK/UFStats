@@ -6,7 +6,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [activeGames, setActiveGames] = useState([]);
-  const [lineupRecordedPoint, setLineupRecordedPoint] = useState(null);
   const [flashType, setFlashType] = useState(null);
 
   const triggerFeedback = (type) => {
@@ -27,8 +26,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
 
   // Fetch active games on mount
   useEffect(() => {
-    fetchActiveGames().then(setActiveGames).catch(console.error);
-  }, []);
+    fetchActiveGames(currentTeam).then(setActiveGames).catch(console.error);
+  }, [currentTeam]);
 
   // Sync point if user selects an existing active game
   useEffect(() => {
@@ -94,7 +93,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
       const nextPoint = currentPoint + 1;
       await recordLineup(activeLineup, nextPoint, currentGame, gameType, currentTeam);
       setCurrentPoint(nextPoint);
-      setLineupRecordedPoint(nextPoint);
       setIsTrackingActive(true);
       setLastSaved(`Started Point ${nextPoint}`);
     } catch (err) {
