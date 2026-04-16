@@ -5,7 +5,8 @@ import { Lock, Zap, Target, AlertTriangle, Presentation, Users, Clock, ChevronDo
 
 const CoachDashboard = ({ currentGame }) => {
   const [stats, setStats] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [visualGameType, setVisualGameType] = useState('beach');
   const [selectedGames, setSelectedGames] = useState(currentGame ? [currentGame] : []);
   const [allGames, setAllGames] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -41,13 +42,16 @@ const CoachDashboard = ({ currentGame }) => {
     );
   };
 
-  const { playerStats, timeline, activeLineup, gameType, score } = useMemo(() => {
+  const { playerStats, timeline, activeLineup, score, teamSummary } = useMemo(() => {
     const playersMap = {};
     const timelineData = [];
     let currentUs = 0;
     let currentThem = 0;
-    let type = 'grass';
     let teamTouchesCount = 0;
+    let totalGoals = 0;
+    let totalAssists = 0;
+    let totalTurnovers = 0;
+    let totalBlocks = 0;
     let activeNames = new Set();
     let highestPoint = 0;
 
@@ -61,7 +65,6 @@ const CoachDashboard = ({ currentGame }) => {
     timelineData.push({ point: 0, Us: 0, Them: 0 });
 
     stats.forEach((stat, index) => {
-      if (stat.game_type) type = stat.game_type;
       
       // Track points and timeline
       if (stat.stat_type === 'Point') {
@@ -109,18 +112,26 @@ const CoachDashboard = ({ currentGame }) => {
     });
 
     // Calculate usage rates
-    const calculatedPlayerStats = Object.values(playersMap).map(p => ({
-      ...p,
-      usage: teamTouchesCount > 0 ? ((p.touches / teamTouchesCount) * 100).toFixed(1) : 0,
-      turnovers: p.throwaways + p.drops + p.stalls
-    })).sort((a, b) => b.touches - a.touches);
+    const calculatedPlayerStats = Object.values(playersMap).map(p => {
+      const turnovers = p.throwaways + p.drops + p.stalls;
+      totalGoals += p.goals;
+      totalAssists += p.assists;
+      totalTurnovers += turnovers;
+      totalBlocks += p.blocks;
+
+      return {
+        ...p,
+        usage: teamTouchesCount > 0 ? ((p.touches / teamTouchesCount) * 100).toFixed(1) : 0,
+        turnovers: turnovers
+      };
+    }).sort((a, b) => b.touches - a.touches);
 
     return {
       playerStats: calculatedPlayerStats,
       timeline: timelineData,
       activeLineup: Array.from(activeNames),
-      gameType: type,
-      score: { us: currentUs, them: currentThem }
+      score: { us: currentUs, them: currentThem },
+      teamSummary: { totalTouches: teamTouchesCount, totalGoals, totalAssists, totalTurnovers, totalBlocks }
     };
   }, [stats]);
 
@@ -159,17 +170,13 @@ const CoachDashboard = ({ currentGame }) => {
     );
   }
 
-  if (loading) {
-    return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-indigo-400 font-bold tracking-widest text-lg animate-pulse">SYNCING DATABASES...</div>;
-  }
-
   const isMultiGame = selectedGames.length > 1;
 
   return (
     <div className="min-h-screen bg-slate-950 p-4 sm:p-8 pb-32 space-y-6 sm:space-y-8 max-w-7xl mx-auto font-sans">
       
       {/* Live Header / Selector Panel */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl relative z-50">
         <div className="w-full sm:w-auto relative group">
           <button 
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -199,13 +206,20 @@ const CoachDashboard = ({ currentGame }) => {
           
           <div className="flex flex-wrap items-center gap-3 mt-2">
             {!isMultiGame && (
-              <span className={`px-3 py-1 font-bold text-xs uppercase tracking-widest rounded-full ${gameType === 'beach' ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}`}>
-                {gameType === 'beach' ? '5v5 Beach' : '7v7 Grass'}
-              </span>
+              <button 
+                onClick={() => setVisualGameType(visualGameType === 'beach' ? 'grass' : 'beach')}
+                className={`px-3 py-1 font-bold text-xs uppercase tracking-widest rounded-full ${visualGameType === 'beach' ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}`}
+              >
+                {visualGameType === 'beach' ? '5v5 Beach' : '7v7 Grass'}
+              </button>
             )}
             <span className="flex items-center gap-1 text-slate-400 text-sm font-medium bg-slate-800/50 px-3 py-1 rounded-full">
-              <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-              {selectedGames.length} Game{selectedGames.length !== 1 ? 's' : ''} Mode
+              {loading ? (
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+              ) : (
+                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+              )}
+              {loading ? 'Syncing...' : `${selectedGames.length} Game${selectedGames.length !== 1 ? 's' : ''} Mode`}
             </span>
           </div>
         </div>
@@ -236,7 +250,7 @@ const CoachDashboard = ({ currentGame }) => {
               {activeLineup.length === 0 ? (
                 <div className="p-6 text-center text-slate-500 font-medium bg-slate-950/50 rounded-2xl border border-white/5">No active players</div>
               ) : (
-                <div className={`grid gap-4 ${gameType === 'beach' ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-7'}`}>
+                <div className={`grid gap-4 ${visualGameType === 'beach' ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-7'}`}>
                   {activeLineup.map(player => {
                     const pStat = playerStats.find(p => p.name === player) || { usage: 0, goals: 0, assists: 0 };
                     const isHighUsage = parseFloat(pStat.usage) > 15;
@@ -348,30 +362,49 @@ const CoachDashboard = ({ currentGame }) => {
 
         </div>
 
-        {/* Sidebar Paywall */}
+        {/* Sidebar Analytics Update */}
         <div className="col-span-1">
-          <div className="relative h-full min-h-[500px] bg-slate-900/30 border border-white/5 p-6 rounded-3xl shadow-xl overflow-hidden flex flex-col">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-6 opacity-40"><AlertTriangle className="w-5 h-5" /> Deep Analytics</h3>
+          <div className="relative h-full min-h-[400px] bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl flex flex-col">
+            <h3 className="text-lg font-bold text-white flex items-center justify-between mb-6">
+               <span className="flex items-center gap-2"><Target className="w-5 h-5 text-indigo-400" /> Team Overview</span>
+            </h3>
             
-            {/* Blurred Mock Content */}
-            <div className="space-y-4 opacity-20 blur-[4px] pointer-events-none flex-1">
-              <div className="h-24 bg-slate-800 rounded-xl"></div>
-              <div className="h-40 bg-slate-800 rounded-xl"></div>
-              <div className="h-32 bg-slate-800 rounded-xl"></div>
-            </div>
-
-            {/* Glass Paywall Overlay */}
-            <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center border-l border-white/10">
-              <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(245,158,11,0.3)]">
-                <Lock className="w-8 h-8 text-white" />
+            <div className="flex flex-col gap-4 flex-1">
+              
+              <div className="bg-slate-950/80 rounded-2xl p-4 border border-white/5 flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Total Touches</div>
+                  <div className="text-2xl font-black text-slate-200">{teamSummary.totalTouches}</div>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center text-slate-600">
+                  <Users className="w-5 h-5" />
+                </div>
               </div>
-              <h4 className="text-2xl font-black text-white mb-3 tracking-tight">Upgrade to Pro</h4>
-              <p className="text-slate-300 font-medium text-sm mb-8 leading-relaxed">
-                Unlock granular Lineup +/- differentials, advanced wind impact analysis, and predictive fatigue modeling.
-              </p>
-              <button className="w-full py-4 bg-white text-slate-950 hover:bg-slate-200 font-black tracking-wide uppercase text-sm rounded-xl transition-all shadow-xl hover:scale-[1.02] active:scale-95">
-                Unlock Premium
-              </button>
+
+              <div className="bg-slate-950/80 rounded-2xl p-4 border border-white/5 flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Scores / Assists</div>
+                  <div className="text-2xl font-black text-emerald-400">{teamSummary.totalGoals} <span className="text-slate-600 text-lg">/</span> <span className="text-indigo-400 text-lg">{teamSummary.totalAssists}</span></div>
+                </div>
+              </div>
+
+              <div className="bg-slate-950/80 rounded-2xl p-4 border border-white/5 flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Total Blocks</div>
+                  <div className="text-2xl font-black text-amber-400">{teamSummary.totalBlocks}</div>
+                </div>
+              </div>
+
+              <div className="bg-slate-950/80 rounded-2xl p-4 border border-white/5 flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Total Turnovers</div>
+                  <div className="text-2xl font-black text-rose-500">{teamSummary.totalTurnovers}</div>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
