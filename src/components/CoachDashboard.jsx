@@ -239,6 +239,7 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
         touchesPerPoint: parseFloat(touchesPerPoint.toFixed(1)),
         plusMinus,
         systemImpact,
+        pointsPlayed: p.holdsPlayed + p.breaksPlayed,
         tags
       };
     }).sort((a, b) => b.touches - a.touches);
@@ -570,6 +571,9 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
                     <th className="p-4 font-bold hover:text-white transition-colors" onClick={() => handleSort('name')}>
                       Player {sortField === 'name' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
+                    <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('pointsPlayed')} title="O-Points / D-Points">
+                      Pts Played {sortField === 'pointsPlayed' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                    </th>
                     <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('touchesPerPoint')} title="Avg Touches per Point">
                       Touches/Pt {sortField === 'touchesPerPoint' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
@@ -607,6 +611,9 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
                               </span>
                             </span>
                           </div>
+                        </td>
+                        <td className="p-4 text-center font-mono font-medium text-slate-400 text-xs text-nowrap">
+                           <span className="text-emerald-400/80" title="Offense Points">{p.holdsPlayed} O</span><span className="text-slate-600 mx-1">/</span><span className="text-rose-400/80" title="Defense Points">{p.breaksPlayed} D</span>
                         </td>
                         <td className="p-4 text-center font-mono font-medium text-slate-300">
                           {p.touchesPerPoint}
