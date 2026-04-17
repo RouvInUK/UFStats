@@ -281,7 +281,7 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
 
       return {
         ...p,
-        usage: teamTouchesCount > 0 ? ((p.touches / teamTouchesCount) * 100).toFixed(1) : 0,
+        usage: teamTouchesCount > 0 ? parseFloat(((p.touches / teamTouchesCount) * 100).toFixed(1)) : 0,
         turnovers: turnovers,
         completion: parseFloat(completion.toFixed(1)),
         nis: parseFloat(nis.toFixed(2)),
