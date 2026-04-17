@@ -45,7 +45,7 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
     );
   };
 
-  const { playerStats, timeline, score, teamSummary, connectionsMap } = useMemo(() => {
+  const { playerStats, timeline, score, teamSummary, connectionsMap, totalTeamSecondaryAssists } = useMemo(() => {
     const playersMap = {};
     const timelineData = [];
     let currentUs = 0;
@@ -66,7 +66,7 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
 
     const ensurePlayer = (name) => {
       if (!playersMap[name]) {
-        playersMap[name] = { name, goals: 0, assists: 0, secondaryAssists: 0, blocks: 0, throwaways: 0, drops: 0, stalls: 0, touches: 0, passes: 0, passDropped: 0, usage: 0, pointsPlayedSet: new Set(), holdsPlayed: 0, holdsWon: 0, breaksPlayed: 0, breaksWon: 0 };
+        playersMap[name] = { name, goals: 0, assists: 0, secondaryAssists: 0, blocks: 0, throwaways: 0, drops: 0, stalls: 0, touches: 0, passes: 0, passDropped: 0, usage: 0, pointsPlayedSet: new Set(), holdsPlayed: 0, holdsWon: 0, breaksPlayed: 0, breaksWon: 0, cleanHolds: 0, possessionsPlayed: 0, goalsOnPitch: 0 };
       }
       return playersMap[name];
     };
@@ -75,6 +75,10 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
     let currentLineState = 'O';
 
     timelineData.push({ point: 0, pointNumber: 0, Us: 0, Them: 0 });
+
+    const pointTurnovers = {};
+    const pointPossessions = {};
+    const pointCleanHolds = {};
 
     stats.forEach((stat, index) => {
       
@@ -161,25 +165,36 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
         p.blocks += 1;
       } else if (stat.stat_type === 'Throwaway') {
         p.throwaways += 1;
+        pointTurnovers[stat.point_number] = (pointTurnovers[stat.point_number] || 0) + 1;
       } else if (stat.stat_type === 'Drop') {
         p.drops += 1;
+        pointTurnovers[stat.point_number] = (pointTurnovers[stat.point_number] || 0) + 1;
       } else if (stat.stat_type === 'Stall Out') {
         p.stalls += 1;
+        pointTurnovers[stat.point_number] = (pointTurnovers[stat.point_number] || 0) + 1;
       }
     });
 
     let globalHoldsPlayed = 0; let globalHoldsWon = 0;
     let globalBreaksPlayed = 0; let globalBreaksWon = 0;
+    let totalTeamSecondaryAssists = 0;
 
     Object.entries(pointOutcomes).forEach(([ptStr, outcome]) => {
        const ptNum = parseInt(ptStr, 10);
+       const turnovers = pointTurnovers[ptNum] || 0;
+       
        if (pointODState[ptNum] === 'O') {
           globalHoldsPlayed++;
-          if (outcome === 'won') globalHoldsWon++;
+          if (outcome === 'won') {
+             globalHoldsWon++;
+             if (turnovers === 0) pointCleanHolds[ptNum] = true;
+          }
        } else {
           globalBreaksPlayed++;
           if (outcome === 'won') globalBreaksWon++;
        }
+       
+       pointPossessions[ptNum] = turnovers + (outcome === 'won' ? 1 : 0);
     });
 
     const globalHoldRate = globalHoldsPlayed > 0 ? globalHoldsWon / globalHoldsPlayed : 0;
@@ -215,11 +230,17 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
 
          if (pointODState[ptNum] === 'O') {
              p.holdsPlayed += 1;
-             if (outcome === 'won') p.holdsWon += 1;
+             if (outcome === 'won') {
+                 p.holdsWon += 1;
+                 if (pointCleanHolds[ptNum]) p.cleanHolds += 1;
+             }
          } else {
              p.breaksPlayed += 1;
              if (outcome === 'won') p.breaksWon += 1;
          }
+
+         p.possessionsPlayed += pointPossessions[ptNum] || 0;
+         if (outcome === 'won') p.goalsOnPitch += 1;
 
          if (outcome === 'won' || outcome === 'lost') {
              const result = outcome === 'won' ? 1 : 0;
@@ -237,6 +258,12 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
       const systemImpactRaw = p.pointsPlayedSet.size > 0 ? (totalWeightedImpact / p.pointsPlayedSet.size) * 100 : 0;
       const systemImpact = parseFloat((systemImpactRaw).toFixed(1));
 
+      const oceRaw = p.possessionsPlayed > 0 ? (p.goalsOnPitch / p.possessionsPlayed) * 100 : 0;
+      const oce = parseFloat(oceRaw.toFixed(1));
+      
+      const ova = (p.cleanHolds * 0.5) + (p.assists * 2.0) + (p.secondaryAssists * 1.5);
+      totalTeamSecondaryAssists += p.secondaryAssists;
+
       let tags = [];
       if (touchesPerPoint > 3 && completion >= 90) tags.push("The Engine");
       if (touchesPerPoint < 2 && (p.goals + p.assists) / pointsPlayed > 0.4) tags.push("The Finisher");
@@ -252,6 +279,8 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
         touchesPerPoint: parseFloat(touchesPerPoint.toFixed(1)),
         plusMinus,
         systemImpact,
+        oce,
+        ova,
         pointsPlayed: p.holdsPlayed + p.breaksPlayed,
         tags
       };
@@ -262,10 +291,13 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
     const finishers = calculatedPlayerStats.filter(p => p.tags.includes("The Finisher"));
     const sortedByTouches = [...calculatedPlayerStats].sort((a,b) => b.touches - a.touches);
     const highestImpactPlayer = [...calculatedPlayerStats].sort((a,b) => b.systemImpact - a.systemImpact)[0];
+    const topOVA = [...calculatedPlayerStats].sort((a,b) => b.ova - a.ova)[0];
     
     let insight = "Not enough data to analyze impact trends.";
     
-    if (highestImpactPlayer && highestImpactPlayer.systemImpact > 10 && highestImpactPlayer.touchesPerPoint <= 2) {
+    if (topOVA && (topOVA.goals + topOVA.assists) <= 2 && topOVA.ova > 2.5 && topOVA.secondaryAssists > 0) {
+        insight = `${topOVA.name} is the Silent Driver, facilitating clean holds via high-value secondary assists while flying under the radar on the traditional stat sheet.`;
+    } else if (highestImpactPlayer && highestImpactPlayer.systemImpact > 10 && highestImpactPlayer.touchesPerPoint <= 2) {
        insight = `Despite low traditional stats, ${highestImpactPlayer.name} has a massive +${highestImpactPlayer.systemImpact}% System Impact. Their structural positioning allows the team to drastically increase scoring efficiency when they step on the field.`;
     } else if (engines.length > 0 && finishers.length > 0) {
       insight = `${engines[0].name} is averaging ${engines[0].touchesPerPoint} touches per point (The Engine), providing absolute foundational stability for ${finishers[0].name} (The Finisher) to attack.`;
@@ -289,7 +321,8 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
       score: { us: currentUs, them: currentThem },
       teamSummary: { totalTouches: teamTouchesCount, totalGoals, totalAssists, totalTurnovers, totalBlocks, totalThrowaways, totalDrops, totalStalls },
       coachInsight: insight,
-      connectionsMap
+      connectionsMap,
+      totalTeamSecondaryAssists
     };
   }, [stats]);
 
@@ -602,6 +635,12 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
                     <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('systemImpact')} title="The % change in team scoring efficiency when this player is on the field. Corrects for O/D starting bias.">
                       System Impact % {sortField === 'systemImpact' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
+                    <th className="p-4 font-bold text-center hover:text-white transition-colors whitespace-nowrap" onClick={() => handleSort('oce')} title="Team success rate at converting possessions into goals while this player is active.">
+                      OCE % {sortField === 'oce' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                    </th>
+                    <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('ova')} title="Weighted offensive contribution (Assists + Hockey Assists + Clean Holds).">
+                      OVA {sortField === 'ova' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                    </th>
                     <th className="p-4 font-bold text-right hover:text-white transition-colors" onClick={() => handleSort('usage')} title="Share of Team Touches">
                       Usage {sortField === 'usage' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
@@ -673,7 +712,16 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
                              </span>
                           </div>
                         </td>
-                        <td className="p-4 text-right font-mono font-bold text-slate-500">
+                        <td className="p-4 text-center font-mono font-bold text-teal-300">
+                          {p.oce}%
+                        </td>
+                        <td className="p-4 text-center font-mono font-bold text-emerald-300">
+                          {p.ova.toFixed(1)}
+                          {totalTeamSecondaryAssists > 0 && (p.secondaryAssists / totalTeamSecondaryAssists) > 0.40 && (
+                            <span className="ml-1 text-[11px] drop-shadow-md" title="Hub Player: Contributes >40% of team Secondary Assists">🏗️</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-right font-mono font-bold text-slate-300">
                           {p.usage}%
                         </td>
                         <td className="p-4 text-right">
