@@ -162,8 +162,8 @@ const EventLog = ({ currentGame, onNavigate }) => {
                       </div>
                     </div>
                     
-                    {!isSystem && (
-                      <div className="flex gap-2 w-full sm:w-auto">
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      {!isSystem && (
                         <button
                           onClick={() => editingId === log.id ? setEditingId(null) : setEditingId(log.id)}
                           disabled={savingId === log.id}
@@ -171,15 +171,15 @@ const EventLog = ({ currentGame, onNavigate }) => {
                         >
                           {editingId === log.id ? 'Cancel' : 'Edit'}
                         </button>
-                        <button
-                          onClick={() => handleDelete(log.id)}
-                          disabled={savingId === log.id}
-                          className="flex-1 sm:flex-none px-4 py-2 bg-slate-800 hover:bg-rose-500/20 hover:text-rose-300 text-rose-500 font-bold text-xs rounded-xl border border-slate-700 transition-colors disabled:opacity-50"
-                        >
-                          {savingId === log.id ? '...' : 'Delete'}
-                        </button>
-                      </div>
-                    )}
+                      )}
+                      <button
+                        onClick={() => handleDelete(log.id)}
+                        disabled={savingId === log.id}
+                        className="flex-1 sm:flex-none px-4 py-2 bg-slate-800 hover:bg-rose-500/20 hover:text-rose-300 text-rose-500 font-bold text-xs rounded-xl border border-slate-700 transition-colors disabled:opacity-50"
+                      >
+                        {savingId === log.id ? '...' : 'Delete'}
+                      </button>
+                    </div>
                   </div>
                 );
               })}
