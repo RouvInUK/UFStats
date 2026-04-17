@@ -66,7 +66,7 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
 
     const ensurePlayer = (name) => {
       if (!playersMap[name]) {
-        playersMap[name] = { name, goals: 0, assists: 0, secondaryAssists: 0, blocks: 0, throwaways: 0, drops: 0, stalls: 0, touches: 0, passes: 0, usage: 0, pointsPlayedSet: new Set(), holdsPlayed: 0, holdsWon: 0, breaksPlayed: 0, breaksWon: 0 };
+        playersMap[name] = { name, goals: 0, assists: 0, secondaryAssists: 0, blocks: 0, throwaways: 0, drops: 0, stalls: 0, touches: 0, passes: 0, passDropped: 0, usage: 0, pointsPlayedSet: new Set(), holdsPlayed: 0, holdsWon: 0, breaksPlayed: 0, breaksWon: 0 };
       }
       return playersMap[name];
     };
@@ -145,9 +145,15 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
            }
         }
       } else if (stat.stat_type === 'Pass') {
-        p.passes += 1;
-        // Look ahead for assist
         const nextStat = stats[index + 1];
+        
+        // Look ahead for a receiver drop OR an assist
+        if (nextStat && nextStat.point_number === stat.point_number && nextStat.stat_type === 'Drop') {
+            p.passDropped += 1;
+        } else {
+            p.passes += 1; // Completed pass
+        }
+
         if (nextStat && nextStat.point_number === stat.point_number && nextStat.stat_type === 'Point') {
           p.assists += 1;
         }
@@ -194,7 +200,7 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
       const touchesPerPoint = p.touches / pointsPlayed;
       const blocksPerPoint = p.blocks / pointsPlayed;
 
-      const passAttempts = p.passes + p.throwaways;
+      const passAttempts = p.passes + p.throwaways + p.passDropped;
       const completion = passAttempts > 0 ? (p.passes / passAttempts) * 100 : 0;
       
       const nis = ((p.goals * 2) + (p.assists * 1.5) + (p.blocks * 2) + (p.passes * 0.3) - (turnovers * 2)) / pointsPlayed;
