@@ -176,6 +176,9 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
        }
     });
 
+    const globalHoldRate = globalHoldsPlayed > 0 ? globalHoldsWon / globalHoldsPlayed : 0;
+    const globalBreakRate = globalBreaksPlayed > 0 ? globalBreaksWon / globalBreaksPlayed : 0;
+
     // Calculate usage rates, NIS, Tags, Completion %, and System Impact
     const calculatedPlayerStats = Object.values(playersMap).map(p => {
       const turnovers = p.throwaways + p.drops + p.stalls;
@@ -197,6 +200,8 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
       const nis = ((p.goals * 2) + (p.assists * 1.5) + (p.blocks * 2) + (p.passes * 0.3) - (turnovers * 2)) / pointsPlayed;
 
       let plusMinus = 0;
+      let totalWeightedImpact = 0;
+
       p.pointsPlayedSet.forEach(ptNum => {
          const outcome = pointOutcomes[ptNum];
          if (outcome === 'won') plusMinus += 1;
@@ -209,26 +214,28 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
              p.breaksPlayed += 1;
              if (outcome === 'won') p.breaksWon += 1;
          }
+
+         if (outcome === 'won' || outcome === 'lost') {
+             const result = outcome === 'won' ? 1 : 0;
+             let impact = 0;
+             if (pointODState[ptNum] === 'O') {
+                 impact = result - globalHoldRate;
+             } else {
+                 impact = result - globalBreakRate;
+                 if (impact > 0) impact *= 2; // Break Bonus
+             }
+             totalWeightedImpact += impact;
+         }
       });
 
-      const sOn = (p.holdsPlayed + p.breaksPlayed) > 0 
-           ? ((p.holdsWon + p.breaksWon) / (p.holdsPlayed + p.breaksPlayed)) * 100 : 0;
-           
-      const offHoldsPlayed = globalHoldsPlayed - p.holdsPlayed;
-      const offBreaksPlayed = globalBreaksPlayed - p.breaksPlayed;
-      const offHoldsWon = globalHoldsWon - p.holdsWon;
-      const offBreaksWon = globalBreaksWon - p.breaksWon;
-      
-      const sOff = (offHoldsPlayed + offBreaksPlayed) > 0 
-           ? ((offHoldsWon + offBreaksWon) / (offHoldsPlayed + offBreaksPlayed)) * 100 : 0;
-           
-      // If team has 0 points off, neutral offset
-      const systemImpact = (offHoldsPlayed + offBreaksPlayed) > 0 ? parseFloat((sOn - sOff).toFixed(1)) : 0;
+      const systemImpactRaw = p.pointsPlayedSet.size > 0 ? (totalWeightedImpact / p.pointsPlayedSet.size) * 100 : 0;
+      const systemImpact = parseFloat((systemImpactRaw).toFixed(1));
 
       let tags = [];
       if (touchesPerPoint > 3 && completion >= 90) tags.push("The Engine");
       if (touchesPerPoint < 2 && (p.goals + p.assists) / pointsPlayed > 0.4) tags.push("The Finisher");
       if (blocksPerPoint > 0.3) tags.push("The Lockdown");
+      if (systemImpact > 0 && p.pointsPlayedSet.size > 0 && (p.breaksPlayed / p.pointsPlayedSet.size) > 0.70) tags.push("D-Line Specialist");
 
       return {
         ...p,
@@ -656,6 +663,7 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
                              </div>
                              <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white drop-shadow-md z-20 pointer-events-none">
                                 {p.systemImpact > 0 ? '+' : ''}{p.systemImpact}%
+                                {p.breaksWon > 2 && <span className="ml-0.5 drop-shadow-[0_0_5px_rgba(250,204,21,0.9)] text-amber-400 text-[11px]" title="Break Master">🔥</span>}
                              </span>
                           </div>
                         </td>
