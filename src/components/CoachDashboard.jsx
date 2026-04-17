@@ -1,22 +1,31 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { fetchGameStats, fetchAllGameNames } from '../supabaseClient';
+import { fetchGameStats, fetchAllGameNames, fetchAllTeamNames } from '../supabaseClient';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
 import { Lock, Zap, Target, AlertTriangle, Presentation, Users, ChevronDown, Check, Activity } from 'lucide-react';
 
-const CoachDashboard = ({ currentGame, currentTeam }) => {
+const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [visualGameType, setVisualGameType] = useState('beach');
   const [selectedGames, setSelectedGames] = useState(currentGame ? [currentGame] : []);
   const [allGames, setAllGames] = useState([]);
+  const [allTeams, setAllTeams] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [sortField, setSortField] = useState('nis');
   const [sortDirection, setSortDirection] = useState('desc');
   const [highlightedPlayerName, setHighlightedPlayerName] = useState(null);
 
   useEffect(() => {
-    fetchAllGameNames(currentTeam).then(setAllGames).catch(console.error);
-  }, [currentTeam]);
+    fetchAllTeamNames().then(setAllTeams).catch(console.error);
+    fetchAllGameNames(currentTeam).then(names => {
+      setAllGames(names);
+      if (currentGame && names.includes(currentGame)) {
+        setSelectedGames([currentGame]);
+      } else {
+        setSelectedGames([]);
+      }
+    });
+  }, [currentTeam, currentGame]);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -330,13 +339,36 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 pb-32">
         <Presentation className="w-16 h-16 text-indigo-500/50 mb-4" />
-        <h2 className="text-2xl font-black text-white tracking-widest uppercase mb-6">Coach Dashboard</h2>
+        <h2 className="text-2xl font-black text-white tracking-widest uppercase mb-6 text-center">Coach Dashboard</h2>
         
-        <div className="relative w-full max-w-sm">
-          <button 
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="w-full flex items-center justify-between px-6 py-4 bg-slate-800 rounded-2xl border border-slate-700 text-left transition-all hover:bg-slate-700"
-          >
+        <div className="w-full max-w-sm flex flex-col gap-6">
+          
+          <div className="relative w-full">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">1. Select Subject Team</label>
+            <div className="relative">
+              <select
+                value={currentTeam || 'Default Team'}
+                onChange={(e) => {
+                  setCurrentTeam(e.target.value);
+                  setSelectedGames([]);
+                }}
+                className="w-full px-6 py-4 bg-slate-800 rounded-2xl border border-slate-700 text-slate-200 font-bold outline-none focus:border-indigo-500 transition-colors appearance-none"
+              >
+                <option value="Default Team">Default Team (Legacy)</option>
+                {allTeams.filter(t => t !== 'Default Team').map(team => (
+                  <option key={team} value={team}>{team}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-5 h-5 text-slate-400 absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+          </div>
+
+          <div className="relative w-full">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">2. Select Matches to Analyze</label>
+            <button 
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="w-full flex items-center justify-between px-6 py-4 bg-slate-800 rounded-2xl border border-slate-700 text-left transition-all hover:bg-slate-700"
+            >
             <span className="font-bold text-slate-200">Select Matches to Analyze</span>
             <ChevronDown className="w-5 h-5 text-slate-400" />
           </button>
@@ -356,6 +388,7 @@ const CoachDashboard = ({ currentGame, currentTeam }) => {
               {allGames.length === 0 && <div className="p-4 text-center text-slate-500 text-sm">No games logged yet.</div>}
             </div>
           )}
+          </div>
         </div>
       </div>
     );

@@ -184,6 +184,7 @@ function App() {
         <CoachDashboard 
           currentGame={currentGame}
           currentTeam={currentTeam}
+          setCurrentTeam={setCurrentTeam}
         />
       )}
 
