@@ -66,6 +66,10 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
       
       if (statType === 'Point' || statType === 'Opponent Point') {
         setIsTrackingActive(false);
+        // Seamless Loop: Auto-redirect to Lineup after a goal to prepare for the next point
+        setTimeout(() => {
+          onNavigate('lineup');
+        }, 1000);
       }
 
       if (statType === 'Point') {
