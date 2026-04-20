@@ -177,6 +177,11 @@ function App() {
           setPlayers={setPlayers}
           currentTeam={currentTeam}
           onNavigate={setCurrentView} 
+          currentGame={currentGame}
+          currentPoint={currentPoint}
+          setCurrentPoint={setCurrentPoint}
+          gameType={gameType}
+          setIsTrackingActive={setIsTrackingActive}
         />
       )}
 
