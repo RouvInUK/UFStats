@@ -1,9 +1,37 @@
-import { togglePlayerActiveStatus, clearActiveLineup } from '../supabaseClient';
+import { togglePlayerActiveStatus, clearActiveLineup, recordLineup } from '../supabaseClient';
 import { useState } from 'react';
 
-const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate }) => {
+const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentGame, currentPoint, setCurrentPoint, gameType, setIsTrackingActive }) => {
   const [processingId, setProcessingId] = useState(null);
   const [isClearing, setIsClearing] = useState(false);
+  const [isStartingPoint, setIsStartingPoint] = useState(false);
+
+  const handleStartPoint = async () => {
+    const activeLineupNames = players.filter(p => p.is_active).map(p => p.name);
+    const expectedCount = gameType === 'grass' ? 7 : 5;
+    
+    if (activeLineupNames.length !== expectedCount) {
+      if (!window.confirm(`You selected ${activeLineupNames.length} players, but a ${gameType} game usually expects ${expectedCount}. Start point anyway?`)) {
+        return;
+      }
+    }
+
+    if (!currentGame) return alert("Enter a game name in the Dashboard first.");
+
+    setIsStartingPoint(true);
+    try {
+      const nextPoint = currentPoint + 1;
+      await recordLineup(activeLineupNames, nextPoint, currentGame, gameType, currentTeam);
+      setCurrentPoint(nextPoint);
+      setIsTrackingActive(true);
+      onNavigate('dashboard');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to start point.');
+    } finally {
+      setIsStartingPoint(false);
+    }
+  };
 
   const togglePlayer = async (player) => {
     // Optimistically update UI locally
@@ -110,6 +138,23 @@ const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate }) => {
             </div>
           )}
         </div>
+
+        {/* Start Point Footer logic block */}
+        <div className="p-6 sm:p-8 border-t border-slate-700/50 bg-slate-900/30">
+          <button
+            onClick={handleStartPoint}
+            disabled={isStartingPoint || activeCount === 0 || !currentGame}
+            className="w-full group relative flex items-center justify-center px-6 py-5 border border-emerald-500/50 text-xl font-black rounded-2xl text-white bg-emerald-500/20 hover:bg-emerald-500/40 backdrop-blur-md focus:outline-none focus:ring-4 focus:ring-emerald-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest"
+          >
+            {isStartingPoint ? (
+               <span className="flex items-center gap-3">
+                 <div className="w-5 h-5 border-2 border-transparent border-t-white rounded-full animate-spin" />
+                 Synchronizing...
+               </span>
+            ) : "Start Point"}
+          </button>
+        </div>
+
       </div>
     </div>
   );

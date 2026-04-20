@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { recordStatToDB, fetchActiveGames, recordLineup } from '../supabaseClient';
+import { recordStatToDB, fetchActiveGames } from '../supabaseClient';
 
 const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, setCurrentGame, gameType, setGameType, currentTeam, isTrackingActive, setIsTrackingActive, onNavigate }) => {
   const [selectedPlayer, setSelectedPlayer] = useState('');
@@ -78,26 +78,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
     } catch (error) {
       console.error('Save failed:', error);
       alert('Failed to save. Check server logs.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleStartNextPoint = async () => {
-    if (activeLineup.length === 0) return alert("Select a lineup first!");
-    if (!currentGame) return alert("Enter a game name first.");
-
-    setIsSaving(true);
-    setLastSaved(null);
-    try {
-      const nextPoint = currentPoint + 1;
-      await recordLineup(activeLineup, nextPoint, currentGame, gameType, currentTeam);
-      setCurrentPoint(nextPoint);
-      setIsTrackingActive(true);
-      setLastSaved(`Started Point ${nextPoint}`);
-    } catch (err) {
-      console.error(err);
-      alert('Failed to start point.');
     } finally {
       setIsSaving(false);
     }
@@ -313,18 +293,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
             {/* Control Buttons */}
             {activeLineup.length > 0 && (
               <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                <button
-                  onClick={handleStartNextPoint}
-                  disabled={isSaving || !currentGame || isTrackingActive}
-                  className={`w-full py-3 px-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all shadow-md ${
-                    isTrackingActive
-                      ? 'bg-emerald-900/40 text-emerald-700/50 cursor-not-allowed border border-emerald-900/50'
-                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20 shadow-lg'
-                  }`}
-                >
-                  ▶ Start Next Point (+1)
-                </button>
-                
                 <button
                   onClick={() => onNavigate('lineup')}
                   disabled={isSaving || !currentGame || !isTrackingActive}
