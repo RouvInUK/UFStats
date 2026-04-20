@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { recordStatToDB, fetchActiveGames } from '../supabaseClient';
+import { recordStatToDB, fetchActiveGames, clearActiveLineup } from '../supabaseClient';
 
-const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, setCurrentGame, gameType, setGameType, currentTeam, isTrackingActive, setIsTrackingActive, onNavigate }) => {
+const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, setCurrentGame, gameType, setGameType, currentTeam, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers }) => {
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -66,6 +66,14 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
       
       if (statType === 'Point' || statType === 'Opponent Point') {
         setIsTrackingActive(false);
+        
+        // Auto-clean the lineup on the backend asynchronously
+        clearActiveLineup(currentTeam).catch(console.error);
+        // Instant visual clearing via optimistically mutated prop
+        if (players && setPlayers) {
+            setPlayers(players.map(p => ({ ...p, is_active: false })));
+        }
+
         // Seamless Loop: Auto-redirect to Lineup after a goal to prepare for the next point
         setTimeout(() => {
           onNavigate('lineup');

@@ -154,6 +154,8 @@ function App() {
           isTrackingActive={isTrackingActive}
           setIsTrackingActive={setIsTrackingActive}
           onNavigate={setCurrentView} 
+          players={players}
+          setPlayers={setPlayers}
         />
       )}
 
