@@ -1,10 +1,49 @@
-import { togglePlayerActiveStatus, clearActiveLineup, recordLineup } from '../supabaseClient';
-import { useState } from 'react';
+import { togglePlayerActiveStatus, clearActiveLineup, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint } from '../supabaseClient';
+import { useState, useEffect } from 'react';
+import { Undo2 } from 'lucide-react';
 
 const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentGame, currentPoint, setCurrentPoint, gameType, setIsTrackingActive }) => {
   const [processingId, setProcessingId] = useState(null);
   const [isClearing, setIsClearing] = useState(false);
   const [isStartingPoint, setIsStartingPoint] = useState(false);
+  const [lastAction, setLastAction] = useState(null);
+  const [isUndoing, setIsUndoing] = useState(false);
+
+  useEffect(() => {
+    if (currentGame) {
+      fetchLastStatForGame(currentGame, currentTeam)
+        .then(setLastAction)
+        .catch(console.error);
+    }
+  }, [currentGame, currentTeam, currentPoint]);
+
+  const handleUndoLastPoint = async () => {
+    if (!lastAction || !lastAction.id) return;
+    
+    if (window.confirm("Are you sure you want to undo this score? This will restore the previous lineup and return to tracking.")) {
+      setIsUndoing(true);
+      try {
+        await deleteStat(lastAction.id);
+        
+        const restoredNames = await restoreLineupForPoint(currentGame, currentPoint, currentTeam);
+        
+        const optimisticallyRestored = players.map(p => ({
+          ...p,
+          is_active: restoredNames.includes(p.name)
+        }));
+        
+        setPlayers(optimisticallyRestored);
+        
+        setIsTrackingActive(true);
+        onNavigate('dashboard');
+      } catch (err) {
+        console.error("Failed to undo point", err);
+        alert("Failed to undo point.");
+      } finally {
+        setIsUndoing(false);
+      }
+    }
+  };
 
   const handleStartPoint = async () => {
     const activeLineupNames = players.filter(p => p.is_active).map(p => p.name);
@@ -153,6 +192,21 @@ const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentG
                </span>
             ) : "Start Point"}
           </button>
+          
+          {lastAction && (lastAction.stat_type === 'Point' || lastAction.stat_type === 'Opponent Point') && (
+            <button
+              onClick={handleUndoLastPoint}
+              disabled={isUndoing}
+              className="w-full mt-4 flex items-center justify-center gap-2 px-6 py-4 border border-slate-700/50 text-sm font-bold rounded-2xl text-slate-400 bg-slate-900/50 hover:bg-slate-800 hover:text-white transition-all shadow-md focus:outline-none focus:ring-4 focus:ring-slate-800 disabled:opacity-50"
+            >
+              {isUndoing ? 'Undoing...' : (
+                <>
+                  <Undo2 className="w-4 h-4" />
+                  Undo Last {lastAction.stat_type}
+                </>
+              )}
+            </button>
+          )}
         </div>
 
       </div>

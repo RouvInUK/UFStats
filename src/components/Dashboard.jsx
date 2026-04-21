@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { recordStatToDB, fetchActiveGames, clearActiveLineup } from '../supabaseClient';
+import { recordStatToDB, fetchActiveGames, clearActiveLineup, fetchLastStatForGame, deleteStat } from '../supabaseClient';
+import { Undo2 } from 'lucide-react';
 
 const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, setCurrentGame, gameType, setGameType, currentTeam, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers }) => {
   const [selectedPlayer, setSelectedPlayer] = useState('');
@@ -142,6 +143,33 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
     } catch (error) {
       console.error('Save failed:', error);
       alert('Failed to log system event.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUndo = async () => {
+    if (!currentGame) return;
+    setIsSaving(true);
+    try {
+      const lastStat = await fetchLastStatForGame(currentGame, currentTeam);
+      if (!lastStat) {
+        alert("No recent actions found to undo for this game.");
+        return;
+      }
+      
+      const isPoint = lastStat.stat_type === 'Point' || lastStat.stat_type === 'Opponent Point';
+      if (isPoint) {
+        if (!window.confirm(`Are you sure you want to undo this ${lastStat.stat_type}?`)) return;
+        await deleteStat(lastStat.id);
+        setLastSaved('Point Undone');
+      } else {
+        await deleteStat(lastStat.id);
+        setLastSaved('Action Undone');
+      }
+    } catch (error) {
+      console.error('Undo failed:', error);
+      alert('Failed to undo action.');
     } finally {
       setIsSaving(false);
     }
@@ -315,6 +343,16 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
                   }`}
                 >
                   ↻ Substitution
+                </button>
+                
+                <button
+                  onClick={handleUndo}
+                  disabled={isSaving || !currentGame}
+                  className="w-full sm:w-auto py-3 px-6 flex items-center justify-center gap-2 font-bold rounded-xl transition-all border border-slate-700/50 text-slate-400 hover:text-white bg-slate-900 shadow-md hover:bg-slate-800"
+                  title="Undo Last Action"
+                >
+                  <Undo2 className="w-5 h-5" />
+                  <span className="sm:hidden">Undo Last Action</span>
                 </button>
               </div>
             )}

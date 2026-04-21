@@ -251,3 +251,50 @@ export const deleteStat = async (id) => {
 
   if (error) throw error;
 };
+
+export const fetchLastStatForGame = async (gameName, teamName) => {
+  let query = supabase
+    .from('stats')
+    .select('*')
+    .eq('game_name', gameName)
+    .neq('stat_type', 'Lineup')
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (teamName && teamName !== 'Default Team') {
+    query = query.eq('team_name', teamName);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data && data.length > 0 ? data[0] : null;
+};
+
+export const restoreLineupForPoint = async (gameName, pointNumber, teamName) => {
+  let query = supabase
+    .from('stats')
+    .select('player')
+    .eq('game_name', gameName)
+    .eq('point_number', pointNumber)
+    .eq('stat_type', 'Lineup');
+
+  if (teamName && teamName !== 'Default Team') {
+    query = query.eq('team_name', teamName);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  if (!data || data.length === 0) return [];
+
+  const activePlayers = data.map(d => d.player);
+
+  let updateQuery = supabase.from('players').update({ is_active: true }).in('name', activePlayers);
+  if (teamName && teamName !== 'Default Team') {
+    updateQuery = updateQuery.eq('team_name', teamName);
+  }
+
+  await updateQuery;
+
+  return activePlayers;
+};
