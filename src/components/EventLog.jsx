@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchGameStats, updateStat, deleteStat, fetchAllGameNames } from '../supabaseClient';
+import { Pencil, Trash2 } from 'lucide-react';
 
 const STAT_TYPES = ['Point', 'Pass', 'Throwaway', 'Drop', 'Stall Out', 'Defence'];
 
@@ -119,70 +120,86 @@ const EventLog = ({ currentGame, onNavigate }) => {
               No stats recorded yet for {selectedGame}.
             </div>
           ) : (
-            <div className="space-y-3">
-              {logs.map((log) => {
-                const isSystem = log.player === 'System';
-                
-                return (
-                  <div key={log.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-900/60 rounded-2xl border border-slate-700/50 gap-4 hover:bg-slate-800/50 transition-colors duration-200">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 flex items-center justify-center bg-slate-800 rounded-xl border border-slate-700/50 font-bold text-slate-400 text-sm shadow-inner">
-                        Pt {log.point_number}
-                      </div>
-                      <div>
-                        {isSystem ? (
-                          <p className="text-slate-500 font-bold italic">{log.stat_type}</p>
-                        ) : (
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                            <span className="text-white font-bold text-lg">{log.player}</span>
-                            {editingId === log.id ? (
-                              <select 
-                                value={log.stat_type}
-                                onChange={(e) => handleUpdate(log.id, e.target.value)}
-                                disabled={savingId === log.id}
-                                className="bg-slate-900 border border-indigo-500 text-indigo-300 rounded-lg px-2 py-1 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"
-                              >
-                                {STAT_TYPES.map(type => (
-                                  <option key={type} value={type}>{type}</option>
-                                ))}
-                              </select>
-                            ) : (
-                              <span className={`text-sm font-bold px-2 py-0.5 rounded-md 
-                                ${log.stat_type === 'Point' ? 'bg-emerald-500/20 text-emerald-400' : 
-                                  log.stat_type === 'Pass' ? 'bg-cyan-500/20 text-cyan-400' : 
-                                  log.stat_type === 'Defence' ? 'bg-orange-500/20 text-orange-400' : 
-                                  'bg-rose-500/20 text-rose-400'}`}
-                              >
-                                {log.stat_type}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        <p className="text-slate-500 text-xs mt-1 font-medium">{new Date(log.created_at).toLocaleTimeString()}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2 w-full sm:w-auto">
-                      {!isSystem && (
-                        <button
-                          onClick={() => editingId === log.id ? setEditingId(null) : setEditingId(log.id)}
-                          disabled={savingId === log.id}
-                          className="flex-1 sm:flex-none px-4 py-2 bg-slate-800 hover:bg-slate-700 text-indigo-400 font-bold text-xs rounded-xl border border-slate-700 transition-colors disabled:opacity-50"
-                        >
-                          {editingId === log.id ? 'Cancel' : 'Edit'}
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleDelete(log.id)}
-                        disabled={savingId === log.id}
-                        className="flex-1 sm:flex-none px-4 py-2 bg-slate-800 hover:bg-rose-500/20 hover:text-rose-300 text-rose-500 font-bold text-xs rounded-xl border border-slate-700 transition-colors disabled:opacity-50"
-                      >
-                        {savingId === log.id ? '...' : 'Delete'}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="space-y-6">
+              {(() => {
+                const groupedObj = logs.reduce((acc, log) => {
+                   const pt = log.point_number;
+                   if (!acc[pt]) acc[pt] = [];
+                   acc[pt].push(log);
+                   return acc;
+                }, {});
+
+                const sortedPoints = Object.keys(groupedObj).map(Number).sort((a,b) => b - a);
+
+                return sortedPoints.map(pointNum => {
+                   const pointLogs = groupedObj[pointNum];
+                   const endedInGoal = pointLogs.some(l => l.stat_type === 'Point' || l.stat_type === 'Opponent Point');
+
+                   return (
+                     <div key={pointNum} className={`p-5 rounded-xl border bg-white/5 backdrop-blur-sm ${endedInGoal ? 'border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'border-white/10'}`}>
+                       <h3 className="text-slate-400 font-semibold uppercase tracking-wider mb-4 border-b border-slate-700/50 pb-2">
+                         Point {pointNum}
+                       </h3>
+                       {pointLogs.length === 0 ? (
+                         <p className="text-slate-500 italic text-sm">No actions logged for this point</p>
+                       ) : (
+                         <div className="space-y-4">
+                           {pointLogs.map(log => {
+                             const isSystem = log.player === 'System';
+                             return (
+                               <div key={log.id} className="flex justify-between items-center gap-2 group">
+                                 <div className="flex items-center gap-3">
+                                   {isSystem ? (
+                                      <span className="text-slate-500 font-bold italic">{log.stat_type}</span>
+                                   ) : (
+                                      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                                        <span className="text-white font-bold">{log.player}</span>
+                                        <div className="flex items-center gap-2 opacity-50 transition-opacity group-hover:opacity-100 ml-1">
+                                          <button onClick={() => editingId === log.id ? setEditingId(null) : setEditingId(log.id)} disabled={savingId === log.id} className="text-indigo-400 hover:text-indigo-300 bg-slate-900/50 p-1.5 rounded-md hover:bg-slate-800 transition-colors" title="Edit">
+                                            <Pencil className="w-4 h-4" />
+                                          </button>
+                                          <button onClick={() => handleDelete(log.id)} disabled={savingId === log.id} className="text-rose-400 hover:text-rose-300 bg-slate-900/50 p-1.5 rounded-md hover:bg-slate-800 transition-colors" title="Delete">
+                                            <Trash2 className="w-4 h-4" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                   )}
+                                 </div>
+                                 <div className="flex items-center gap-3">
+                                   {editingId === log.id && !isSystem ? (
+                                      <select 
+                                        value={log.stat_type}
+                                        onChange={(e) => handleUpdate(log.id, e.target.value)}
+                                        disabled={savingId === log.id}
+                                        className="bg-slate-900 border border-indigo-500 text-indigo-300 rounded-lg px-2 py-1 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                                      >
+                                        {STAT_TYPES.map(type => (
+                                          <option key={type} value={type}>{type}</option>
+                                        ))}
+                                      </select>
+                                    ) : (
+                                      <span className={`text-sm font-bold px-2 py-0.5 rounded-md 
+                                        ${log.stat_type === 'Point' ? 'bg-emerald-500/20 text-emerald-400' : 
+                                          log.stat_type === 'Pass' ? 'bg-cyan-500/20 text-cyan-400' : 
+                                          log.stat_type === 'Defence' ? 'bg-orange-500/20 text-orange-400' : 
+                                          'bg-rose-500/20 text-rose-400'}`}
+                                      >
+                                        {log.stat_type}
+                                      </span>
+                                    )}
+                                    <span className="text-slate-500 text-xs font-medium min-w-[60px] text-right tabular-nums">
+                                      {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                 </div>
+                               </div>
+                             );
+                           })}
+                         </div>
+                       )}
+                     </div>
+                   );
+                });
+              })()}
             </div>
           )}
         </div>
