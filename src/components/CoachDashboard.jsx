@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { fetchGameStats, fetchAllGameNames, fetchAllTeamNames } from '../supabaseClient';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
-import { Lock, Zap, Target, AlertTriangle, Presentation, Users, ChevronDown, Check, Activity } from 'lucide-react';
+import { Lock, Zap, Target, AlertTriangle, Presentation, Users, ChevronDown, Check, Activity, TrendingUp, TrendingDown } from 'lucide-react';
 
 const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
   const [stats, setStats] = useState([]);
@@ -54,7 +54,8 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
     );
   };
 
-  const { playerStats, timeline, score, teamSummary, connectionsMap, totalTeamSecondaryAssists } = useMemo(() => {
+  const { playerStats, timeline, score, teamSummary, connectionsMap, totalTeamSecondaryAssists, twoGameTrend, isMultiGame } = useMemo(() => {
+    const isMultiGame = selectedGames.length > 1;
     const playersMap = {};
     const timelineData = [];
     let currentUs = 0;
@@ -68,7 +69,7 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
     let totalDrops = 0;
     let totalStalls = 0;
     let activeNames = new Set();
-    let highestPoint = 0;
+    const highestPointPerGame = {};
 
     const pointOutcomes = {};
     const connectionsMap = {};
@@ -81,7 +82,7 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
     };
 
     const pointODState = {};
-    let currentLineState = 'O';
+    const currentLineStatePerGame = {};
 
     timelineData.push({ point: 0, pointNumber: 0, Us: 0, Them: 0 });
 
@@ -90,39 +91,45 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
     const pointCleanHolds = {};
 
     stats.forEach((stat, index) => {
+      const pointKey = `${stat.game_name}_${stat.point_number}`;
       
+      if (!currentLineStatePerGame[stat.game_name]) {
+          currentLineStatePerGame[stat.game_name] = 'O';
+      }
+
       // Track O/D State Initializations
-      if (stat.stat_type === 'Start Offense') currentLineState = 'O';
-      if (stat.stat_type === 'Start Defense') currentLineState = 'D';
+      if (stat.stat_type === 'Start Offense') currentLineStatePerGame[stat.game_name] = 'O';
+      if (stat.stat_type === 'Start Defense') currentLineStatePerGame[stat.game_name] = 'D';
       if (stat.stat_type === 'Half Time') {
-        currentLineState = currentLineState === 'O' ? 'D' : 'O';
+        currentLineStatePerGame[stat.game_name] = currentLineStatePerGame[stat.game_name] === 'O' ? 'D' : 'O';
       }
 
       const isLineupOrScore = stat.stat_type === 'Lineup' || stat.stat_type === 'Point' || stat.stat_type === 'Opponent Point';
-      if (isLineupOrScore && !pointODState[stat.point_number]) {
-          pointODState[stat.point_number] = currentLineState;
+      if (isLineupOrScore && !pointODState[pointKey]) {
+          pointODState[pointKey] = currentLineStatePerGame[stat.game_name];
       }
 
       // Track points and timeline
       if (stat.stat_type === 'Point') {
         currentUs += 1;
-        pointOutcomes[stat.point_number] = 'won';
-        timelineData.push({ point: currentUs + currentThem, pointNumber: stat.point_number, Us: currentUs, Them: currentThem });
-        currentLineState = 'D'; // Scored, now pull on D
+        pointOutcomes[pointKey] = 'won';
+        timelineData.push({ point: currentUs + currentThem, pointNumber: stat.point_number, pointKey, Us: currentUs, Them: currentThem });
+        currentLineStatePerGame[stat.game_name] = 'D'; // Scored, now pull on D
       } else if (stat.stat_type === 'Opponent Point') {
         currentThem += 1;
-        pointOutcomes[stat.point_number] = 'lost';
-        timelineData.push({ point: currentUs + currentThem, pointNumber: stat.point_number, Us: currentUs, Them: currentThem });
-        currentLineState = 'O'; // Got scored on, now receive on O
+        pointOutcomes[pointKey] = 'lost';
+        timelineData.push({ point: currentUs + currentThem, pointNumber: stat.point_number, pointKey, Us: currentUs, Them: currentThem });
+        currentLineStatePerGame[stat.game_name] = 'O'; // Got scored on, now receive on O
       }
 
       // Track active lineup based on max point
-      if (stat.point_number >= highestPoint) {
-        if (stat.point_number > highestPoint) {
-          highestPoint = stat.point_number;
-          activeNames = new Set(); // reset lineup for new point
+      const currentHighest = highestPointPerGame[stat.game_name] || 0;
+      if (stat.point_number >= currentHighest) {
+        if (stat.point_number > currentHighest) {
+          highestPointPerGame[stat.game_name] = stat.point_number;
+          if (!isMultiGame) activeNames = new Set(); // Only reset for single UI viewing
         }
-        if (stat.stat_type === 'Lineup') {
+        if (stat.stat_type === 'Lineup' && !isMultiGame) {
           activeNames.add(stat.player);
         }
       }
@@ -130,7 +137,7 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
       if (stat.stat_type === 'Lineup') {
         if (stat.player !== 'System' && stat.player !== 'Opponent') {
           const lp = ensurePlayer(stat.player);
-          lp.pointsPlayedSet.add(stat.point_number);
+          lp.pointsPlayedSet.add(pointKey);
         }
         return;
       }
@@ -146,13 +153,13 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
         
         // Track the connection
         const assister = stats[index - 1];
-        if (assister && assister.point_number === stat.point_number && assister.stat_type === 'Pass') {
+        if (assister && assister.game_name === stat.game_name && assister.point_number === stat.point_number && assister.stat_type === 'Pass') {
            const pairKey = `${assister.player} → ${stat.player}`;
            connectionsMap[pairKey] = (connectionsMap[pairKey] || 0) + 1;
            
            // Secondary Assist Logic
            const hockeyAssister = stats[index - 2];
-           if (hockeyAssister && hockeyAssister.point_number === stat.point_number && hockeyAssister.stat_type === 'Pass') {
+           if (hockeyAssister && hockeyAssister.game_name === stat.game_name && hockeyAssister.point_number === stat.point_number && hockeyAssister.stat_type === 'Pass') {
               const saPlayer = ensurePlayer(hockeyAssister.player);
               saPlayer.secondaryAssists += 1;
            }
@@ -161,26 +168,26 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
         const nextStat = stats[index + 1];
         
         // Look ahead for a receiver drop OR an assist
-        if (nextStat && nextStat.point_number === stat.point_number && nextStat.stat_type === 'Drop') {
+        if (nextStat && nextStat.game_name === stat.game_name && nextStat.point_number === stat.point_number && nextStat.stat_type === 'Drop') {
             p.passDropped += 1;
         } else {
             p.passes += 1; // Completed pass
         }
 
-        if (nextStat && nextStat.point_number === stat.point_number && nextStat.stat_type === 'Point') {
+        if (nextStat && nextStat.game_name === stat.game_name && nextStat.point_number === stat.point_number && nextStat.stat_type === 'Point') {
           p.assists += 1;
         }
       } else if (stat.stat_type === 'Defence') {
         p.blocks += 1;
       } else if (stat.stat_type === 'Throwaway') {
         p.throwaways += 1;
-        pointTurnovers[stat.point_number] = (pointTurnovers[stat.point_number] || 0) + 1;
+        pointTurnovers[pointKey] = (pointTurnovers[pointKey] || 0) + 1;
       } else if (stat.stat_type === 'Drop') {
         p.drops += 1;
-        pointTurnovers[stat.point_number] = (pointTurnovers[stat.point_number] || 0) + 1;
+        pointTurnovers[pointKey] = (pointTurnovers[pointKey] || 0) + 1;
       } else if (stat.stat_type === 'Stall Out') {
         p.stalls += 1;
-        pointTurnovers[stat.point_number] = (pointTurnovers[stat.point_number] || 0) + 1;
+        pointTurnovers[pointKey] = (pointTurnovers[pointKey] || 0) + 1;
       }
     });
 
@@ -188,22 +195,21 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
     let globalBreaksPlayed = 0; let globalBreaksWon = 0;
     let totalTeamSecondaryAssists = 0;
 
-    Object.entries(pointOutcomes).forEach(([ptStr, outcome]) => {
-       const ptNum = parseInt(ptStr, 10);
-       const turnovers = pointTurnovers[ptNum] || 0;
+    Object.entries(pointOutcomes).forEach(([ptKey, outcome]) => {
+       const turnovers = pointTurnovers[ptKey] || 0;
        
-       if (pointODState[ptNum] === 'O') {
+       if (pointODState[ptKey] === 'O') {
           globalHoldsPlayed++;
           if (outcome === 'won') {
              globalHoldsWon++;
-             if (turnovers === 0) pointCleanHolds[ptNum] = true;
+             if (turnovers === 0) pointCleanHolds[ptKey] = true;
           }
        } else {
           globalBreaksPlayed++;
           if (outcome === 'won') globalBreaksWon++;
        }
        
-       pointPossessions[ptNum] = turnovers + (outcome === 'won' ? 1 : 0);
+       pointPossessions[ptKey] = turnovers + (outcome === 'won' ? 1 : 0);
     });
 
     const globalHoldRate = globalHoldsPlayed > 0 ? globalHoldsWon / globalHoldsPlayed : 0;
@@ -232,29 +238,29 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
       let plusMinus = 0;
       let totalWeightedImpact = 0;
 
-      p.pointsPlayedSet.forEach(ptNum => {
-         const outcome = pointOutcomes[ptNum];
+      p.pointsPlayedSet.forEach(ptKey => {
+         const outcome = pointOutcomes[ptKey];
          if (outcome === 'won') plusMinus += 1;
          if (outcome === 'lost') plusMinus -= 1;
 
-         if (pointODState[ptNum] === 'O') {
+         if (pointODState[ptKey] === 'O') {
              p.holdsPlayed += 1;
              if (outcome === 'won') {
                  p.holdsWon += 1;
-                 if (pointCleanHolds[ptNum]) p.cleanHolds += 1;
+                 if (pointCleanHolds[ptKey]) p.cleanHolds += 1;
              }
          } else {
              p.breaksPlayed += 1;
              if (outcome === 'won') p.breaksWon += 1;
          }
 
-         p.possessionsPlayed += pointPossessions[ptNum] || 0;
+         p.possessionsPlayed += pointPossessions[ptKey] || 0;
          if (outcome === 'won') p.goalsOnPitch += 1;
 
          if (outcome === 'won' || outcome === 'lost') {
              const result = outcome === 'won' ? 1 : 0;
              let impact = 0;
-             if (pointODState[ptNum] === 'O') {
+             if (pointODState[ptKey] === 'O') {
                  impact = result - globalHoldRate;
              } else {
                  impact = result - globalBreakRate;
@@ -274,10 +280,12 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
       totalTeamSecondaryAssists += p.secondaryAssists;
 
       let tags = [];
-      if (touchesPerPoint > 3 && completion >= 90) tags.push("The Engine");
-      if (touchesPerPoint < 2 && (p.goals + p.assists) / pointsPlayed > 0.4) tags.push("The Finisher");
-      if (blocksPerPoint > 0.3) tags.push("The Lockdown");
-      if (systemImpact > 0 && p.pointsPlayedSet.size > 0 && (p.breaksPlayed / p.pointsPlayedSet.size) > 0.70) tags.push("D-Line Specialist");
+      if (!isMultiGame || p.pointsPlayedSet.size >= 10) {
+        if (touchesPerPoint > 3 && completion >= 90) tags.push("The Engine");
+        if (touchesPerPoint < 2 && (p.goals + p.assists) / pointsPlayed > 0.4) tags.push("The Finisher");
+        if (blocksPerPoint > 0.3) tags.push("The Lockdown");
+        if (systemImpact > 0 && p.pointsPlayedSet.size > 0 && (p.breaksPlayed / p.pointsPlayedSet.size) > 0.70) tags.push("D-Line Specialist");
+      }
 
       return {
         ...p,
@@ -294,6 +302,34 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
         tags
       };
     }).sort((a, b) => b.touches - a.touches);
+
+    let twoGameTrend = null;
+    if (selectedGames.length === 2 && stats.length > 0) {
+       const gamesSet = Array.from(new Set(stats.map(s => s.game_name)));
+       if (gamesSet.length === 2) {
+           const g1Name = gamesSet[0];
+           const g2Name = gamesSet[1];
+           
+           let g1Poss = 0, g1GoalsOnPitch = 0;
+           let g2Poss = 0, g2GoalsOnPitch = 0;
+           
+           Object.entries(pointPossessions).forEach(([ptKey, poss]) => {
+               if (ptKey.startsWith(g1Name + '_')) {
+                  g1Poss += poss;
+                  g1GoalsOnPitch += (pointOutcomes[ptKey] === 'won' ? 1 : 0);
+               } else if (ptKey.startsWith(g2Name + '_')) {
+                  g2Poss += poss;
+                  g2GoalsOnPitch += (pointOutcomes[ptKey] === 'won' ? 1 : 0);
+               }
+           });
+           
+           const g1OCE = g1Poss > 0 ? (g1GoalsOnPitch / g1Poss) * 100 : 0;
+           const g2OCE = g2Poss > 0 ? (g2GoalsOnPitch / g2Poss) * 100 : 0;
+           const delta = g2OCE - g1OCE;
+           
+           twoGameTrend = { g1Name, g2Name, g1OCE, g2OCE, delta };
+       }
+    }
 
     // Generate Coach Insight
     const engines = calculatedPlayerStats.filter(p => p.tags.includes("The Engine"));
@@ -331,9 +367,11 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
       teamSummary: { totalTouches: teamTouchesCount, totalGoals, totalAssists, totalTurnovers, totalBlocks, totalThrowaways, totalDrops, totalStalls },
       coachInsight: insight,
       connectionsMap,
-      totalTeamSecondaryAssists
+      totalTeamSecondaryAssists,
+      twoGameTrend,
+      isMultiGame
     };
-  }, [stats]);
+  }, [stats, selectedGames.length]);
 
   if (selectedGames.length === 0) {
     return (
@@ -374,18 +412,24 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
           </button>
           
           {isDropdownOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-2xl shadow-xl overflow-hidden z-50 max-h-64 overflow-y-auto">
-              {allGames.map(game => (
-                <div 
-                  key={game} 
-                  onClick={() => toggleGameSelection(game)}
-                  className="flex items-center justify-between px-6 py-3 cursor-pointer hover:bg-slate-700 transition-colors border-b border-slate-700/50 last:border-0 text-slate-200 font-medium"
-                >
-                  {game}
-                  {selectedGames.includes(game) && <Check className="w-5 h-5 text-indigo-500" />}
-                </div>
-              ))}
-              {allGames.length === 0 && <div className="p-4 text-center text-slate-500 text-sm">No games logged yet.</div>}
+            <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-2xl shadow-xl overflow-hidden z-50 max-h-64 flex flex-col">
+              <div className="flex gap-2 p-3 border-b border-slate-700/50 shrink-0">
+                <button onClick={() => setSelectedGames(allGames)} className="flex-1 px-2 py-2 bg-slate-900 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors border border-slate-700">Select All</button>
+                <button onClick={() => setSelectedGames(allGames.slice(0, 3))} className="flex-1 px-2 py-2 bg-slate-900 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors border border-slate-700">Select Last 3</button>
+              </div>
+              <div className="overflow-y-auto">
+                {allGames.map(game => (
+                  <div 
+                    key={game} 
+                    onClick={() => toggleGameSelection(game)}
+                    className="flex items-center justify-between px-6 py-3 cursor-pointer hover:bg-slate-700 transition-colors border-b border-slate-700/50 last:border-0 text-slate-200 font-medium"
+                  >
+                    {game}
+                    {selectedGames.includes(game) && <Check className="w-5 h-5 text-indigo-500" />}
+                  </div>
+                ))}
+                {allGames.length === 0 && <div className="p-4 text-center text-slate-500 text-sm">No games logged yet.</div>}
+              </div>
             </div>
           )}
           </div>
@@ -393,8 +437,6 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
       </div>
     );
   }
-
-  const isMultiGame = selectedGames.length > 1;
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -433,24 +475,32 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
             className="flex items-center gap-2 group-hover:opacity-80 transition-opacity"
           >
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase">
-              {isMultiGame ? 'Aggregate Analysis' : selectedGames[0]}
+              {isMultiGame ? `Aggregated View: ${selectedGames.length} Games | ${score.us + score.them} Total Points` : selectedGames[0]}
             </h1>
             <ChevronDown className="w-6 h-6 text-indigo-400 bg-indigo-500/10 rounded-full p-1" />
           </button>
           
           {isDropdownOpen && (
-            <div className="absolute top-full left-0 mt-4 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-50 max-h-64 overflow-y-auto">
-              <div className="p-3 border-b border-slate-800 text-xs font-bold text-slate-400 tracking-wider">SELECT MATCHES</div>
-              {allGames.map(game => (
-                <div 
-                  key={game} 
-                  onClick={() => toggleGameSelection(game)}
-                  className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-800 transition-colors border-b border-slate-800/50 last:border-0 text-slate-200 text-sm font-medium"
-                >
-                  <span className="truncate">{game}</span>
-                  {selectedGames.includes(game) && <Check className="w-4 h-4 text-indigo-500 shrink-0" />}
-                </div>
-              ))}
+            <div className="absolute top-full left-0 mt-4 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-50 max-h-64 flex flex-col">
+              <div className="p-3 border-b border-slate-800 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Select Matches</span>
+              </div>
+              <div className="flex gap-2 p-3 border-b border-slate-800 shrink-0">
+                <button onClick={() => setSelectedGames(allGames)} className="flex-1 px-2 py-1.5 bg-slate-800 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors">Select All</button>
+                <button onClick={() => setSelectedGames(allGames.slice(0, 3))} className="flex-1 px-2 py-1.5 bg-slate-800 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors">Last 3</button>
+              </div>
+              <div className="overflow-y-auto">
+                {allGames.map(game => (
+                  <div 
+                    key={game} 
+                    onClick={() => toggleGameSelection(game)}
+                    className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-800 transition-colors border-b border-slate-800/50 last:border-0 text-slate-200 text-sm font-medium"
+                  >
+                    <span className="truncate pr-2">{game}</span>
+                    {selectedGames.includes(game) && <Check className="w-4 h-4 text-indigo-500 shrink-0" />}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           
@@ -502,7 +552,27 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
               </span>
             </h3>
             <div className="h-64 w-full">
-              {timeline.length > 1 ? (
+              {selectedGames.length === 2 && twoGameTrend ? (
+                <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center gap-4 border border-white/5 bg-slate-950/40 rounded-2xl">
+                  <div className="text-sm font-bold text-slate-400 uppercase tracking-widest">{twoGameTrend.g1Name} → {twoGameTrend.g2Name}</div>
+                  <div className="flex items-center gap-6">
+                    {twoGameTrend.delta > 0 ? (
+                       <TrendingUp className="w-20 h-20 text-emerald-500 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
+                    ) : (
+                       <TrendingDown className="w-20 h-20 text-rose-500 drop-shadow-[0_0_15px_rgba(244,63,94,0.5)]" />
+                    )}
+                    <div className="text-left flex flex-col">
+                       <span className={`text-4xl font-black tracking-tighter ${twoGameTrend.delta > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {twoGameTrend.delta > 0 ? '+' : ''}{twoGameTrend.delta.toFixed(1)}%
+                       </span>
+                       <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">OCE Shift</span>
+                    </div>
+                  </div>
+                  <div className="text-slate-400 mt-2 text-sm max-w-md">
+                     Team Offensive Conversion Efficiency shifted from <span className="text-white font-bold">{twoGameTrend.g1OCE.toFixed(1)}%</span> to <span className="text-white font-bold">{twoGameTrend.g2OCE.toFixed(1)}%</span> between these two matches.
+                  </div>
+                </div>
+              ) : timeline.length > 1 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={timeline} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
@@ -526,7 +596,7 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
                     {highlightedPlayerName && (
                       timeline.map((d, i) => {
                          const playerObj = playerStats.find(p => p.name === highlightedPlayerName);
-                         if (playerObj && playerObj.pointsPlayedSet.has(d.pointNumber)) {
+                         if (playerObj && playerObj.pointsPlayedSet.has(d.pointKey)) {
                             // Render a reference area from this point to the next
                             const nextD = timeline[i + 1];
                             const endPoint = nextD ? nextD.point : d.point + 1; // Approximate right edge
