@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { recordStatToDB, fetchActiveGames, clearActiveLineup, fetchLastStatForGame, deleteStat } from '../supabaseClient';
-import { Undo2 } from 'lucide-react';
+import { Undo2, ArrowLeftRight } from 'lucide-react';
 
 const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, setCurrentGame, gameType, setGameType, currentTeam, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers }) => {
   const [selectedPlayer, setSelectedPlayer] = useState('');
@@ -332,19 +332,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
 
             {/* Control Buttons */}
             {activeLineup.length > 0 && (
-              <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                <button
-                  onClick={() => onNavigate('lineup')}
-                  disabled={isSaving || !currentGame || !isTrackingActive}
-                  className={`w-full py-3 px-4 flex items-center justify-center gap-2 font-bold rounded-xl transition-all shadow-md ${
-                    !isTrackingActive
-                      ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50'
-                      : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20 shadow-lg'
-                  }`}
-                >
-                  ↻ Substitution
-                </button>
-                
+              <div className="flex justify-end gap-3 mt-4">
                 <button
                   onClick={handleUndo}
                   disabled={isSaving || !currentGame}
@@ -414,6 +402,20 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
             </button>
           </div>
           
+          {/* Secondary Footer Action */}
+          {activeLineup.length > 0 && (
+            <div className="pt-6 pb-2 w-full">
+              <button
+                onClick={() => onNavigate('lineup')}
+                disabled={isSaving || !currentGame || !isTrackingActive}
+                className="w-full py-3.5 px-6 flex items-center justify-center gap-3 font-bold rounded-xl transition-all bg-transparent border border-white/20 backdrop-blur-sm text-slate-300 hover:bg-white/5 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ArrowLeftRight className="w-5 h-5" />
+                Substitution
+              </button>
+            </div>
+          )}
+
         </div>
       </div>
       </div>
