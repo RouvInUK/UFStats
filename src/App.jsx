@@ -44,6 +44,22 @@ function App() {
     localStorage.setItem('ufstats_team', currentTeam);
   }, [currentTeam]);
 
+  const [opponentName, setOpponentName] = useState(() => {
+    return localStorage.getItem('ufstats_opponent') || '';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('ufstats_opponent', opponentName);
+  }, [opponentName]);
+
+  const [initialPossession, setInitialPossession] = useState(() => {
+    return localStorage.getItem('ufstats_possession') || 'O';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('ufstats_possession', initialPossession);
+  }, [initialPossession]);
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -151,6 +167,8 @@ function App() {
           gameType={gameType}
           setGameType={setGameType}
           currentTeam={currentTeam}
+          opponentName={opponentName}
+          initialPossession={initialPossession}
           isTrackingActive={isTrackingActive}
           setIsTrackingActive={setIsTrackingActive}
           onNavigate={setCurrentView} 
@@ -180,10 +198,15 @@ function App() {
           currentTeam={currentTeam}
           onNavigate={setCurrentView} 
           currentGame={currentGame}
+          setCurrentGame={setCurrentGame}
           currentPoint={currentPoint}
           setCurrentPoint={setCurrentPoint}
           gameType={gameType}
           setIsTrackingActive={setIsTrackingActive}
+          opponentName={opponentName}
+          setOpponentName={setOpponentName}
+          initialPossession={initialPossession}
+          setInitialPossession={setInitialPossession}
         />
       )}
 

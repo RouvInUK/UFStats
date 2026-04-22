@@ -1,8 +1,8 @@
-import { togglePlayerActiveStatus, clearActiveLineup, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint } from '../supabaseClient';
+import { togglePlayerActiveStatus, clearActiveLineup, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB } from '../supabaseClient';
 import { useState, useEffect } from 'react';
 import { Undo2 } from 'lucide-react';
 
-const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentGame, currentPoint, setCurrentPoint, gameType, setIsTrackingActive }) => {
+const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentGame, setCurrentGame, currentPoint, setCurrentPoint, gameType, setIsTrackingActive, opponentName, setOpponentName, initialPossession, setInitialPossession }) => {
   const [processingId, setProcessingId] = useState(null);
   const [isClearing, setIsClearing] = useState(false);
   const [isStartingPoint, setIsStartingPoint] = useState(false);
@@ -55,12 +55,38 @@ const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentG
       }
     }
 
-    if (!currentGame) return alert("Enter a game name in the Dashboard first.");
+    if (!currentGame) return alert("Enter a Match Name first.");
+
+    if (currentPoint === 0) {
+      if (!opponentName) return alert("Enter an Opponent Name first.");
+      if (!initialPossession) return alert("Select Starting Possession (O or D).");
+    }
 
     setIsStartingPoint(true);
     try {
       const nextPoint = currentPoint + 1;
       await recordLineup(activeLineupNames, nextPoint, currentGame, gameType, currentTeam);
+
+      if (currentPoint === 0) {
+          // Log Structural Events for first point
+          await recordStatToDB({
+              player: opponentName,
+              stat: 'Match Metadata',
+              pointNumber: nextPoint,
+              gameName: currentGame,
+              gameType: gameType,
+              teamName: currentTeam
+          });
+          await recordStatToDB({
+              player: 'System',
+              stat: initialPossession === 'O' ? 'Start Offense' : 'Start Defense',
+              pointNumber: nextPoint,
+              gameName: currentGame,
+              gameType: gameType,
+              teamName: currentTeam
+          });
+      }
+
       setCurrentPoint(nextPoint);
       setIsTrackingActive(true);
       onNavigate('dashboard');
@@ -141,6 +167,32 @@ const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentG
           </div>
         </div>
 
+        {currentPoint === 0 && (
+          <div className="p-6 sm:p-8 border-b border-slate-700/50 bg-slate-900/50">
+             <div className="flex items-center gap-2 mb-6">
+                <div className="w-1.5 h-6 bg-indigo-500 rounded-full"></div>
+                <h2 className="text-lg font-bold text-white uppercase tracking-widest">Pre-Game Configurations</h2>
+             </div>
+             <div className="space-y-5">
+                <div>
+                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">Match Identifier / Title</label>
+                   <input type="text" value={currentGame} onChange={e => setCurrentGame(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner" placeholder="e.g. EUCF Pool Play - Game 1" />
+                </div>
+                <div>
+                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">Opponent Team Name</label>
+                   <input type="text" value={opponentName} onChange={e => setOpponentName(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner" placeholder="e.g. Darkstar" />
+                </div>
+                <div>
+                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">Starting Possession</label>
+                   <div className="flex bg-slate-950 border border-slate-700 rounded-xl overflow-hidden shadow-inner font-bold w-full text-sm">
+                      <button onClick={() => setInitialPossession('O')} className={`flex-1 py-3 px-2 transition-all ${initialPossession === 'O' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Receive (Offense)</button>
+                      <button onClick={() => setInitialPossession('D')} className={`flex-1 py-3 px-2 transition-all ${initialPossession === 'D' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Pull (Defense)</button>
+                   </div>
+                </div>
+             </div>
+          </div>
+        )}
+
         <div className="p-6 sm:p-8">
           {players.length === 0 ? (
             <div className="text-center py-10 bg-slate-900/50 rounded-2xl border border-slate-700/50 space-y-4">
@@ -182,7 +234,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentG
         <div className="p-6 sm:p-8 border-t border-slate-700/50 bg-slate-900/30">
           <button
             onClick={handleStartPoint}
-            disabled={isStartingPoint || activeCount === 0 || !currentGame}
+            disabled={isStartingPoint || activeCount === 0 || !currentGame || (currentPoint === 0 && (!opponentName || !initialPossession))}
             className="w-full group relative flex items-center justify-center px-6 py-5 border border-emerald-500/50 text-xl font-black rounded-2xl text-white bg-emerald-500/20 hover:bg-emerald-500/40 backdrop-blur-md focus:outline-none focus:ring-4 focus:ring-emerald-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest"
           >
             {isStartingPoint ? (

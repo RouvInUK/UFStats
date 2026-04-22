@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { recordStatToDB, fetchActiveGames, clearActiveLineup, fetchLastStatForGame, deleteStat } from '../supabaseClient';
+import { recordStatToDB, fetchActiveGames, clearActiveLineup, fetchLastStatForGame, deleteStat, fetchGameStats } from '../supabaseClient';
 import { Undo2, ArrowLeftRight } from 'lucide-react';
 
-const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, setCurrentGame, gameType, setGameType, currentTeam, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers }) => {
+const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, setCurrentGame, gameType, currentTeam, opponentName, initialPossession, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers }) => {
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -24,6 +24,39 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
 
     setTimeout(() => setFlashType(null), 250); 
   };
+
+  const [score, setScore] = useState({ us: 0, them: 0 });
+  const [currentOD, setCurrentOD] = useState('O');
+  const [liveOpponentName, setLiveOpponentName] = useState('Opponent');
+
+  useEffect(() => {
+    if (!currentGame) return;
+    const loadGameContext = async () => {
+       try {
+          const stats = await fetchGameStats(currentGame);
+          let us = 0, them = 0;
+          let od = initialPossession || 'O';
+          let oppName = opponentName || 'Opponent';
+
+          // Ensure it's chronological to accurately trace the O/D shift
+          const chronStats = [...stats].reverse();
+          chronStats.forEach(stat => {
+              if (stat.stat_type === 'Start Offense') od = 'O';
+              if (stat.stat_type === 'Start Defense') od = 'D';
+              if (stat.stat_type === 'Half Time') od = od === 'O' ? 'D' : 'O';
+              if (stat.stat_type === 'Point') { us += 1; od = 'D'; }
+              if (stat.stat_type === 'Opponent Point') { them += 1; od = 'O'; }
+              if (stat.stat_type === 'Match Metadata') oppName = stat.player;
+          });
+          setScore({ us, them });
+          setCurrentOD(od);
+          setLiveOpponentName(oppName);
+       } catch (e) {
+          console.error("Failed to load live score context", e);
+       }
+    };
+    loadGameContext();
+  }, [currentGame, isTrackingActive, lastSaved]);
 
   // Fetch active games on mount
   useEffect(() => {
@@ -190,107 +223,48 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
       <div className="flex flex-col items-center p-4 py-8 sm:py-12 min-h-screen">
       <div className="w-full max-w-xl bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-slate-700 pb-6">
         
-        {/* Header Section */}
-        <div className="p-6 sm:p-8 bg-slate-800 border-b border-slate-700/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-          <div className="flex items-start gap-4 sm:gap-5 w-full">
-            <img src="/logo.png" alt="UFStats Logo" className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl shadow-lg border border-slate-700/50 shrink-0" />
-            <div className="flex flex-col w-full">
-              <div className="flex flex-wrap items-center justify-between gap-4 mb-2">
-                <div className="flex flex-col">
-                  <span className="text-indigo-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest">{currentTeam}</span>
-                  <h1 className="text-xl sm:text-2xl font-bold text-slate-100 tracking-tight leading-none mt-0.5">
-                    Ultimate Stats
-                  </h1>
-                </div>
-                <div className="flex items-center gap-1 bg-slate-900/80 px-2 py-1 rounded-xl border border-slate-700 shadow-inner">
-                  <span className="text-slate-400 text-xs font-bold uppercase tracking-wider pl-2 pr-1">Point</span>
-                  <button onClick={() => setCurrentPoint(p => Math.max(0, p - 1))} className="text-slate-500 hover:text-white hover:bg-slate-700 px-2 rounded-lg font-bold transition-colors">-</button>
-                  <span className="text-white font-bold text-lg w-5 text-center">{currentPoint}</span>
-                  <button onClick={() => setCurrentPoint(p => p + 1)} className="text-slate-500 hover:text-white hover:bg-slate-700 px-2 rounded-lg font-bold transition-colors">+</button>
-                </div>
-              </div>
-            <div className="flex flex-col gap-2 w-full max-w-[300px] mb-2">
-              <div className="flex bg-slate-900 border border-slate-700/50 rounded-xl overflow-hidden shadow-inner text-sm font-bold w-full">
-                <button
-                  onClick={() => setGameType('beach')}
-                  className={`flex-1 py-1 px-4 transition-colors ${gameType === 'beach' ? 'bg-teal-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
-                >
-                  🏖️ 5v5 Beach
-                </button>
-                <div className="w-[1px] bg-slate-800"></div>
-                <button
-                  onClick={() => setGameType('grass')}
-                  className={`flex-1 py-1 px-4 transition-colors ${gameType === 'grass' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
-                >
-                  🌿 7v7 Grass
-                </button>
-              </div>
-              <div className="flex bg-slate-900 border border-slate-700/50 rounded-xl overflow-hidden shadow-inner font-bold w-full text-xs sm:text-sm">
-                <button
-                  onClick={() => handleSystemEvent('Start Offense')}
-                  disabled={isSaving || !currentGame}
-                  className="flex-1 py-1 px-1 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
-                >
-                  Start (O)
-                </button>
-                <div className="w-[1px] bg-slate-800"></div>
-                <button
-                  onClick={() => handleSystemEvent('Start Defense')}
-                  disabled={isSaving || !currentGame}
-                  className="flex-1 py-1 px-1 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
-                >
-                  Start (D)
-                </button>
-                <div className="w-[1px] bg-slate-800"></div>
-                <button
-                  onClick={() => handleSystemEvent('Half Time')}
-                  disabled={isSaving || !currentGame}
-                  className="flex-1 py-1 px-1 text-amber-500 hover:text-amber-400 hover:bg-slate-800 transition-colors disabled:opacity-50 whitespace-nowrap"
-                >
-                  Half Time
-                </button>
-              </div>
-              <div className="flex items-center gap-2 w-full">
-                <input 
-                  type="text" 
-                  list="active-games-list"
-                  value={currentGame}
-                  onChange={(e) => setCurrentGame(e.target.value)}
-                  className="flex-1 bg-transparent border-b border-transparent hover:border-slate-700/50 text-slate-400 text-sm font-medium focus:outline-none focus:border-indigo-500 focus:text-indigo-300 transition-colors placeholder-slate-600 pb-1"
-                  placeholder="Match Name (e.g. Vs Team X)"
-                />
-                {currentGame && (
-                  <button 
-                    onClick={handleMarkCompleted}
-                    className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-bold rounded-lg transition-all whitespace-nowrap"
-                    title="Close out Game"
-                  >
-                    ✓ Close Game
-                  </button>
-                )}
-              </div>
-            </div>
+        {/* Scoreboard Header Section */}
+        <div className="p-6 sm:p-8 bg-slate-900 border-b border-slate-700/50">
+          <div className="flex items-center justify-between bg-slate-950/50 rounded-2xl border border-white/5 shadow-inner p-4">
+             {/* Left Column: Us */}
+             <div className="flex flex-col items-start w-1/3">
+                <span className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest truncate w-full">{currentTeam}</span>
+                <div className={`text-4xl sm:text-5xl font-black font-mono tracking-tighter ${score.us > score.them ? 'text-indigo-400 drop-shadow-[0_0_15px_rgba(129,140,248,0.5)]' : 'text-slate-300'}`}>{score.us}</div>
+             </div>
 
-            <datalist id="active-games-list">
-              {activeGames.map(game => (
-                <option key={game.name} value={game.name} />
-              ))}
-            </datalist>
-            
-            {isSaving && (
-              <p className="text-amber-400 text-sm font-bold mt-2 animate-pulse">
-                Saving to Google Sheets...
-              </p>
-            )}
-            {lastSaved && !isSaving && (
-              <p className="text-emerald-400 text-sm font-bold mt-2">
-                ✓ {lastSaved}
-              </p>
-            )}
-            </div>
-          </div>
+             {/* Center Column: Point & O/D */}
+             <div className="flex flex-col items-center justify-center w-1/3 px-2">
+                <div className="flex items-center justify-center gap-3">
+                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm sm:text-base font-black shadow-lg ${currentOD === 'O' ? 'bg-indigo-600 text-white ring-2 ring-indigo-400/50' : 'bg-rose-600 text-white ring-2 ring-rose-400/50'}`}>
+                    {currentOD}
+                  </div>
+                </div>
+                <div className="mt-2 text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Point {currentPoint}</div>
+             </div>
 
+             {/* Right Column: Them */}
+             <div className="flex flex-col items-end w-1/3 text-right">
+                <span className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest truncate w-full text-right">{liveOpponentName}</span>
+                <div className={`text-4xl sm:text-5xl font-black font-mono tracking-tighter ${score.them > score.us ? 'text-rose-400 drop-shadow-[0_0_15px_rgba(244,63,94,0.5)]' : 'text-slate-300'}`}>{score.them}</div>
+             </div>
           </div>
+          
+          <div className="flex justify-between items-center mt-4 h-6">
+             <div className="flex-1">
+                 {isSaving && <p className="text-amber-400 text-sm font-bold animate-pulse text-left">Synchronizing...</p>}
+                 {lastSaved && !isSaving && <p className="text-emerald-400 text-sm font-bold text-left">✓ {lastSaved}</p>}
+             </div>
+             {currentGame && (
+                <button 
+                  onClick={handleMarkCompleted}
+                  className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-bold rounded-lg transition-all ml-auto"
+                  title="Close out Game"
+                >
+                  ✓ Close Match
+                </button>
+             )}
+          </div>
+        </div>
 
         {/* Content Section */}
         <div className="p-6 sm:p-8 space-y-8">
@@ -404,7 +378,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
           
           {/* Secondary Footer Action */}
           {activeLineup.length > 0 && (
-            <div className="pt-6 pb-2 w-full">
+            <div className="pt-6 pb-2 w-full grid grid-cols-2 gap-3">
               <button
                 onClick={() => onNavigate('lineup')}
                 disabled={isSaving || !currentGame || !isTrackingActive}
@@ -412,6 +386,13 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
               >
                 <ArrowLeftRight className="w-5 h-5" />
                 Substitution
+              </button>
+              <button
+                onClick={() => handleSystemEvent('Half Time')}
+                disabled={isSaving || !currentGame || !isTrackingActive}
+                className="w-full py-3.5 px-6 flex items-center justify-center gap-2 font-bold rounded-xl transition-all bg-transparent border border-amber-500/30 backdrop-blur-sm text-amber-500 hover:bg-amber-500/10 hover:text-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Half Time
               </button>
             </div>
           )}
