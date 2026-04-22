@@ -156,31 +156,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
     }
   };
 
-  const handleSystemEvent = async (type) => {
-    if (!currentGame) return alert("Enter a game name first.");
-    setIsSaving(true);
-    setLastSaved(null);
-    try {
-      const statData = {
-        player: 'System',
-        stat: type,
-        timestamp: new Date().toLocaleString(),
-        pointNumber: currentPoint,
-        gameName: currentGame,
-        gameType: gameType,
-        teamName: currentTeam
-      };
-      await recordStatToDB(statData);
-      setLastSaved(`Logged: ${type}`);
-      triggerFeedback('success');
-    } catch (error) {
-      console.error('Save failed:', error);
-      alert('Failed to log system event.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleUndo = async () => {
     if (!currentGame) return;
     setIsSaving(true);
@@ -378,7 +353,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
           
           {/* Secondary Footer Action */}
           {activeLineup.length > 0 && (
-            <div className="pt-6 pb-2 w-full grid grid-cols-2 gap-3">
+            <div className="pt-6 pb-2 w-full">
               <button
                 onClick={() => onNavigate('lineup')}
                 disabled={isSaving || !currentGame || !isTrackingActive}
@@ -386,13 +361,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
               >
                 <ArrowLeftRight className="w-5 h-5" />
                 Substitution
-              </button>
-              <button
-                onClick={() => handleSystemEvent('Half Time')}
-                disabled={isSaving || !currentGame || !isTrackingActive}
-                className="w-full py-3.5 px-6 flex items-center justify-center gap-2 font-bold rounded-xl transition-all bg-transparent border border-amber-500/30 backdrop-blur-sm text-amber-500 hover:bg-amber-500/10 hover:text-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Half Time
               </button>
             </div>
           )}

@@ -98,6 +98,30 @@ const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentG
     }
   };
 
+  const handleHalfTime = async () => {
+    if (!currentGame) return alert("Enter a Match Name first.");
+    if (!window.confirm("Are you sure you want to log Half Time?")) return;
+    
+    setIsStartingPoint(true);
+    try {
+      await recordStatToDB({
+        player: 'System',
+        stat: 'Half Time',
+        pointNumber: currentPoint,
+        gameName: currentGame,
+        gameType: gameType,
+        teamName: currentTeam
+      });
+      alert('Half Time logged successfully.');
+      onNavigate('dashboard');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to log Half Time.');
+    } finally {
+      setIsStartingPoint(false);
+    }
+  };
+
   const togglePlayer = async (player) => {
     // Optimistically update UI locally
     const optimisticPlayers = players.map(p => 
@@ -244,6 +268,16 @@ const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentG
                </span>
             ) : "Start Point"}
           </button>
+          
+          {currentPoint > 0 && (
+            <button
+               onClick={handleHalfTime}
+               disabled={isStartingPoint}
+               className="w-full mt-4 flex items-center justify-center gap-2 px-6 py-4 border border-amber-500/30 text-sm font-bold rounded-2xl text-amber-500 bg-slate-900/50 hover:bg-amber-500/10 hover:text-amber-400 transition-all shadow-md focus:outline-none focus:ring-4 focus:ring-slate-800 disabled:opacity-50"
+            >
+               Log Half Time
+            </button>
+          )}
           
           {lastAction && (lastAction.stat_type === 'Point' || lastAction.stat_type === 'Opponent Point') && (
             <button
