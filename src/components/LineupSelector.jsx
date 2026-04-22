@@ -113,7 +113,6 @@ const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentG
         teamName: currentTeam
       });
       alert('Half Time logged successfully.');
-      onNavigate('dashboard');
     } catch (err) {
       console.error(err);
       alert('Failed to log Half Time.');
