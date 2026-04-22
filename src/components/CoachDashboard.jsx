@@ -142,7 +142,8 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
         return;
       }
 
-      if (stat.player === 'System' || stat.player === 'Opponent') return;
+      const SYSTEM_EVENTS = ['Match Metadata', 'Game Completed', 'Start Offense', 'Start Defense', 'Half Time'];
+      if (stat.player === 'System' || stat.player === 'Opponent' || SYSTEM_EVENTS.includes(stat.stat_type)) return;
 
       const p = ensurePlayer(stat.player);
       p.touches += 1;
