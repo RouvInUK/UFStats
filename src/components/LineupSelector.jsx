@@ -1,4 +1,4 @@
-import { togglePlayerActiveStatus, clearActiveLineup, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB } from '../supabaseClient';
+import { togglePlayerActiveStatus, clearActiveLineup, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB, checkIfHalfTimeLogged } from '../supabaseClient';
 import { useState, useEffect } from 'react';
 import { Undo2 } from 'lucide-react';
 
@@ -9,10 +9,16 @@ const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentG
   const [lastAction, setLastAction] = useState(null);
   const [isUndoing, setIsUndoing] = useState(false);
 
+  const [hasHalfTime, setHasHalfTime] = useState(false);
+
   useEffect(() => {
     if (currentGame) {
       fetchLastStatForGame(currentGame, currentTeam)
         .then(setLastAction)
+        .catch(console.error);
+        
+      checkIfHalfTimeLogged(currentGame)
+        .then(setHasHalfTime)
         .catch(console.error);
     }
   }, [currentGame, currentTeam, currentPoint]);
@@ -100,24 +106,53 @@ const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentG
 
   const handleHalfTime = async () => {
     if (!currentGame) return alert("Enter a Match Name first.");
-    if (!window.confirm("Are you sure you want to log Half Time?")) return;
-    
-    setIsStartingPoint(true);
-    try {
-      await recordStatToDB({
-        player: 'System',
-        stat: 'Half Time',
-        pointNumber: currentPoint,
-        gameName: currentGame,
-        gameType: gameType,
-        teamName: currentTeam
-      });
-      alert('Half Time logged successfully.');
-    } catch (err) {
-      console.error(err);
-      alert('Failed to log Half Time.');
-    } finally {
-      setIsStartingPoint(false);
+    if (window.confirm("Are you sure you want to log Half Time?")) {
+      setIsStartingPoint(true);
+      try {
+        await recordStatToDB({
+          player: 'System',
+          stat: 'Half Time',
+          pointNumber: currentPoint,
+          gameName: currentGame,
+          gameType: gameType,
+          teamName: currentTeam
+        });
+        setHasHalfTime(true);
+        alert('Half Time logged successfully.');
+      } catch (err) {
+        console.error(err);
+        alert('Failed to log Half Time.');
+      } finally {
+        setIsStartingPoint(false);
+      }
+    }
+  };
+
+  const handleMarkCompleted = async () => {
+    if (!currentGame) return alert("Enter a game name first.");
+    if (window.confirm(`Are you sure you want to close out Match "${currentGame}"?`)) {
+      setIsStartingPoint(true);
+      try {
+        await recordStatToDB({
+          player: 'System',
+          stat: 'Game Completed',
+          timestamp: new Date().toLocaleString(),
+          pointNumber: currentPoint,
+          gameName: currentGame,
+          gameType: gameType,
+          teamName: currentTeam
+        });
+        alert(`Match ${currentGame} completed!`);
+        setCurrentGame('');
+        setCurrentPoint(0);
+        setIsTrackingActive(false);
+        onNavigate('dashboard');
+      } catch (err) {
+        console.error(err);
+        alert('Failed to end game.');
+      } finally {
+        setIsStartingPoint(false);
+      }
     }
   };
 
@@ -269,13 +304,27 @@ const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentG
           </button>
           
           {currentPoint > 0 && (
-            <button
-               onClick={handleHalfTime}
-               disabled={isStartingPoint}
-               className="w-full mt-4 flex items-center justify-center gap-2 px-6 py-4 border border-amber-500/30 text-sm font-bold rounded-2xl text-amber-500 bg-slate-900/50 hover:bg-amber-500/10 hover:text-amber-400 transition-all shadow-md focus:outline-none focus:ring-4 focus:ring-slate-800 disabled:opacity-50"
-            >
-               Log Half Time
-            </button>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <button
+                 onClick={handleHalfTime}
+                 disabled={isStartingPoint || hasHalfTime}
+                 className={`w-full flex items-center justify-center gap-2 px-6 py-4 border text-sm font-bold rounded-2xl transition-all shadow-md focus:outline-none focus:ring-4 focus:ring-slate-800 ${
+                   hasHalfTime 
+                     ? 'border-slate-700/50 text-slate-500 bg-slate-900/50 cursor-not-allowed opacity-50'
+                     : 'border-amber-500/30 text-amber-500 bg-slate-900/50 hover:bg-amber-500/10 hover:text-amber-400 disabled:opacity-50'
+                 }`}
+              >
+                 {hasHalfTime ? 'Half Time Logged' : 'Log Half Time'}
+              </button>
+              
+              <button
+                 onClick={handleMarkCompleted}
+                 disabled={isStartingPoint}
+                 className="w-full flex items-center justify-center gap-2 px-6 py-4 border border-rose-500/30 text-sm font-bold rounded-2xl text-rose-500 bg-slate-900/50 hover:bg-rose-500/10 hover:text-rose-400 transition-all shadow-md focus:outline-none focus:ring-4 focus:ring-slate-800 disabled:opacity-50"
+              >
+                 End Game
+              </button>
+            </div>
           )}
           
           {lastAction && (lastAction.stat_type === 'Point' || lastAction.stat_type === 'Opponent Point') && (

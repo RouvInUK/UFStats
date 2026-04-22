@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { recordStatToDB, fetchActiveGames, clearActiveLineup, fetchLastStatForGame, deleteStat, fetchGameStats } from '../supabaseClient';
 import { Undo2, ArrowLeftRight } from 'lucide-react';
 
-const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, setCurrentGame, gameType, currentTeam, opponentName, initialPossession, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers }) => {
+const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, gameType, currentTeam, opponentName, initialPossession, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers }) => {
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -129,32 +129,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
     }
   };
 
-  const handleMarkCompleted = async () => {
-    if (!currentGame) return alert("Enter a game name first.");
-    if (window.confirm(`Are you sure you want to close "${currentGame}"? It will no longer appear in the active dropdown for anyone.`)) {
-      setIsSaving(true);
-      try {
-        await recordStatToDB({
-          player: 'System',
-          stat: 'Game Completed',
-          timestamp: new Date().toLocaleString(),
-          pointNumber: currentPoint,
-          gameName: currentGame,
-          gameType: gameType,
-          teamName: currentTeam
-        });
-        setLastSaved(`Closed ${currentGame}!`);
-        setCurrentGame('');
-        setCurrentPoint(0);
-        setIsTrackingActive(false);
-      } catch (err) {
-        console.error(err);
-        alert('Failed to mark completed.');
-      } finally {
-        setIsSaving(false);
-      }
-    }
-  };
+
 
   const handleUndo = async () => {
     if (!currentGame) return;
@@ -229,15 +204,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, s
                  {isSaving && <p className="text-amber-400 text-sm font-bold animate-pulse text-left">Synchronizing...</p>}
                  {lastSaved && !isSaving && <p className="text-emerald-400 text-sm font-bold text-left">✓ {lastSaved}</p>}
              </div>
-             {currentGame && (
-                <button 
-                  onClick={handleMarkCompleted}
-                  className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-bold rounded-lg transition-all ml-auto"
-                  title="Close out Game"
-                >
-                  ✓ Close Match
-                </button>
-             )}
+
           </div>
         </div>
 

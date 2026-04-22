@@ -270,6 +270,18 @@ export const fetchLastStatForGame = async (gameName, teamName) => {
   return data && data.length > 0 ? data[0] : null;
 };
 
+export const checkIfHalfTimeLogged = async (gameName) => {
+  const { data, error } = await supabase
+    .from('stats')
+    .select('id')
+    .eq('game_name', gameName)
+    .eq('stat_type', 'Half Time')
+    .limit(1);
+    
+  if (error) throw error;
+  return data && data.length > 0;
+};
+
 export const restoreLineupForPoint = async (gameName, pointNumber, teamName) => {
   let query = supabase
     .from('stats')
