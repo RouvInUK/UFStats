@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, setGlobalTeamId } from '../supabaseClient';
 
 const AuthContext = createContext();
 
@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch initial session
+    // Manually fetch session in case INITIAL_SESSION event doesn't trigger
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -18,9 +18,12 @@ export const AuthProvider = ({ children }) => {
       } else {
         setLoading(false);
       }
+    }).catch(err => {
+      console.error("Auth initialization error:", err);
+      setLoading(false);
     });
 
-    // Listen for auth changes
+    // Listen for auth changes (this fires on login/logout)
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setUser(session?.user ?? null);
@@ -28,6 +31,7 @@ export const AuthProvider = ({ children }) => {
           await fetchProfile(session.user.id);
         } else {
           setProfile(null);
+          setGlobalTeamId(null);
           setLoading(false);
         }
       }
@@ -57,6 +61,7 @@ export const AuthProvider = ({ children }) => {
               .eq('id', userId)
               .single();
             setProfile(retryData);
+            if (retryData?.team_id) setGlobalTeamId(retryData.team_id);
             setLoading(false);
           }, 1000);
           return;
@@ -64,6 +69,7 @@ export const AuthProvider = ({ children }) => {
         throw error;
       }
       setProfile(data);
+      if (data?.team_id) setGlobalTeamId(data.team_id);
     } catch (err) {
       console.error('Error fetching profile:', err);
     } finally {
@@ -92,7 +98,7 @@ export const AuthProvider = ({ children }) => {
     signOut,
   };
 
-  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

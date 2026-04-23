@@ -6,26 +6,10 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 let activeTeamId = null;
-let isSystemAdmin = false;
 
-supabase.auth.onAuthStateChange(async (event, session) => {
-  if (session?.user) {
-    // Retry logic in case profile isn't generated yet
-    const fetchProfile = async (retries = 3) => {
-        const { data, error } = await supabase.from('profiles').select('team_id, is_system_admin').eq('id', session.user.id).single();
-        if (data) {
-           activeTeamId = data.team_id;
-           isSystemAdmin = data.is_system_admin;
-        } else if (retries > 0) {
-           setTimeout(() => fetchProfile(retries - 1), 1000);
-        }
-    };
-    fetchProfile();
-  } else {
-    activeTeamId = null;
-    isSystemAdmin = false;
-  }
-});
+export const setGlobalTeamId = (teamId) => {
+  activeTeamId = teamId;
+};
 
 export const recordStatToDB = async (statData) => {
   const { player, stat, pointNumber, gameName, gameType, teamName } = statData;
