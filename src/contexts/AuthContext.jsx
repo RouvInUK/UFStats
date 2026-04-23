@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { supabase, setGlobalTeamId } from '../supabaseClient';
+import { supabase } from '../supabaseClient';
 
 const AuthContext = createContext();
 
@@ -43,7 +43,6 @@ export const AuthProvider = ({ children }) => {
           await fetchProfile(session.user.id);
         } else {
           setProfile(null);
-          setGlobalTeamId(null);
           setLoading(false);
         }
       }
@@ -78,7 +77,6 @@ export const AuthProvider = ({ children }) => {
               
               if (!retryError) {
                 setProfile(retryData);
-                if (retryData?.team_id) setGlobalTeamId(retryData.team_id);
               } else {
                 console.warn('AuthContext: Profile retry failed:', retryError);
               }
@@ -95,7 +93,6 @@ export const AuthProvider = ({ children }) => {
       }
       console.log("AuthContext: Profile fetched successfully:", data);
       setProfile(data);
-      if (data?.team_id) setGlobalTeamId(data.team_id);
     } catch (err) {
       console.error('AuthContext: Error fetching profile:', err);
     } finally {
