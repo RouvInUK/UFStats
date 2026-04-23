@@ -5,6 +5,28 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
+let activeTeamId = null;
+let isSystemAdmin = false;
+
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (session?.user) {
+    // Retry logic in case profile isn't generated yet
+    const fetchProfile = async (retries = 3) => {
+        const { data, error } = await supabase.from('profiles').select('team_id, is_system_admin').eq('id', session.user.id).single();
+        if (data) {
+           activeTeamId = data.team_id;
+           isSystemAdmin = data.is_system_admin;
+        } else if (retries > 0) {
+           setTimeout(() => fetchProfile(retries - 1), 1000);
+        }
+    };
+    fetchProfile();
+  } else {
+    activeTeamId = null;
+    isSystemAdmin = false;
+  }
+});
+
 export const recordStatToDB = async (statData) => {
   const { player, stat, pointNumber, gameName, gameType, teamName } = statData;
 
@@ -17,7 +39,8 @@ export const recordStatToDB = async (statData) => {
         point_number: pointNumber,
         game_name: gameName || 'Unnamed Game',
         game_type: gameType || 'grass',
-        team_name: teamName || 'Default Team'
+        team_name: teamName || 'Default Team',
+        team_id: activeTeamId
       }
     ]);
 
@@ -36,7 +59,8 @@ export const recordLineup = async (players, pointNumber, gameName, gameType, tea
     point_number: pointNumber,
     game_name: gameName || 'Unnamed Game',
     game_type: gameType || 'grass',
-    team_name: teamName || 'Default Team'
+    team_name: teamName || 'Default Team',
+    team_id: activeTeamId
   }));
 
   const { data, error } = await supabase
@@ -81,7 +105,7 @@ export const fetchPlayers = async (teamName) => {
 export const addPlayer = async (name, teamName) => {
   const { data, error } = await supabase
     .from('players')
-    .insert([{ name, is_active: false, team_name: teamName || 'Default Team' }])
+    .insert([{ name, is_active: false, team_name: teamName || 'Default Team', team_id: activeTeamId }])
     .select();
 
   if (error) throw error;

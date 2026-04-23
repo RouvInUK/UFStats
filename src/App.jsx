@@ -5,9 +5,14 @@ import LineupSelector from './components/LineupSelector';
 import Analytics from './components/Analytics';
 import EventLog from './components/EventLog';
 import CoachDashboard from './components/CoachDashboard';
+import BetaBadge from './components/BetaBadge';
+import AuthScreen from './components/AuthScreen';
+import AdminDashboard from './components/AdminDashboard';
 import { fetchPlayers } from './supabaseClient';
+import { useAuth } from './contexts/AuthContext';
 
 function App() {
+  const { user, profile, loading: authLoading, signOut } = useAuth();
   const [currentView, setCurrentView] = useState('dashboard');
   
   // Database State
@@ -37,7 +42,7 @@ function App() {
   }, [gameType]);
 
   const [currentTeam, setCurrentTeam] = useState(() => {
-    return localStorage.getItem('ufstats_team') || 'Default Team';
+    return localStorage.getItem('ufstats_team') || 'Default Team (Migrated)';
   });
 
   useEffect(() => {
@@ -61,19 +66,25 @@ function App() {
   }, [initialPossession]);
 
   useEffect(() => {
+    if (!user) return;
     const loadData = async () => {
       setLoading(true);
       try {
-        const data = await fetchPlayers(currentTeam);
-        setPlayers(data);
+        // Fetch players uses the user's implicit team scope based on profile
+        // but we pass currentTeam for legacy compatibility or if they are admin viewing another team
+        const targetTeam = profile?.is_system_admin ? currentTeam : profile?.team_id;
+        if (targetTeam) {
+            const data = await fetchPlayers(targetTeam);
+            setPlayers(data);
+        }
       } catch (err) {
-        console.error("Failed to load players for team.", err);
+        console.error("Failed to load players.", err);
       } finally {
         setLoading(false);
       }
     };
     loadData();
-  }, [currentTeam]);
+  }, [currentTeam, profile, user]);
 
   // Screen Wake Lock
   useEffect(() => {
@@ -130,7 +141,19 @@ function App() {
     localStorage.setItem('ufstats_tracking', isTrackingActive.toString());
   }, [isTrackingActive]);
 
-  if (loading) {
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-indigo-400 font-bold tracking-widest text-lg">
+        AUTHENTICATING...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthScreen />;
+  }
+
+  if (loading && !authLoading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center text-indigo-400 font-bold tracking-widest text-lg">
         SYNCING DATABASE...
@@ -148,13 +171,34 @@ function App() {
       <div className="hidden sm:flex justify-between items-center px-8 py-4 bg-slate-950/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 shadow-xl">
         <div className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-2">
           UF<span className="text-indigo-500 font-light">STATS</span>
+          <BetaBadge />
         </div>
-        <button 
-          onClick={() => setCurrentView('coach')}
-          className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-extrabold rounded-xl shadow-[0_0_25px_rgba(245,158,11,0.2)] hover:shadow-[0_0_35px_rgba(245,158,11,0.4)] transition-all flex items-center gap-2 uppercase tracking-wide text-sm scale-100 hover:scale-[1.02]"
-        >
-          Coach Pro ★
-        </button>
+        <div className="flex items-center gap-4">
+          {profile?.is_system_admin && (
+             <button 
+                onClick={() => setCurrentView('admin')}
+                className="px-4 py-2 bg-slate-800 text-slate-300 hover:text-white font-bold rounded-xl transition-all uppercase tracking-wide text-xs"
+             >
+                Admin Panel
+             </button>
+          )}
+          <button 
+            onClick={() => setCurrentView('coach')}
+            className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-extrabold rounded-xl shadow-[0_0_25px_rgba(245,158,11,0.2)] hover:shadow-[0_0_35px_rgba(245,158,11,0.4)] transition-all flex items-center gap-2 uppercase tracking-wide text-sm scale-100 hover:scale-[1.02]"
+          >
+            Coach Pro ★
+          </button>
+          <button 
+            onClick={() => {
+               if (window.confirm("Are you sure you want to sign out?")) {
+                  signOut();
+               }
+            }}
+            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition-all uppercase tracking-wide text-xs border border-white/10"
+          >
+            Sign Out
+          </button>
+        </div>
       </div>
 
       {currentView === 'dashboard' && (
@@ -223,6 +267,10 @@ function App() {
           currentGame={currentGame}
           onNavigate={setCurrentView} 
         />
+      )}
+
+      {currentView === 'admin' && profile?.is_system_admin && (
+        <AdminDashboard onNavigate={setCurrentView} />
       )}
 
       {/* Fixed Bottom Navigation Bar */}
