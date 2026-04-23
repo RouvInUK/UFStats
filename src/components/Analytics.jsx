@@ -43,7 +43,7 @@ const Analytics = () => {
     };
 
     filteredStats.forEach((stat, index) => {
-      if (stat.player === 'System') return;
+      if (stat.player === 'System' || stat.player === 'Opponent' || stat.stat_type === 'Match Metadata') return;
       
       const p = ensurePlayer(stat.player);
       
