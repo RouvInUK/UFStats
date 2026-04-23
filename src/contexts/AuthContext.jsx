@@ -113,20 +113,20 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.warn("AuthContext: Error during sign out:", err);
-    } finally {
-      // Force clear any corrupted Supabase session keys from local storage
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('sb-')) {
-          localStorage.removeItem(key);
-        }
-      });
-      // Hard reload the browser to purge all React state and reset
-      window.location.reload();
-    }
+    // Fire and forget the official signout so it doesn't hang the UI
+    supabase.auth.signOut().catch(err => {
+      console.warn("AuthContext: Background signout error:", err);
+    });
+
+    // Instantly force clear any Supabase session keys from local storage
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('sb-')) {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    // Hard reload the browser to purge all React state and reset immediately
+    window.location.reload();
   };
 
   const value = {
