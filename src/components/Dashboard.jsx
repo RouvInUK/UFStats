@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { recordStatToDB, fetchActiveGames, clearActiveLineup, fetchLastStatForGame, deleteStat, fetchGameStats } from '../supabaseClient';
 import { Undo2, ArrowLeftRight } from 'lucide-react';
 
-const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, gameType, currentTeam, opponentName, initialPossession, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers }) => {
+const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, gameType, currentTeam, targetTeamId, opponentName, initialPossession, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers }) => {
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -95,7 +95,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         gameType: gameType,
         teamName: currentTeam,
       };
-      await recordStatToDB(statData);
+      await recordStatToDB(statData, targetTeamId);
       setLastSaved(statType === 'Opponent Point' ? `Saved Opponent Point` : `Saved ${statType} for ${selectedPlayer}`);
       
       if (statType === 'Point' || statType === 'Opponent Point') {

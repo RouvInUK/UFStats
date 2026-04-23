@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { addPlayer, removePlayer, fetchAllTeamNames } from '../supabaseClient';
-
-const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam }) => {
+const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, targetTeamId }) => {
   const [newPlayerName, setNewPlayerName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [allTeams, setAllTeams] = useState([]);
@@ -25,7 +24,7 @@ const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam }) => {
 
     setIsProcessing(true);
     try {
-      const savedPlayer = await addPlayer(trimmed, currentTeam);
+      const savedPlayer = await addPlayer(trimmed, currentTeam, targetTeamId);
       if (savedPlayer) {
         setPlayers([...players, savedPlayer]);
       }

@@ -65,16 +65,17 @@ function App() {
     localStorage.setItem('ufstats_possession', initialPossession);
   }, [initialPossession]);
 
+  const targetTeamId = profile?.is_system_admin && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentTeam)
+    ? currentTeam
+    : profile?.team_id;
+
   useEffect(() => {
     if (!user) return;
     const loadData = async () => {
       setLoading(true);
       try {
-        // Fetch players uses the user's implicit team scope based on profile
-        // but we pass currentTeam for legacy compatibility or if they are admin viewing another team
-        const targetTeam = profile?.is_system_admin ? currentTeam : profile?.team_id;
-        if (targetTeam) {
-            const data = await fetchPlayers(targetTeam);
+        if (targetTeamId) {
+            const data = await fetchPlayers(targetTeamId);
             setPlayers(data);
         }
       } catch (err) {
@@ -84,7 +85,7 @@ function App() {
       }
     };
     loadData();
-  }, [currentTeam, profile, user]);
+  }, [targetTeamId, user]);
 
   // Screen Wake Lock
   useEffect(() => {
@@ -211,6 +212,7 @@ function App() {
           gameType={gameType}
           setGameType={setGameType}
           currentTeam={currentTeam}
+          targetTeamId={targetTeamId}
           opponentName={opponentName}
           initialPossession={initialPossession}
           isTrackingActive={isTrackingActive}
@@ -231,6 +233,7 @@ function App() {
           setPlayers={setPlayers}
           currentTeam={currentTeam}
           setCurrentTeam={setCurrentTeam}
+          targetTeamId={targetTeamId}
           onNavigate={setCurrentView} 
         />
       )}
@@ -240,6 +243,7 @@ function App() {
           players={players} 
           setPlayers={setPlayers}
           currentTeam={currentTeam}
+          targetTeamId={targetTeamId}
           onNavigate={setCurrentView} 
           currentGame={currentGame}
           setCurrentGame={setCurrentGame}

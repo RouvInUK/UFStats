@@ -2,7 +2,7 @@ import { togglePlayerActiveStatus, clearActiveLineup, recordLineup, fetchLastSta
 import { useState, useEffect } from 'react';
 import { Undo2 } from 'lucide-react';
 
-const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentGame, setCurrentGame, currentPoint, setCurrentPoint, gameType, setIsTrackingActive, opponentName, setOpponentName, initialPossession, setInitialPossession }) => {
+const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavigate, currentGame, setCurrentGame, currentPoint, setCurrentPoint, gameType, setIsTrackingActive, opponentName, setOpponentName, initialPossession, setInitialPossession }) => {
   const [processingId, setProcessingId] = useState(null);
   const [isClearing, setIsClearing] = useState(false);
   const [isStartingPoint, setIsStartingPoint] = useState(false);
@@ -71,7 +71,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentG
     setIsStartingPoint(true);
     try {
       const nextPoint = currentPoint + 1;
-      await recordLineup(activeLineupNames, nextPoint, currentGame, gameType, currentTeam);
+      await recordLineup(activeLineupNames, nextPoint, currentGame, gameType, currentTeam, targetTeamId);
 
       if (currentPoint === 0) {
           // Log Structural Events for first point
@@ -82,7 +82,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentG
               gameName: currentGame,
               gameType: gameType,
               teamName: currentTeam
-          });
+          }, targetTeamId);
           await recordStatToDB({
               player: 'System',
               stat: initialPossession === 'O' ? 'Start Offense' : 'Start Defense',
@@ -90,7 +90,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentG
               gameName: currentGame,
               gameType: gameType,
               teamName: currentTeam
-          });
+          }, targetTeamId);
       }
 
       setCurrentPoint(nextPoint);
@@ -116,7 +116,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentG
           gameName: currentGame,
           gameType: gameType,
           teamName: currentTeam
-        });
+        }, targetTeamId);
         setHasHalfTime(true);
         alert('Half Time logged successfully.');
       } catch (err) {
@@ -141,7 +141,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, onNavigate, currentG
           gameName: currentGame,
           gameType: gameType,
           teamName: currentTeam
-        });
+        }, targetTeamId);
         alert(`Match ${currentGame} completed!`);
         setCurrentGame('');
         setCurrentPoint(0);

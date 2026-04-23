@@ -5,13 +5,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-let activeTeamId = null;
-
-export const setGlobalTeamId = (teamId) => {
-  activeTeamId = teamId;
-};
-
-export const recordStatToDB = async (statData) => {
+export const recordStatToDB = async (statData, currentTeamId) => {
   const { player, stat, pointNumber, gameName, gameType, teamName } = statData;
 
   const { data, error } = await supabase
@@ -24,7 +18,7 @@ export const recordStatToDB = async (statData) => {
         game_name: gameName || 'Unnamed Game',
         game_type: gameType || 'grass',
         team_name: teamName || 'Default Team',
-        team_id: activeTeamId
+        team_id: currentTeamId
       }
     ]);
 
@@ -34,7 +28,7 @@ export const recordStatToDB = async (statData) => {
   return data;
 };
 
-export const recordLineup = async (players, pointNumber, gameName, gameType, teamName) => {
+export const recordLineup = async (players, pointNumber, gameName, gameType, teamName, currentTeamId) => {
   if (!players || players.length === 0) return;
   
   const insertData = players.map(player => ({
@@ -44,7 +38,7 @@ export const recordLineup = async (players, pointNumber, gameName, gameType, tea
     game_name: gameName || 'Unnamed Game',
     game_type: gameType || 'grass',
     team_name: teamName || 'Default Team',
-    team_id: activeTeamId
+    team_id: currentTeamId
   }));
 
   const { data, error } = await supabase
@@ -71,28 +65,42 @@ export const fetchAllTeamNames = async () => {
   return [...new Set(data.map(p => p.team_name))].filter(Boolean);
 };
 
-export const fetchPlayers = async (teamName) => {
+export const fetchPlayers = async (teamIdentifier) => {
   let query = supabase.from('players').select('*').order('name', { ascending: true });
-  if (teamName) {
-    if (teamName === 'Default Team') {
-      query = query.or('team_name.eq.Default Team,team_name.is.null');
+  
+  if (teamIdentifier) {
+    // Check if it's a UUID (team_id) or a team_name string
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamIdentifier);
+    
+    if (isUUID) {
+      query = query.eq('team_id', teamIdentifier);
+    } else if (teamIdentifier === 'Default Team' || teamIdentifier === 'Default Team (Migrated)') {
+      query = query.or(`team_name.eq.${teamIdentifier},team_name.is.null`);
     } else {
-      query = query.eq('team_name', teamName);
+      query = query.eq('team_name', teamIdentifier);
     }
   }
+  
   const { data, error } = await query;
-
   if (error) throw error;
   return data || [];
 };
 
-export const addPlayer = async (name, teamName) => {
+export const addPlayer = async (name, teamName, currentTeamId) => {
   const { data, error } = await supabase
     .from('players')
-    .insert([{ name, is_active: false, team_name: teamName || 'Default Team', team_id: activeTeamId }])
+    .insert([{ 
+      name, 
+      is_active: false, 
+      team_name: teamName || 'Default Team', 
+      team_id: currentTeamId 
+    }])
     .select();
 
-  if (error) throw error;
+  if (error) {
+    console.error("Supabase Insert Error:", error);
+    throw error;
+  }
   return data[0];
 };
 
