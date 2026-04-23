@@ -55,14 +55,24 @@ export const AuthProvider = ({ children }) => {
         // If profile isn't found immediately after signup, retry once after 1 second
         if (error.code === 'PGRST116') {
           setTimeout(async () => {
-            const { data: retryData } = await supabase
-              .from('profiles')
-              .select('team_id, is_system_admin, teams(name)')
-              .eq('id', userId)
-              .single();
-            setProfile(retryData);
-            if (retryData?.team_id) setGlobalTeamId(retryData.team_id);
-            setLoading(false);
+            try {
+              const { data: retryData, error: retryError } = await supabase
+                .from('profiles')
+                .select('team_id, is_system_admin, teams(name)')
+                .eq('id', userId)
+                .single();
+              
+              if (!retryError) {
+                setProfile(retryData);
+                if (retryData?.team_id) setGlobalTeamId(retryData.team_id);
+              } else {
+                console.warn('Profile retry failed:', retryError);
+              }
+            } catch (retryErr) {
+              console.warn('Profile retry exception:', retryErr);
+            } finally {
+              setLoading(false);
+            }
           }, 1000);
           return;
         }
