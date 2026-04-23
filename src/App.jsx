@@ -257,6 +257,7 @@ function App() {
           currentPoint={currentPoint}
           setCurrentPoint={setCurrentPoint}
           gameType={gameType}
+          setGameType={setGameType}
           setIsTrackingActive={setIsTrackingActive}
           opponentName={opponentName}
           setOpponentName={setOpponentName}

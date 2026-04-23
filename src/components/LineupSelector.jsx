@@ -2,7 +2,7 @@ import { togglePlayerActiveStatus, clearActiveLineup, recordLineup, fetchLastSta
 import { useState, useEffect } from 'react';
 import { Undo2 } from 'lucide-react';
 
-const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavigate, currentGame, setCurrentGame, currentPoint, setCurrentPoint, gameType, setIsTrackingActive, opponentName, setOpponentName, initialPossession, setInitialPossession }) => {
+const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavigate, currentGame, setCurrentGame, currentPoint, setCurrentPoint, gameType, setGameType, setIsTrackingActive, opponentName, setOpponentName, initialPossession, setInitialPossession }) => {
   const [processingId, setProcessingId] = useState(null);
   const [isClearing, setIsClearing] = useState(false);
   const [isStartingPoint, setIsStartingPoint] = useState(false);
@@ -235,6 +235,14 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
                 <div>
                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">Match Identifier / Title</label>
                    <input type="text" value={currentGame} onChange={e => setCurrentGame(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner" placeholder="e.g. EUCF Pool Play - Game 1" />
+                </div>
+                <div>
+                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">Game Format</label>
+                   <div className="flex flex-wrap sm:flex-nowrap bg-slate-950 border border-slate-700 rounded-xl overflow-hidden shadow-inner font-bold w-full text-sm">
+                      <button onClick={() => setGameType('grass')} className={`flex-1 min-w-[30%] py-3 px-2 transition-all ${gameType === 'grass' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Grass (7v7)</button>
+                      <button onClick={() => setGameType('beach')} className={`flex-1 min-w-[30%] py-3 px-2 transition-all ${gameType === 'beach' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Beach (5v5)</button>
+                      <button onClick={() => setGameType('indoor')} className={`flex-1 min-w-[30%] py-3 px-2 transition-all ${gameType === 'indoor' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Indoor (5v5)</button>
+                   </div>
                 </div>
                 <div>
                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">Opponent Team Name</label>
