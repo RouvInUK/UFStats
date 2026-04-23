@@ -10,8 +10,18 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log("AuthContext: Mounting");
+    
+    // Safety net: force loading to false after 5 seconds
+    const fallbackTimeout = setTimeout(() => {
+      console.warn("AuthContext: Fallback timeout triggered! Forcing loading=false");
+      setLoading(false);
+    }, 5000);
+
     // Manually fetch session in case INITIAL_SESSION event doesn't trigger
+    console.log("AuthContext: Calling getSession...");
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("AuthContext: getSession resolved. Session:", !!session);
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
@@ -19,13 +29,15 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
       }
     }).catch(err => {
-      console.error("Auth initialization error:", err);
+      console.error("AuthContext: Auth initialization error:", err);
       setLoading(false);
     });
 
     // Listen for auth changes (this fires on login/logout)
+    console.log("AuthContext: Setting up onAuthStateChange...");
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("AuthContext: onAuthStateChange fired! Event:", event, "Session:", !!session);
         setUser(session?.user ?? null);
         if (session?.user) {
           await fetchProfile(session.user.id);
@@ -38,13 +50,14 @@ export const AuthProvider = ({ children }) => {
     );
 
     return () => {
+      clearTimeout(fallbackTimeout);
       authListener.subscription.unsubscribe();
     };
   }, []);
 
   const fetchProfile = async (userId) => {
+    console.log("AuthContext: fetchProfile called for user:", userId);
     try {
-      // Small delay might be needed for the trigger to insert the profile on first signup
       const { data, error } = await supabase
         .from('profiles')
         .select('team_id, is_system_admin, teams(name)')
@@ -52,8 +65,9 @@ export const AuthProvider = ({ children }) => {
         .single();
         
       if (error) {
-        // If profile isn't found immediately after signup, retry once after 1 second
+        console.warn("AuthContext: fetchProfile query error:", error.code);
         if (error.code === 'PGRST116') {
+          console.log("AuthContext: Retrying profile fetch in 1s...");
           setTimeout(async () => {
             try {
               const { data: retryData, error: retryError } = await supabase
@@ -66,11 +80,12 @@ export const AuthProvider = ({ children }) => {
                 setProfile(retryData);
                 if (retryData?.team_id) setGlobalTeamId(retryData.team_id);
               } else {
-                console.warn('Profile retry failed:', retryError);
+                console.warn('AuthContext: Profile retry failed:', retryError);
               }
             } catch (retryErr) {
-              console.warn('Profile retry exception:', retryErr);
+              console.warn('AuthContext: Profile retry exception:', retryErr);
             } finally {
+              console.log("AuthContext: setLoading(false) from retry finally");
               setLoading(false);
             }
           }, 1000);
@@ -78,11 +93,13 @@ export const AuthProvider = ({ children }) => {
         }
         throw error;
       }
+      console.log("AuthContext: Profile fetched successfully:", data);
       setProfile(data);
       if (data?.team_id) setGlobalTeamId(data.team_id);
     } catch (err) {
-      console.error('Error fetching profile:', err);
+      console.error('AuthContext: Error fetching profile:', err);
     } finally {
+      console.log("AuthContext: setLoading(false) from main finally block");
       setLoading(false);
     }
   };
