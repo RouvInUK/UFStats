@@ -10,17 +10,21 @@ const Analytics = () => {
   const currentGame = localStorage.getItem('ufstats_game');
 
   useEffect(() => {
+    let isMounted = true;
     const loadStats = async () => {
       try {
-        const rawStats = await fetchStats();
-        setStats(rawStats);
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out")), 5000));
+        const rawStats = await Promise.race([fetchStats(), timeoutPromise]);
+        if (isMounted) setStats(rawStats);
       } catch (err) {
         console.error('Failed to load stats', err);
+        if (isMounted) alert("Network issue: Failed to load analytics. Please refresh.");
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
     loadStats();
+    return () => { isMounted = false; };
   }, []);
 
   const games = useMemo(() => {
