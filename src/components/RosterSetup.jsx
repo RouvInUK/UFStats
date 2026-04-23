@@ -30,8 +30,8 @@ const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, targetT
       }
       setNewPlayerName('');
     } catch (err) {
-      alert("Failed to add player to database. Check connection or RLS rules.");
-      console.error(err);
+      alert("Failed to add player to database: " + (err.message || err.details || JSON.stringify(err)));
+      console.error("Full add error:", err);
     } finally {
       setIsProcessing(false);
     }
