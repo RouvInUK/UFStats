@@ -42,8 +42,15 @@ function App() {
   }, [gameType]);
 
   const [currentTeam, setCurrentTeam] = useState(() => {
-    return localStorage.getItem('ufstats_team') || 'Default Team (Migrated)';
+    return localStorage.getItem('ufstats_team') || '';
   });
+
+  // Auto-sync the current team to their actual database team name once profile loads
+  useEffect(() => {
+    if (profile?.teams?.name && (!currentTeam || currentTeam === 'Default Team (Migrated)')) {
+      setCurrentTeam(profile.teams.name);
+    }
+  }, [profile, currentTeam]);
 
   useEffect(() => {
     localStorage.setItem('ufstats_team', currentTeam);
