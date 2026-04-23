@@ -113,7 +113,20 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signOut = async () => {
-    return supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.warn("AuthContext: Error during sign out:", err);
+    } finally {
+      // Force clear any corrupted Supabase session keys from local storage
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
+      // Hard reload the browser to purge all React state and reset
+      window.location.reload();
+    }
   };
 
   const value = {
