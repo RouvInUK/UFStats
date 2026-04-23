@@ -265,7 +265,23 @@ export const deleteStat = async (id) => {
     .delete()
     .eq('id', id);
 
-  if (error) throw error;
+  if (error) {
+    console.error("Supabase Delete Error:", error);
+    throw error;
+  }
+};
+
+export const deleteGame = async (gameName, teamId) => {
+  const { error } = await supabase
+    .from('stats')
+    .delete()
+    .eq('game_name', gameName)
+    .eq('team_id', teamId);
+
+  if (error) {
+    console.error("Supabase Delete Game Error:", error);
+    throw error;
+  }
 };
 
 export const fetchLastStatForGame = async (gameName, teamName) => {

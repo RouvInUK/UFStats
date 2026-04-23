@@ -277,6 +277,7 @@ function App() {
       {currentView === 'log' && (
         <EventLog 
           currentGame={currentGame}
+          currentTeam={currentTeam}
           onNavigate={setCurrentView} 
         />
       )}

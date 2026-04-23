@@ -1,10 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchGameStats, updateStat, deleteStat, fetchAllGameNames } from '../supabaseClient';
-import { Pencil, Trash2 } from 'lucide-react';
+import { fetchGameStats, updateStat, deleteStat, deleteGame, fetchAllGameNames } from '../supabaseClient';
+import { Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const STAT_TYPES = ['Point', 'Pass', 'Throwaway', 'Drop', 'Stall Out', 'Defence'];
 
-const EventLog = ({ currentGame, onNavigate }) => {
+const EventLog = ({ currentGame, onNavigate, currentTeam }) => {
+  const { profile } = useAuth();
+  const targetTeamId = profile?.is_system_admin && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentTeam) 
+        ? currentTeam 
+        : profile?.team_id;
+
   const [selectedGame, setSelectedGame] = useState(currentGame);
   const [allGames, setAllGames] = useState([]);
   const [logs, setLogs] = useState([]);
@@ -76,6 +82,35 @@ const EventLog = ({ currentGame, onNavigate }) => {
     }
   };
 
+  const handleDeleteGame = async () => {
+    if (!selectedGame) return;
+    if (!window.confirm(`Are you absolutely sure you want to delete ALL data for "${selectedGame}"? This cannot be undone.`)) return;
+    
+    setLoading(true);
+    try {
+      await deleteGame(selectedGame, targetTeamId);
+      
+      // If we deleted the current active game, reset the app state
+      if (selectedGame === currentGame) {
+        onNavigate('dashboard');
+        window.location.reload(); // Hard reset to clear out Dashboard local state hooks easily
+        return;
+      }
+
+      setSelectedGame('');
+      const names = await fetchAllGameNames();
+      setAllGames(names);
+      if (names.length > 0) {
+        setSelectedGame(names[names.length - 1]);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete game data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!loading && allGames.length === 0 && !selectedGame) {
     return (
       <div className="flex flex-col items-center justify-center p-4 min-h-screen text-slate-400 bg-slate-900">
@@ -108,6 +143,16 @@ const EventLog = ({ currentGame, onNavigate }) => {
                 <option key={game} value={game}>{game}</option>
               ))}
             </select>
+            {selectedGame && (
+              <button 
+                onClick={handleDeleteGame}
+                disabled={loading}
+                className="p-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg transition-all"
+                title="Delete Entire Match History"
+              >
+                <AlertTriangle className="w-5 h-5" />
+              </button>
+            )}
           </div>
         </div>
 
