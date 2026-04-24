@@ -54,3 +54,12 @@ BEGIN
     RETURN deleted_count;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 6. Unlink any auto-generated teams from existing System Admins
+UPDATE public.profiles
+SET team_id = NULL
+WHERE is_system_admin = true;
+
+-- 7. Prune those abandoned admin teams from the database
+DELETE FROM public.teams
+WHERE id NOT IN (SELECT team_id FROM public.profiles WHERE team_id IS NOT NULL);

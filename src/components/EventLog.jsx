@@ -21,7 +21,7 @@ const EventLog = ({ currentGame, onNavigate, currentTeam }) => {
   useEffect(() => {
     const init = async () => {
       try {
-        const names = await fetchAllGameNames();
+        const names = await fetchAllGameNames(targetTeamId);
         setAllGames(names);
         if (!selectedGame && names.length > 0) {
            setSelectedGame(names[names.length - 1]); // Default to latest if no active game
@@ -31,7 +31,7 @@ const EventLog = ({ currentGame, onNavigate, currentTeam }) => {
       }
     };
     init();
-  }, [selectedGame]);
+  }, [targetTeamId]);
 
   const loadLogs = useCallback(async () => {
     if (!selectedGame) {
@@ -40,7 +40,7 @@ const EventLog = ({ currentGame, onNavigate, currentTeam }) => {
     }
     setLoading(true);
     try {
-      const data = await fetchGameStats(selectedGame);
+      const data = await fetchGameStats(selectedGame, targetTeamId);
       setLogs(data);
     } catch (err) {
       console.error(err);
@@ -48,7 +48,7 @@ const EventLog = ({ currentGame, onNavigate, currentTeam }) => {
     } finally {
       setLoading(false);
     }
-  }, [selectedGame]);
+  }, [selectedGame, targetTeamId]);
 
   useEffect(() => {
     loadLogs();

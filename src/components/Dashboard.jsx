@@ -33,7 +33,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     if (!currentGame) return;
     const loadGameContext = async () => {
        try {
-          const stats = await fetchGameStats(currentGame);
+          const stats = await fetchGameStats(currentGame, targetTeamId);
           let us = 0, them = 0;
           let od = initialPossession || 'O';
           let oppName = opponentName || 'Opponent';
@@ -60,8 +60,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
 
   // Fetch active games on mount
   useEffect(() => {
-    fetchActiveGames(currentTeam).then(setActiveGames).catch(console.error);
-  }, [currentTeam]);
+    fetchActiveGames(targetTeamId).then(setActiveGames).catch(console.error);
+  }, [targetTeamId]);
 
   // Sync point if user selects an existing active game
   useEffect(() => {
@@ -135,7 +135,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     if (!currentGame) return;
     setIsSaving(true);
     try {
-      const lastStat = await fetchLastStatForGame(currentGame, currentTeam);
+      const lastStat = await fetchLastStatForGame(currentGame, targetTeamId);
       if (!lastStat) {
         alert("No recent actions found to undo for this game.");
         return;

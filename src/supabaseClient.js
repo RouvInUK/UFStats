@@ -66,6 +66,7 @@ export const fetchAllTeamNames = async () => {
 };
 
 export const fetchPlayers = async (teamIdentifier) => {
+  if (!teamIdentifier) return [];
   let query = supabase.from('players').select('*').order('name', { ascending: true });
   
   if (teamIdentifier) {
@@ -138,26 +139,44 @@ export const clearActiveLineup = async (teamName) => {
   if (error) throw error;
 };
 
-export const fetchStats = async () => {
-  const { data, error } = await supabase
+export const fetchStats = async (teamIdentifier) => {
+  if (!teamIdentifier) return [];
+  let query = supabase
     .from('stats')
     .select('*')
     .limit(100000)
     .order('created_at', { ascending: true });
+
+  if (teamIdentifier) {
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamIdentifier);
+    if (isUUID) {
+      query = query.eq('team_id', teamIdentifier);
+    } else if (teamIdentifier === 'Default Team' || teamIdentifier === 'Default Team (Migrated)') {
+      query = query.or(`team_name.eq.${teamIdentifier},team_name.is.null`);
+    } else {
+      query = query.eq('team_name', teamIdentifier);
+    }
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data || [];
 };
 
 export const fetchAllGameNames = async (teamName) => {
+  if (!teamName) return [];
   let query = supabase
     .from('stats')
     .select('game_name')
     .limit(100000);
 
   if (teamName) {
-    if (teamName === 'Default Team') {
-      query = query.or('team_name.eq.Default Team,team_name.is.null');
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamName);
+    if (isUUID) {
+      query = query.eq('team_id', teamName);
+    } else if (teamName === 'Default Team' || teamName === 'Default Team (Migrated)') {
+      query = query.or(`team_name.eq.${teamName},team_name.is.null`);
     } else {
       query = query.eq('team_name', teamName);
     }
@@ -172,6 +191,7 @@ export const fetchAllGameNames = async (teamName) => {
 };
 
 export const fetchActiveGames = async (teamName) => {
+  if (!teamName) return [];
   // We only need a few columns to derive active games
   let query = supabase
     .from('stats')
@@ -179,8 +199,11 @@ export const fetchActiveGames = async (teamName) => {
     .limit(100000);
 
   if (teamName) {
-    if (teamName === 'Default Team') {
-      query = query.or('team_name.eq.Default Team,team_name.is.null');
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamName);
+    if (isUUID) {
+      query = query.eq('team_id', teamName);
+    } else if (teamName === 'Default Team' || teamName === 'Default Team (Migrated)') {
+      query = query.or(`team_name.eq.${teamName},team_name.is.null`);
     } else {
       query = query.eq('team_name', teamName);
     }
@@ -226,7 +249,8 @@ export const fetchActiveGames = async (teamName) => {
     }));
 };
 
-export const fetchGameStats = async (gameNames) => {
+export const fetchGameStats = async (gameNames, teamIdentifier) => {
+  if (!teamIdentifier) return [];
   const isArray = Array.isArray(gameNames);
   if (isArray && gameNames.length === 0) return [];
 
@@ -240,6 +264,17 @@ export const fetchGameStats = async (gameNames) => {
     query = query.in('game_name', gameNames);
   } else {
     query = query.eq('game_name', gameNames);
+  }
+
+  if (teamIdentifier) {
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamIdentifier);
+    if (isUUID) {
+      query = query.eq('team_id', teamIdentifier);
+    } else if (teamIdentifier === 'Default Team' || teamIdentifier === 'Default Team (Migrated)') {
+      query = query.or(`team_name.eq.${teamIdentifier},team_name.is.null`);
+    } else {
+      query = query.eq('team_name', teamIdentifier);
+    }
   }
 
   const { data, error } = await query;
@@ -329,6 +364,7 @@ export const fetchActionsPerDay = async () => {
 };
 
 export const fetchLastStatForGame = async (gameName, teamName) => {
+  if (!teamName) return null;
   let query = supabase
     .from('stats')
     .select('*')
@@ -337,8 +373,15 @@ export const fetchLastStatForGame = async (gameName, teamName) => {
     .order('created_at', { ascending: false })
     .limit(1);
 
-  if (teamName && teamName !== 'Default Team') {
-    query = query.eq('team_name', teamName);
+  if (teamName) {
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamName);
+    if (isUUID) {
+      query = query.eq('team_id', teamName);
+    } else if (teamName === 'Default Team' || teamName === 'Default Team (Migrated)') {
+      query = query.or(`team_name.eq.${teamName},team_name.is.null`);
+    } else {
+      query = query.eq('team_name', teamName);
+    }
   }
 
   const { data, error } = await query;
@@ -359,6 +402,7 @@ export const checkIfHalfTimeLogged = async (gameName) => {
 };
 
 export const restoreLineupForPoint = async (gameName, pointNumber, teamName) => {
+  if (!teamName) return [];
   let query = supabase
     .from('stats')
     .select('player')
@@ -366,8 +410,15 @@ export const restoreLineupForPoint = async (gameName, pointNumber, teamName) => 
     .eq('point_number', pointNumber)
     .eq('stat_type', 'Lineup');
 
-  if (teamName && teamName !== 'Default Team') {
-    query = query.eq('team_name', teamName);
+  if (teamName) {
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamName);
+    if (isUUID) {
+      query = query.eq('team_id', teamName);
+    } else if (teamName === 'Default Team' || teamName === 'Default Team (Migrated)') {
+      query = query.or(`team_name.eq.${teamName},team_name.is.null`);
+    } else {
+      query = query.eq('team_name', teamName);
+    }
   }
 
   const { data, error } = await query;
@@ -378,8 +429,15 @@ export const restoreLineupForPoint = async (gameName, pointNumber, teamName) => 
   const activePlayers = data.map(d => d.player);
 
   let updateQuery = supabase.from('players').update({ is_active: true }).in('name', activePlayers);
-  if (teamName && teamName !== 'Default Team') {
-    updateQuery = updateQuery.eq('team_name', teamName);
+  if (teamName) {
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamName);
+    if (isUUID) {
+      updateQuery = updateQuery.eq('team_id', teamName);
+    } else if (teamName === 'Default Team' || teamName === 'Default Team (Migrated)') {
+      updateQuery = updateQuery.or(`team_name.eq.${teamName},team_name.is.null`);
+    } else {
+      updateQuery = updateQuery.eq('team_name', teamName);
+    }
   }
 
   await updateQuery;

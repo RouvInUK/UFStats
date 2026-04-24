@@ -249,7 +249,7 @@ function App() {
       )}
 
       {currentView === 'analytics' && (
-        <Analytics />
+        <Analytics targetTeamId={targetTeamId} />
       )}
       
       {currentView === 'roster' && (
@@ -288,6 +288,7 @@ function App() {
         <CoachDashboard 
           currentGame={currentGame}
           currentTeam={effectiveTeamName}
+          targetTeamId={targetTeamId}
           setCurrentTeam={setCurrentTeam}
         />
       )}
@@ -296,6 +297,7 @@ function App() {
         <EventLog 
           currentGame={currentGame}
           currentTeam={effectiveTeamName}
+          targetTeamId={targetTeamId}
           onNavigate={setCurrentView} 
         />
       )}

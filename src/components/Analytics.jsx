@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { fetchStats } from '../supabaseClient';
 
-const Analytics = () => {
+const Analytics = ({ targetTeamId }) => {
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedGames, setSelectedGames] = useState([]);
@@ -14,7 +14,7 @@ const Analytics = () => {
     const loadStats = async () => {
       try {
         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out")), 5000));
-        const rawStats = await Promise.race([fetchStats(), timeoutPromise]);
+        const rawStats = await Promise.race([fetchStats(targetTeamId), timeoutPromise]);
         if (isMounted) setStats(rawStats);
       } catch (err) {
         console.error('Failed to load stats', err);
@@ -25,7 +25,7 @@ const Analytics = () => {
     };
     loadStats();
     return () => { isMounted = false; };
-  }, []);
+  }, [targetTeamId]);
 
   const games = useMemo(() => {
     const uniqueGames = [...new Set(stats.map(s => s.game_name))].filter(Boolean);

@@ -17,7 +17,10 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
       // 1. Fetch Teams
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
-        .select('*')
+        .select(`
+          *,
+          profiles (is_system_admin)
+        `)
         .order('created_at', { ascending: false });
       if (teamsError) throw teamsError;
 
@@ -40,7 +43,16 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
       
       Object.values(gamesPerTeam).forEach(s => totalGames += s.size);
 
-      const mergedTeams = teamsData.map(team => ({
+      // Filter out admin teams
+      const regularTeams = teamsData.filter(team => {
+        // If any profile in this team is a system admin, exclude the team
+        if (team.profiles && team.profiles.some(p => p.is_system_admin)) {
+          return false;
+        }
+        return true;
+      });
+
+      const mergedTeams = regularTeams.map(team => ({
         ...team,
         gamesTracked: gamesPerTeam[team.id] ? gamesPerTeam[team.id].size : 0
       }));

@@ -9,6 +9,15 @@ const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, targetT
     fetchAllTeamNames().then(setAllTeams).catch(console.error);
   }, [players]);
 
+  const handleClearLineup = async () => {
+    try {
+      await clearActiveLineup(targetTeamId);
+      setPlayers([]);
+    } catch (err) {
+      alert("Failed to clear lineup: " + (err.message || err.details || JSON.stringify(err)));
+    }
+  };
+
   const handleAddPlayer = async (e) => {
     e.preventDefault();
     const trimmed = newPlayerName.trim();

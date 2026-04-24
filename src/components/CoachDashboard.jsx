@@ -3,7 +3,7 @@ import { fetchGameStats, fetchAllGameNames, fetchAllTeamNames } from '../supabas
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
 import { Lock, Zap, Target, AlertTriangle, Presentation, Users, ChevronDown, Check, Activity, TrendingUp, TrendingDown } from 'lucide-react';
 
-const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
+const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam }) => {
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [visualGameType, setVisualGameType] = useState('beach');
@@ -25,7 +25,7 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
         setSelectedGames([]);
       }
     });
-  }, [currentTeam, currentGame]);
+  }, [targetTeamId, currentGame]);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -36,7 +36,7 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
       }
       setLoading(true);
       try {
-        const rawStats = await fetchGameStats(selectedGames);
+        const rawStats = await fetchGameStats(selectedGames, targetTeamId);
         // fetchGameStats returns desc, we want chronological for the timeline
         setStats(rawStats.reverse());
       } catch (err) {
@@ -46,7 +46,7 @@ const CoachDashboard = ({ currentGame, currentTeam, setCurrentTeam }) => {
       }
     };
     loadStats();
-  }, [selectedGames]);
+  }, [selectedGames, targetTeamId]);
 
   const toggleGameSelection = (game) => {
     setSelectedGames(prev => 

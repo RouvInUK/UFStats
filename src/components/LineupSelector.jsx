@@ -13,15 +13,20 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
 
   useEffect(() => {
     if (currentGame) {
-      fetchLastStatForGame(currentGame, currentTeam)
-        .then(setLastAction)
+      fetchLastStatForGame(currentGame, targetTeamId)
+        .then(lastStat => {
+          if (lastStat && lastStat.game_type) {
+            setGameType(lastStat.game_type);
+          }
+          setLastAction(lastStat);
+        })
         .catch(console.error);
         
       checkIfHalfTimeLogged(currentGame)
         .then(setHasHalfTime)
         .catch(console.error);
     }
-  }, [currentGame, currentTeam, currentPoint]);
+  }, [currentGame, targetTeamId, setGameType, currentPoint]);
 
   const handleUndoLastPoint = async () => {
     if (!lastAction || !lastAction.id) return;
@@ -71,6 +76,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     setIsStartingPoint(true);
     try {
       const nextPoint = currentPoint + 1;
+      await clearActiveLineup(targetTeamId);
       await recordLineup(activeLineupNames, nextPoint, currentGame, gameType, currentTeam, targetTeamId);
 
       if (currentPoint === 0) {
