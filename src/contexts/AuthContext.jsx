@@ -101,6 +101,43 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 15-Minute Auto-Logout Timer
+  useEffect(() => {
+    if (!user) return; // Only track inactivity if a user is logged in
+
+    let timeoutId;
+    const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutes in milliseconds
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        console.warn("AuthContext: Auto-logging out due to 15m inactivity.");
+        signOut();
+      }, INACTIVITY_LIMIT);
+    };
+
+    resetTimer();
+
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
+    
+    // Throttle the reset so we aren't calling setTimeout 60 times a second
+    let isThrottled = false;
+    const handleActivity = () => {
+      if (!isThrottled) {
+        resetTimer();
+        isThrottled = true;
+        setTimeout(() => { isThrottled = false; }, 2000);
+      }
+    };
+
+    events.forEach(event => window.addEventListener(event, handleActivity, { passive: true }));
+
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach(event => window.removeEventListener(event, handleActivity));
+    };
+  }, [user]);
+
   const signIn = async (email, password) => {
     return supabase.auth.signInWithPassword({ email, password });
   };
