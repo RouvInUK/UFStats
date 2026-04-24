@@ -284,6 +284,50 @@ export const deleteGame = async (gameName, teamId) => {
   }
 };
 
+export const updateTeamTier = async (teamId, tier) => {
+  const { data, error } = await supabase
+    .from('teams')
+    .update({ tier })
+    .eq('id', teamId)
+    .select();
+
+  if (error) throw error;
+  return data[0];
+};
+
+export const fetchBetaKeys = async () => {
+  const { data, error } = await supabase
+    .from('beta_keys')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+};
+
+export const generateBetaKey = async () => {
+  const randomKey = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const { data, error } = await supabase
+    .from('beta_keys')
+    .insert([{ key: randomKey }])
+    .select();
+
+  if (error) throw error;
+  return data[0];
+};
+
+export const pruneIncompleteGames = async () => {
+  const { data, error } = await supabase.rpc('prune_incomplete_games');
+  if (error) throw error;
+  return data;
+};
+
+export const fetchActionsPerDay = async () => {
+  const { data, error } = await supabase.rpc('get_actions_per_day_30d');
+  if (error) throw error;
+  return data || [];
+};
+
 export const fetchLastStatForGame = async (gameName, teamName) => {
   let query = supabase
     .from('stats')

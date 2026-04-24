@@ -45,12 +45,18 @@ function App() {
     return localStorage.getItem('ufstats_team') || '';
   });
 
+  const [shadowTeam, setShadowTeam] = useState(null);
+
   // Auto-sync the current team to their actual database team name once profile loads
   useEffect(() => {
+    if (profile?.is_system_admin && shadowTeam) {
+      // Don't auto-sync if we are actively shadowing
+      return;
+    }
     if (profile?.teams?.name && (!currentTeam || currentTeam === 'Default Team (Migrated)')) {
       setCurrentTeam(profile.teams.name);
     }
-  }, [profile, currentTeam]);
+  }, [profile, currentTeam, shadowTeam]);
 
   useEffect(() => {
     localStorage.setItem('ufstats_team', currentTeam);
@@ -72,9 +78,13 @@ function App() {
     localStorage.setItem('ufstats_possession', initialPossession);
   }, [initialPossession]);
 
-  const targetTeamId = profile?.is_system_admin && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentTeam)
-    ? currentTeam
-    : profile?.team_id;
+  const targetTeamId = shadowTeam?.id
+    ? shadowTeam.id
+    : profile?.is_system_admin && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentTeam)
+      ? currentTeam
+      : profile?.team_id;
+
+  const effectiveTeamName = shadowTeam?.name || currentTeam;
 
   useEffect(() => {
     if (!user) return;
@@ -174,6 +184,14 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-900 selection:bg-indigo-500 selection:text-white pb-24">
+      {shadowTeam && (
+        <div className="bg-amber-500 text-amber-950 font-black tracking-widest text-xs py-2 px-4 flex justify-center items-center gap-4 z-50 sticky top-0 shadow-md">
+           <span>IMPERSONATING: {shadowTeam.name}</span>
+           <button onClick={() => setShadowTeam(null)} className="bg-amber-950 text-amber-400 px-3 py-1 rounded hover:bg-amber-900 transition-colors shadow-inner">
+             EXIT SHADOW
+           </button>
+        </div>
+      )}
       
       {/* Premium Desktop Header */}
       <div className="hidden sm:flex justify-between items-center px-8 py-4 bg-slate-950/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 shadow-xl">
@@ -218,7 +236,7 @@ function App() {
           setCurrentGame={setCurrentGame}
           gameType={gameType}
           setGameType={setGameType}
-          currentTeam={currentTeam}
+          currentTeam={effectiveTeamName}
           targetTeamId={targetTeamId}
           opponentName={opponentName}
           initialPossession={initialPossession}
@@ -238,7 +256,7 @@ function App() {
         <RosterSetup 
           players={players} 
           setPlayers={setPlayers}
-          currentTeam={currentTeam}
+          currentTeam={effectiveTeamName}
           setCurrentTeam={setCurrentTeam}
           targetTeamId={targetTeamId}
           onNavigate={setCurrentView} 
@@ -249,7 +267,7 @@ function App() {
         <LineupSelector 
           players={players} 
           setPlayers={setPlayers}
-          currentTeam={currentTeam}
+          currentTeam={effectiveTeamName}
           targetTeamId={targetTeamId}
           onNavigate={setCurrentView} 
           currentGame={currentGame}
@@ -269,7 +287,7 @@ function App() {
       {currentView === 'coach' && (
         <CoachDashboard 
           currentGame={currentGame}
-          currentTeam={currentTeam}
+          currentTeam={effectiveTeamName}
           setCurrentTeam={setCurrentTeam}
         />
       )}
@@ -277,13 +295,16 @@ function App() {
       {currentView === 'log' && (
         <EventLog 
           currentGame={currentGame}
-          currentTeam={currentTeam}
+          currentTeam={effectiveTeamName}
           onNavigate={setCurrentView} 
         />
       )}
 
       {currentView === 'admin' && profile?.is_system_admin && (
-        <AdminDashboard onNavigate={setCurrentView} />
+        <AdminDashboard 
+          onNavigate={setCurrentView}
+          onShadowTeam={setShadowTeam}
+        />
       )}
 
       {/* Fixed Bottom Navigation Bar */}

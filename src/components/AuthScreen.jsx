@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../supabaseClient';
 import { Target, AlertTriangle } from 'lucide-react';
 
 const AuthScreen = () => {
@@ -7,6 +8,7 @@ const AuthScreen = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [betaKey, setBetaKey] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -16,13 +18,37 @@ const AuthScreen = () => {
     setError('');
 
     try {
-      const { error: authError } = isLogin 
+      if (!isLogin) {
+        if (!betaKey || betaKey.length !== 6) {
+          throw new Error("A valid 6-character Beta Key is required to create a workspace.");
+        }
+        
+        // Validate Beta Key
+        const { data: keyData, error: keyError } = await supabase
+          .from('beta_keys')
+          .select('*')
+          .eq('key', betaKey)
+          .eq('is_used', false)
+          .single();
+          
+        if (keyError || !keyData) {
+          throw new Error("Invalid or already claimed Beta Key.");
+        }
+      }
+
+      const { data: authData, error: authError } = isLogin 
         ? await signIn(email, password)
         : await signUp(email, password);
 
       if (authError) throw authError;
 
-      if (!isLogin) {
+      if (!isLogin && authData?.user) {
+        // Mark Beta Key as used
+        await supabase
+          .from('beta_keys')
+          .update({ is_used: true, used_by: authData.user.id })
+          .eq('key', betaKey);
+          
         alert('Signup successful! Check your email if email confirmation is enabled, otherwise you should be logged in automatically.');
       }
     } catch (err) {
@@ -80,6 +106,23 @@ const AuthScreen = () => {
               placeholder="••••••••"
             />
           </div>
+
+          {!isLogin && (
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-amber-500 uppercase tracking-widest pl-2 block">
+                Beta Access Key
+              </label>
+              <input
+                type="text"
+                value={betaKey}
+                onChange={(e) => setBetaKey(e.target.value.toUpperCase())}
+                required={!isLogin}
+                maxLength={6}
+                className="w-full bg-slate-950 border border-amber-500/50 rounded-xl px-4 py-3 text-amber-400 font-mono tracking-widest outline-none focus:border-amber-400 transition-colors shadow-[0_0_15px_rgba(245,158,11,0.1)]"
+                placeholder="XXXXXX"
+              />
+            </div>
+          )}
 
           <button
             type="submit"
