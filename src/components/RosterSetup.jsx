@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { addPlayer, removePlayer, fetchAllTeamNames } from '../supabaseClient';
 const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, targetTeamId }) => {
   const [newPlayerName, setNewPlayerName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [allTeams, setAllTeams] = useState([]);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     fetchAllTeamNames().then(setAllTeams).catch(console.error);
@@ -46,6 +47,7 @@ const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, targetT
         setPlayers([...players, savedPlayer]);
       }
       setNewPlayerName('');
+      setTimeout(() => inputRef.current?.focus(), 0);
     } catch (err) {
       alert("Failed to add player to database: " + (err.message || err.details || JSON.stringify(err)));
       console.error("Full add error:", err);
@@ -104,6 +106,7 @@ const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, targetT
         <div className="p-6 sm:p-8 space-y-6">
           <form onSubmit={handleAddPlayer} className="flex gap-3">
             <input
+              ref={inputRef}
               type="text"
               value={newPlayerName}
               onChange={(e) => setNewPlayerName(e.target.value)}
