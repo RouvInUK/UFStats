@@ -57,7 +57,8 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
   };
 
   const handleStartPoint = async () => {
-    const activeLineupNames = players.filter(p => p.is_active).map(p => p.name);
+    // Only get active players that belong to the current team
+    const activeLineupNames = filteredPlayers.filter(p => p.is_active).map(p => p.name);
     const expectedCount = gameType === 'grass' ? 7 : 5;
     
     if (activeLineupNames.length !== expectedCount) {
@@ -203,7 +204,14 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     }
   };
 
-  const activeCount = players.filter(p => p.is_active).length;
+  const filteredPlayers = players.filter(p => {
+    if (currentTeam === 'Default Team (Migrated)' || currentTeam === 'Default Team') {
+      return p.team_name === 'Default Team' || p.team_name === 'Default Team (Migrated)' || !p.team_name;
+    }
+    return p.team_name === currentTeam;
+  });
+
+  const activeCount = filteredPlayers.filter(p => p.is_active).length;
 
   return (
     <div className="flex flex-col items-center p-4 py-8 sm:py-12 min-h-screen">
@@ -266,7 +274,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
         )}
 
         <div className="p-6 sm:p-8">
-          {players.length === 0 ? (
+          {filteredPlayers.length === 0 ? (
             <div className="text-center py-10 bg-slate-900/50 rounded-2xl border border-slate-700/50 space-y-4">
               <p className="text-slate-400 font-medium">Your roster is currently empty.</p>
               <button 
@@ -278,7 +286,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {players.map((player) => {
+              {filteredPlayers.map((player) => {
                 const isActive = player.is_active;
                 const isProcessing = processingId === player.id;
                 

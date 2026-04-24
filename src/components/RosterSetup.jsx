@@ -9,6 +9,13 @@ const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, targetT
     fetchAllTeamNames().then(setAllTeams).catch(console.error);
   }, [players]);
 
+  const filteredPlayers = players.filter(p => {
+    if (currentTeam === 'Default Team (Migrated)' || currentTeam === 'Default Team') {
+      return p.team_name === 'Default Team' || p.team_name === 'Default Team (Migrated)' || !p.team_name;
+    }
+    return p.team_name === currentTeam;
+  });
+
   const handleClearLineup = async () => {
     try {
       await clearActiveLineup(targetTeamId);
@@ -24,10 +31,10 @@ const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, targetT
     if (!trimmed) return;
     
     // Check local array quickly
-    if (players.some(p => p.name.toLowerCase() === trimmed.toLowerCase())) {
+    if (filteredPlayers.some(p => p.name.toLowerCase() === trimmed.toLowerCase())) {
       return alert("Player already exists in this team!");
     }
-    if (players.length >= 21) {
+    if (filteredPlayers.length >= 21) {
       return alert("Maximum 21 players allowed.");
     }
 
@@ -35,6 +42,7 @@ const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, targetT
     try {
       const savedPlayer = await addPlayer(trimmed, currentTeam, targetTeamId);
       if (savedPlayer) {
+        // Append to the full global players array
         setPlayers([...players, savedPlayer]);
       }
       setNewPlayerName('');
@@ -89,7 +97,7 @@ const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, targetT
                 +
               </button>
             </div>
-            <p className="text-slate-400 text-sm font-medium">{players.length} / 21 Players Configured</p>
+            <p className="text-slate-400 text-sm font-medium">{filteredPlayers.length} / 21 Players Configured</p>
           </div>
         </div>
 
@@ -105,20 +113,20 @@ const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, targetT
             />
             <button 
               type="submit"
-              disabled={players.length >= 21 || !newPlayerName.trim() || isProcessing}
+              disabled={filteredPlayers.length >= 21 || !newPlayerName.trim() || isProcessing}
               className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20"
             >
               Add
             </button>
           </form>
 
-          {players.length === 0 ? (
+          {filteredPlayers.length === 0 ? (
             <div className="text-center py-10 text-slate-500 font-medium">
               No players added yet. Start building your squad!
             </div>
           ) : (
             <ul className="space-y-2">
-              {players.map((player) => (
+              {filteredPlayers.map((player) => (
                 <li key={player.id} className="flex justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
                   <span className="text-slate-200 font-semibold">{player.name}</span>
                   <button 
