@@ -172,7 +172,7 @@ function App() {
     return <AuthScreen />;
   }
 
-  if (authError || (user && !profile && !authLoading)) {
+  if ((authError && !profile) || (user && !profile && !authLoading)) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-center p-6">
         <div className="bg-rose-500/10 border border-rose-500/20 p-8 rounded-3xl max-w-md">

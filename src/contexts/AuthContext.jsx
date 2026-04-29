@@ -6,7 +6,14 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(() => {
+    try {
+      const cached = localStorage.getItem('ufstats_cached_profile');
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
 
@@ -21,6 +28,7 @@ export const AuthProvider = ({ children }) => {
       if (error) throw error;
       
       setProfile(data);
+      localStorage.setItem('ufstats_cached_profile', JSON.stringify(data));
       setAuthError(null);
     } catch (err) {
       console.warn(`AuthContext: Profile fetch failed (Attempt ${attempt})`, err);
@@ -58,11 +66,13 @@ export const AuthProvider = ({ children }) => {
         } else {
           setUser(null);
           setProfile(null);
+          localStorage.removeItem('ufstats_cached_profile');
           if (mounted) setLoading(false);
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setProfile(null);
+        localStorage.removeItem('ufstats_cached_profile');
         if (mounted) setLoading(false);
       }
     });
@@ -158,6 +168,7 @@ export const AuthProvider = ({ children }) => {
       }
     });
     localStorage.removeItem('ufstats_last_activity');
+    localStorage.removeItem('ufstats_cached_profile');
     
     // Hard reload the browser to purge all React state and reset immediately
     window.location.reload();
