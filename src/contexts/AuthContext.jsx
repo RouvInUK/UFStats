@@ -101,40 +101,57 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 15-Minute Auto-Logout Timer
+  // 15-Minute Auto-Logout Timer (Robust for Mobile/Sleep)
   useEffect(() => {
     if (!user) return; // Only track inactivity if a user is logged in
 
-    let timeoutId;
     const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutes in milliseconds
+    const STORAGE_KEY = 'ufstats_last_activity';
 
-    const resetTimer = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        console.warn("AuthContext: Auto-logging out due to 15m inactivity.");
-        signOut();
-      }, INACTIVITY_LIMIT);
+    const updateActivity = () => {
+      localStorage.setItem(STORAGE_KEY, Date.now().toString());
     };
 
-    resetTimer();
+    const checkInactivity = () => {
+      const lastActivity = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+      if (lastActivity && (Date.now() - lastActivity > INACTIVITY_LIMIT)) {
+        console.warn("AuthContext: Auto-logging out due to 15m inactivity (background check).");
+        signOut();
+      }
+    };
+
+    // Initialize
+    updateActivity();
+
+    // Check periodically (every 10 seconds)
+    const intervalId = setInterval(checkInactivity, 10000);
+
+    // Also check immediately when the browser tab becomes visible again
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkInactivity();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
     
-    // Throttle the reset so we aren't calling setTimeout 60 times a second
+    // Throttle the localstorage writes so we aren't writing 60 times a second
     let isThrottled = false;
-    const handleActivity = () => {
+    const handleActivityEvent = () => {
       if (!isThrottled) {
-        resetTimer();
+        updateActivity();
         isThrottled = true;
         setTimeout(() => { isThrottled = false; }, 2000);
       }
     };
 
-    events.forEach(event => window.addEventListener(event, handleActivity, { passive: true }));
+    events.forEach(event => window.addEventListener(event, handleActivityEvent, { passive: true }));
 
     return () => {
-      clearTimeout(timeoutId);
-      events.forEach(event => window.removeEventListener(event, handleActivity));
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      events.forEach(event => window.removeEventListener(event, handleActivityEvent));
     };
   }, [user]);
 
