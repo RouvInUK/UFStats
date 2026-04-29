@@ -68,10 +68,12 @@ export const AuthProvider = ({ children }) => {
           
           setUser(session.user);
           
-          // Run the profile sync (this might hang or fail, but UI won't be blocked if cached)
-          await fetchProfile(session.user.id);
+          // Fire and forget the profile sync! 
+          // AWAITING HERE DEADLOCKS THE SUPABASE AUTH QUEUE IF IT HANGS!
+          fetchProfile(session.user.id).finally(() => {
+            if (mounted && !hasCache) setLoading(false);
+          });
           
-          if (mounted) setLoading(false);
         } else {
           setUser(null);
           setProfile(null);
