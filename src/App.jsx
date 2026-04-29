@@ -10,6 +10,7 @@ import AuthScreen from './components/AuthScreen';
 import AdminDashboard from './components/AdminDashboard';
 import { fetchPlayers } from './supabaseClient';
 import { useAuth } from './contexts/AuthContext';
+import { ShieldCheck, Star, LogOut } from 'lucide-react';
 
 function App() {
   const { user, profile, loading: authLoading, signOut } = useAuth();
@@ -223,6 +224,42 @@ function App() {
             className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition-all uppercase tracking-wide text-xs border border-white/10"
           >
             Sign Out
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Header */}
+      <div className="sm:hidden flex justify-between items-center px-4 py-3 bg-slate-950/90 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 shadow-md">
+        <div className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-1.5">
+          UF<span className="text-indigo-500 font-light">STATS</span>
+        </div>
+        <div className="flex items-center gap-1">
+          {profile?.is_system_admin && (
+             <button 
+                onClick={() => setCurrentView('admin')}
+                className={`p-2 rounded-lg transition-all ${currentView === 'admin' ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-400 hover:text-white'}`}
+                title="Admin Panel"
+             >
+                <ShieldCheck className="w-5 h-5" />
+             </button>
+          )}
+          <button 
+            onClick={() => setCurrentView('coach')}
+            className={`p-2 rounded-lg transition-all ${currentView === 'coach' ? 'text-amber-400 bg-amber-500/10' : 'text-slate-400 hover:text-amber-400'}`}
+            title="Coach Pro"
+          >
+            <Star className="w-5 h-5" />
+          </button>
+          <button 
+            onClick={() => {
+               if (window.confirm("Are you sure you want to sign out?")) {
+                  signOut();
+               }
+            }}
+            className="p-2 text-slate-400 hover:text-rose-400 rounded-lg transition-all"
+            title="Sign Out"
+          >
+            <LogOut className="w-5 h-5" />
           </button>
         </div>
       </div>
