@@ -239,6 +239,28 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
           </div>
         </div>
 
+        {currentPoint > 0 && (
+          <div className="p-4 bg-amber-500/10 border-b border-amber-500/20 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="text-amber-400 text-sm font-bold truncate">
+              Active Match: {currentGame || 'Unknown'} (Point {currentPoint})
+            </div>
+            <button 
+              onClick={() => {
+                if (window.confirm("Abandon this match and start a new one?")) {
+                  setCurrentGame('');
+                  setCurrentPoint(0);
+                  setOpponentName('');
+                  setInitialPossession('');
+                  setIsTrackingActive(false);
+                }
+              }}
+              className="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider rounded-lg transition-all whitespace-nowrap"
+            >
+              Start New Match
+            </button>
+          </div>
+        )}
+
         {currentPoint === 0 && (
           <div className="p-6 sm:p-8 border-b border-slate-700/50 bg-slate-900/50">
              <div className="flex items-center gap-2 mb-6">
