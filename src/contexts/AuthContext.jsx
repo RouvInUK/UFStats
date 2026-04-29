@@ -55,37 +55,48 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const fetchProfile = async (userId, attempt = 1) => {
-    console.log(`AuthContext: fetchProfile called for user: ${userId} (Attempt ${attempt})`);
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('team_id, is_system_admin, teams(name)')
-        .eq('id', userId)
-        .single();
-        
-      if (error) {
-        console.warn("AuthContext: fetchProfile query error:", error.code);
-        if (error.code === 'PGRST116' && attempt < 5) {
-          console.log(`AuthContext: Retrying profile fetch in ${attempt}s...`);
-          await new Promise(resolve => setTimeout(resolve, attempt * 1000));
-          return fetchProfile(userId, attempt + 1);
+  const fetchProfile = async (userId) => {
+    console.log(`AuthContext: fetchProfile called for user: ${userId}`);
+    
+    let attempt = 1;
+    let maxAttempts = 5;
+    
+    while (attempt <= maxAttempts) {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('team_id, is_system_admin, teams(name)')
+          .eq('id', userId)
+          .single();
+          
+        if (error) {
+          if (error.code === 'PGRST116' && attempt < maxAttempts) {
+            console.warn(`AuthContext: fetchProfile 0 rows. Retrying in ${attempt}s... (Attempt ${attempt}/${maxAttempts})`);
+            await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+            attempt++;
+            continue; // Loop again
+          }
+          console.warn("AuthContext: fetchProfile fatal query error:", error.code);
+          setAuthError(error.message || JSON.stringify(error));
+          throw error;
         }
-        setAuthError(error.message || JSON.stringify(error));
-        throw error;
-      }
-      
-      console.log("AuthContext: Profile fetched successfully:", data);
-      setProfile(data);
-      setAuthError(null);
-    } catch (err) {
-      console.error('AuthContext: Error fetching profile:', err);
-      setAuthError(err.message || 'Unknown fetch error');
-    } finally {
-      if (attempt === 1 || profile) {
-        setLoading(false);
+        
+        console.log("AuthContext: Profile fetched successfully:", data);
+        setProfile(data);
+        setAuthError(null);
+        break; // Success, exit loop
+        
+      } catch (err) {
+        if (attempt >= maxAttempts) {
+          console.error('AuthContext: Error fetching profile:', err);
+          setAuthError(err.message || 'Unknown fetch error');
+          break;
+        }
       }
     }
+    
+    console.log("AuthContext: Finished fetching profile. Setting loading to false.");
+    setLoading(false);
   };
 
   // 15-Minute Auto-Logout Timer (Robust for Mobile/Sleep)
