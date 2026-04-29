@@ -13,7 +13,7 @@ import { useAuth } from './contexts/AuthContext';
 import { ShieldCheck, Star, LogOut } from 'lucide-react';
 
 function App() {
-  const { user, profile, loading: authLoading, signOut } = useAuth();
+  const { user, profile, loading: authLoading, authError, signOut } = useAuth();
   const [currentView, setCurrentView] = useState('dashboard');
   
   // Database State
@@ -170,6 +170,32 @@ function App() {
 
   if (!user) {
     return <AuthScreen />;
+  }
+
+  if (authError || (user && !profile && !authLoading)) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-center p-6">
+        <div className="bg-rose-500/10 border border-rose-500/20 p-8 rounded-3xl max-w-md">
+          <div className="text-rose-400 font-black tracking-widest text-xl mb-4">PROFILE SYNC ERROR</div>
+          <p className="text-slate-300 text-sm mb-6">
+            We couldn't securely fetch your user profile. This occasionally happens if your connection is unstable or if your session has partially expired.
+          </p>
+          {authError && (
+            <div className="bg-black/50 p-4 rounded-xl text-left font-mono text-[10px] text-rose-300 mb-6 break-words">
+               {authError}
+            </div>
+          )}
+          <button 
+            onClick={() => {
+              signOut();
+            }}
+            className="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl transition-all"
+          >
+            Force Sign Out & Reset
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (loading && !authLoading) {

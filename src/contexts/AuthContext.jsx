@@ -8,7 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const fetchingProfileRef = React.useRef(false);
+  const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
     console.log("AuthContext: Mounting");
@@ -55,13 +55,8 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const fetchProfile = async (userId) => {
-    if (fetchingProfileRef.current) {
-      console.log("AuthContext: fetchProfile already in progress. Skipping duplicate call.");
-      return;
-    }
-    fetchingProfileRef.current = true;
-    console.log("AuthContext: fetchProfile called for user:", userId);
+  const fetchProfile = async (userId, attempt = 1) => {
+    console.log(`AuthContext: fetchProfile called for user: ${userId} (Attempt ${attempt})`);
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -71,37 +66,25 @@ export const AuthProvider = ({ children }) => {
         
       if (error) {
         console.warn("AuthContext: fetchProfile query error:", error.code);
-        if (error.code === 'PGRST116') {
-          console.log("AuthContext: Retrying profile fetch in 1s...");
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          try {
-            const { data: retryData, error: retryError } = await supabase
-              .from('profiles')
-              .select('team_id, is_system_admin, teams(name)')
-              .eq('id', userId)
-              .single();
-            
-            if (!retryError) {
-              setProfile(retryData);
-            } else {
-              console.warn('AuthContext: Profile retry failed:', retryError);
-            }
-          } catch (retryErr) {
-            console.warn('AuthContext: Profile retry exception:', retryErr);
-          }
-          return;
+        if (error.code === 'PGRST116' && attempt < 5) {
+          console.log(`AuthContext: Retrying profile fetch in ${attempt}s...`);
+          await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+          return fetchProfile(userId, attempt + 1);
         }
+        setAuthError(error.message || JSON.stringify(error));
         throw error;
       }
+      
       console.log("AuthContext: Profile fetched successfully:", data);
       setProfile(data);
+      setAuthError(null);
     } catch (err) {
       console.error('AuthContext: Error fetching profile:', err);
+      setAuthError(err.message || 'Unknown fetch error');
     } finally {
-      console.log("AuthContext: setLoading(false) from main finally block");
-      setLoading(false);
-      fetchingProfileRef.current = false;
+      if (attempt === 1 || profile) {
+        setLoading(false);
+      }
     }
   };
 
@@ -193,6 +176,7 @@ export const AuthProvider = ({ children }) => {
     user,
     profile,
     loading,
+    authError,
     signIn,
     signUp,
     signOut,
