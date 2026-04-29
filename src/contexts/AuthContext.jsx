@@ -123,7 +123,9 @@ export const AuthProvider = ({ children }) => {
     };
 
     // Initialize
-    updateActivity();
+    if (!checkInactivity()) {
+      updateActivity();
+    }
 
     // Check periodically (every 10 seconds)
     const intervalId = setInterval(checkInactivity, 10000);
