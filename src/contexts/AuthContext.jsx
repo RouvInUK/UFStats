@@ -11,45 +11,54 @@ export const AuthProvider = ({ children }) => {
   const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
-    console.log("AuthContext: Mounting");
-    
-    // Safety net: force loading to false after 15 seconds
+    let mounted = true;
+
+    // Safety net
     const fallbackTimeout = setTimeout(() => {
-      console.warn("AuthContext: Fallback timeout triggered! Forcing loading=false");
-      setLoading(false);
+      if (mounted) setLoading(false);
     }, 15000);
 
-    // Securely validate the local session token against the server
-    console.log("AuthContext: Calling getUser...");
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      console.log("AuthContext: getUser resolved. User:", !!user);
-      setUser(user ?? null);
-      if (user) {
-        fetchProfile(user.id);
-      } else {
-        setLoading(false);
-      }
-    }).catch(err => {
-      console.error("AuthContext: Auth initialization error:", err);
-      setLoading(false);
-    });
+    const initializeAuth = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error) {
+          // It's normal to get a AuthSessionMissingError if not logged in
+          if (error.name !== 'AuthSessionMissingError') {
+             console.warn("Auth initialization getUser error:", error);
+          }
+          if (mounted) setLoading(false);
+          return;
+        }
 
-    // Listen for auth changes (this fires on login/logout)
-    console.log("AuthContext: Setting up onAuthStateChange...");
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("AuthContext: onAuthStateChange fired! Event:", event, "Session:", !!session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-        } else {
-          setProfile(null);
+        if (user && mounted) {
+          setUser(user);
+          await fetchProfile(user.id);
+        } else if (mounted) {
           setLoading(false);
         }
+      } catch (err) {
+        console.error("Critical Auth Init Error:", err);
+        if (mounted) setLoading(false);
       }
-    );
+    };
+
+    initializeAuth();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("AuthContext: onAuthStateChange event:", event);
+      if (event === 'SIGNED_IN' && mounted) {
+        setLoading(true);
+        setUser(session.user);
+        await fetchProfile(session.user.id);
+      } else if (event === 'SIGNED_OUT' && mounted) {
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+      }
+    });
 
     return () => {
+      mounted = false;
       clearTimeout(fallbackTimeout);
       authListener.subscription.unsubscribe();
     };
