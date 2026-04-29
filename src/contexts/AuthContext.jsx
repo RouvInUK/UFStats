@@ -10,50 +10,60 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
 
+  const fetchProfile = async (userId, attempt = 1) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('team_id, is_system_admin, teams(name)')
+        .eq('id', userId)
+        .single();
+        
+      if (error) throw error;
+      
+      setProfile(data);
+      setAuthError(null);
+    } catch (err) {
+      console.warn(`AuthContext: Profile fetch failed (Attempt ${attempt})`, err);
+      if (err.code === 'PGRST116' && attempt < 3) {
+        await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+        return await fetchProfile(userId, attempt + 1);
+      }
+      setAuthError(`DB Error ${err.code || 'UNKNOWN'}: ${err.message || 'Failed to sync profile.'}`);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
 
-    // Safety net
     const fallbackTimeout = setTimeout(() => {
       if (mounted) setLoading(false);
-    }, 15000);
+    }, 10000);
 
-    const initializeAuth = async () => {
-      try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error) {
-          // It's normal to get a AuthSessionMissingError if not logged in
-          if (error.name !== 'AuthSessionMissingError') {
-             console.warn("Auth initialization getUser error:", error);
-          }
-          if (mounted) setLoading(false);
-          return;
-        }
-
-        if (user && mounted) {
-          setUser(user);
-          await fetchProfile(user.id);
-        } else if (mounted) {
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error("Critical Auth Init Error:", err);
-        if (mounted) setLoading(false);
+    // Initial fast-check for cold starts
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session && mounted) {
+        setLoading(false);
       }
-    };
-
-    initializeAuth();
+    });
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("AuthContext: onAuthStateChange event:", event);
-      if (event === 'SIGNED_IN' && mounted) {
-        setLoading(true);
-        setUser(session.user);
-        await fetchProfile(session.user.id);
-      } else if (event === 'SIGNED_OUT' && mounted) {
+      if (!mounted) return;
+      
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (session?.user) {
+          setLoading(true);
+          setUser(session.user);
+          await fetchProfile(session.user.id);
+          if (mounted) setLoading(false);
+        } else {
+          setUser(null);
+          setProfile(null);
+          if (mounted) setLoading(false);
+        }
+      } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setProfile(null);
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     });
 
@@ -63,38 +73,6 @@ export const AuthProvider = ({ children }) => {
       authListener.subscription.unsubscribe();
     };
   }, []);
-
-  const fetchProfile = async (userId, attempt = 1) => {
-    console.log(`AuthContext: fetchProfile called for user: ${userId} (Attempt ${attempt})`);
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('team_id, is_system_admin, teams(name)')
-        .eq('id', userId)
-        .single();
-        
-      if (error) {
-        console.warn("AuthContext: fetchProfile query error:", error.code);
-        if (error.code === 'PGRST116' && attempt < 5) {
-          console.log(`AuthContext: Retrying profile fetch in ${attempt}s...`);
-          await new Promise(resolve => setTimeout(resolve, attempt * 1000));
-          return await fetchProfile(userId, attempt + 1);
-        }
-        setAuthError(error.message || JSON.stringify(error));
-        setLoading(false);
-        throw error;
-      }
-      
-      console.log("AuthContext: Profile fetched successfully:", data);
-      setProfile(data);
-      setAuthError(null);
-      setLoading(false);
-    } catch (err) {
-      console.error('AuthContext: Error fetching profile:', err);
-      setAuthError(err.message || 'Unknown fetch error');
-      setLoading(false);
-    }
-  };
 
   // 15-Minute Auto-Logout Timer (Robust for Mobile/Sleep)
   useEffect(() => {
