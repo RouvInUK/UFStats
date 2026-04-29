@@ -89,7 +89,11 @@ export const AuthProvider = ({ children }) => {
 
   // 15-Minute Auto-Logout Timer (Robust for Mobile/Sleep)
   useEffect(() => {
-    if (!user) return; // Only track inactivity if a user is logged in
+    if (!user) {
+      // Failsafe: If the user is on the login screen, ensure the inactivity timer is purged
+      localStorage.removeItem('ufstats_last_activity');
+      return;
+    }
 
     const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutes in milliseconds
     const STORAGE_KEY = 'ufstats_last_activity';
