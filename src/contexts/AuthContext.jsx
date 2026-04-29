@@ -117,7 +117,9 @@ export const AuthProvider = ({ children }) => {
       if (lastActivity && (Date.now() - lastActivity > INACTIVITY_LIMIT)) {
         console.warn("AuthContext: Auto-logging out due to 15m inactivity (background check).");
         signOut();
+        return true;
       }
+      return false;
     };
 
     // Initialize
@@ -140,6 +142,7 @@ export const AuthProvider = ({ children }) => {
     let isThrottled = false;
     const handleActivityEvent = () => {
       if (!isThrottled) {
+        if (checkInactivity()) return;
         updateActivity();
         isThrottled = true;
         setTimeout(() => { isThrottled = false; }, 2000);
