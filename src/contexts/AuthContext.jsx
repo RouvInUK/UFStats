@@ -13,19 +13,19 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     console.log("AuthContext: Mounting");
     
-    // Safety net: force loading to false after 5 seconds
+    // Safety net: force loading to false after 15 seconds
     const fallbackTimeout = setTimeout(() => {
       console.warn("AuthContext: Fallback timeout triggered! Forcing loading=false");
       setLoading(false);
-    }, 5000);
+    }, 15000);
 
-    // Manually fetch session in case INITIAL_SESSION event doesn't trigger
-    console.log("AuthContext: Calling getSession...");
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("AuthContext: getSession resolved. Session:", !!session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
+    // Securely validate the local session token against the server
+    console.log("AuthContext: Calling getUser...");
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      console.log("AuthContext: getUser resolved. User:", !!user);
+      setUser(user ?? null);
+      if (user) {
+        fetchProfile(user.id);
       } else {
         setLoading(false);
       }
