@@ -59,9 +59,18 @@ export const AuthProvider = ({ children }) => {
       
       if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (session?.user) {
-          setLoading(true);
+          const hasCache = !!localStorage.getItem('ufstats_cached_profile');
+          if (!hasCache) {
+            setLoading(true);
+          } else {
+            setLoading(false);
+          }
+          
           setUser(session.user);
+          
+          // Run the profile sync (this might hang or fail, but UI won't be blocked if cached)
           await fetchProfile(session.user.id);
+          
           if (mounted) setLoading(false);
         } else {
           setUser(null);
