@@ -226,12 +226,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     }
   };
 
-  const filteredPlayers = players.filter(p => {
-    if (currentTeam === 'Default Team (Migrated)' || currentTeam === 'Default Team') {
-      return p.team_name === 'Default Team' || p.team_name === 'Default Team (Migrated)' || !p.team_name;
-    }
-    return p.team_name === currentTeam;
-  });
+
 
   const activeCount = filteredPlayers.filter(p => p.is_active).length;
 
