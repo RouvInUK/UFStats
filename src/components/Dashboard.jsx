@@ -270,7 +270,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                 disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
                 className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-emerald-500 hover:bg-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                We Scored!
+                Scored
               </button>
               <button
                 onClick={() => handleStatRecord('Pass')}
