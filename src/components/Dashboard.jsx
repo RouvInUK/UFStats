@@ -201,8 +201,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         targetPlayer = searchResult[0].item;
       } else if (activeLineup.length === 1) {
         targetPlayer = activeLineup[0];
-      } else if (selectedPlayer) {
-        targetPlayer = selectedPlayer;
       }
 
       if (targetPlayer) {
@@ -301,6 +299,9 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     if (isVoiceGlow) {
       return 'bg-emerald-500 text-white shadow-[0_0_30px_rgba(52,211,153,0.8)] ring-4 ring-emerald-400 scale-110 z-50 transition-all duration-300';
     }
+    if (isVoiceEnabled) {
+      return 'bg-slate-900 text-slate-500 border border-slate-800 opacity-50 cursor-not-allowed transition-all';
+    }
     if (isSelected) {
       return 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)] ring-2 ring-indigo-400 scale-105 z-10 transition-all';
     }
@@ -393,7 +394,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                   <button
                     key={player}
                     onClick={() => setSelectedPlayer(player)}
-                    disabled={isSaving}
+                    disabled={isSaving || isVoiceEnabled}
                     className={`px-3 py-3 text-sm font-bold rounded-xl ${getPlayerClass(player)}`}
                   >
                     {player}
@@ -423,14 +424,14 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
             <div className="col-span-2 grid grid-cols-2 gap-4">
               <button
                 onClick={() => handleStatRecord('Point')}
-                disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
+                disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer || isVoiceEnabled}
                 className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-emerald-500 hover:bg-emerald-400 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Point')}
               >
                 Scored
               </button>
               <button
                 onClick={() => handleStatRecord('Pass')}
-                disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
+                disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer || isVoiceEnabled}
                 className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-cyan-500 hover:bg-cyan-400 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(6,182,212,0.2)] hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Pass')}
               >
                 Pass
@@ -439,35 +440,35 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
             
             <button
               onClick={() => handleStatRecord('Opponent Point')}
-              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || isVoiceEnabled}
               className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-700 hover:bg-rose-600 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(225,29,72,0.2)] hover:shadow-[0_0_30px_rgba(225,29,72,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Opponent Point')}
             >
               Opponent Scored
             </button>
             <button
               onClick={() => handleStatRecord('Throwaway')}
-              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer || isVoiceEnabled}
               className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-500 hover:bg-rose-400 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(244,63,94,0.2)] hover:shadow-[0_0_30px_rgba(244,63,94,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Throwaway')}
             >
               Throwaway
             </button>
             <button
               onClick={() => handleStatRecord('Drop')}
-              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer || isVoiceEnabled}
               className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-600 hover:bg-rose-500 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(225,29,72,0.2)] hover:shadow-[0_0_30px_rgba(225,29,72,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Drop')}
             >
               Drop
             </button>
             <button
               onClick={() => handleStatRecord('Stall Out')}
-              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer || isVoiceEnabled}
               className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-violet-600 hover:bg-violet-500 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(124,58,237,0.2)] hover:shadow-[0_0_30px_rgba(124,58,237,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Stall Out')}
             >
               Stall Out
             </button>
             <button
               onClick={() => handleStatRecord('Defence')}
-              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer || isVoiceEnabled}
               className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-orange-500 hover:bg-orange-400 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_30px_rgba(249,115,22,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Defence')}
             >
               Defence
