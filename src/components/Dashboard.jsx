@@ -156,7 +156,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       'opponent scored': 'Opponent Point',
       'scored': 'Point',
       'pass': 'Pass',
-      'throwaway': 'Throwaway',
+      'incomplete': 'Throwaway',
       'drop': 'Drop',
       'stall out': 'Stall Out',
       'defence': 'Defence',
@@ -450,7 +450,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer || isVoiceEnabled}
               className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-500 hover:bg-rose-400 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(244,63,94,0.2)] hover:shadow-[0_0_30px_rgba(244,63,94,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Throwaway')}
             >
-              Throwaway
+              Incomplete
             </button>
             <button
               onClick={() => handleStatRecord('Drop')}
