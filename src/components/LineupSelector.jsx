@@ -1,8 +1,8 @@
 import { togglePlayerActiveStatus, clearActiveLineup, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB, checkIfHalfTimeLogged } from '../supabaseClient';
 import { useState, useEffect } from 'react';
-import { Undo2 } from 'lucide-react';
+import { Undo2, Mic, MicOff } from 'lucide-react';
 
-const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavigate, currentGame, setCurrentGame, currentPoint, setCurrentPoint, gameType, setGameType, setIsTrackingActive, opponentName, setOpponentName, initialPossession, setInitialPossession }) => {
+const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavigate, currentGame, setCurrentGame, currentPoint, setCurrentPoint, gameType, setGameType, setIsTrackingActive, opponentName, setOpponentName, initialPossession, setInitialPossession, isVoiceEnabled, setIsVoiceEnabled }) => {
   const [processingId, setProcessingId] = useState(null);
   const [isClearing, setIsClearing] = useState(false);
   const [isStartingPoint, setIsStartingPoint] = useState(false);
@@ -296,6 +296,25 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
         )}
 
         <div className="p-6 sm:p-8">
+            {/* Voice Tracking Toggle */}
+            <div className="mb-6 flex items-center justify-between bg-slate-900 border border-slate-700/50 p-4 rounded-2xl">
+               <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-xl transition-all ${isVoiceEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
+                     {isVoiceEnabled ? <Mic className="w-5 h-5 animate-pulse" /> : <MicOff className="w-5 h-5" />}
+                  </div>
+                  <div>
+                     <h3 className="text-white font-bold text-sm">Voice Tracking Engine</h3>
+                     <p className="text-slate-500 text-xs font-medium">Log stats completely hands-free via speech.</p>
+                  </div>
+               </div>
+               <button 
+                  onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ${isVoiceEnabled ? 'bg-emerald-500' : 'bg-slate-700'}`}
+               >
+                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${isVoiceEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+               </button>
+            </div>
+
           {filteredPlayers.length === 0 ? (
             <div className="text-center py-10 bg-slate-900/50 rounded-2xl border border-slate-700/50 space-y-4">
               <p className="text-slate-400 font-medium">Your roster is currently empty.</p>

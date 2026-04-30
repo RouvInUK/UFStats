@@ -1,13 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { recordStatToDB, fetchActiveGames, clearActiveLineup, fetchLastStatForGame, deleteStat, fetchGameStats } from '../supabaseClient';
-import { Undo2, ArrowLeftRight } from 'lucide-react';
+import { Undo2, ArrowLeftRight, Mic, MicOff } from 'lucide-react';
+import Fuse from 'fuse.js';
+import { playChime, playClick, playBuzz } from '../utils/audioFeedback';
 
-const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, gameType, currentTeam, targetTeamId, opponentName, initialPossession, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers }) => {
+const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, gameType, currentTeam, targetTeamId, opponentName, initialPossession, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers, isVoiceEnabled, setIsVoiceEnabled }) => {
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [activeGames, setActiveGames] = useState([]);
   const [flashType, setFlashType] = useState(null);
+
+  // Voice Tracking State
+  const [voiceFeedback, setVoiceFeedback] = useState('');
+  const [voiceRecognizedAction, setVoiceRecognizedAction] = useState(null);
+  const [voiceRecognizedPlayer, setVoiceRecognizedPlayer] = useState(null);
+  const recognitionRef = useRef(null);
 
   const triggerFeedback = (type) => {
     setFlashType(type);
@@ -38,7 +46,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
           let od = initialPossession || 'O';
           let oppName = opponentName || 'Opponent';
 
-          // Ensure it's chronological to accurately trace the O/D shift
           const chronStats = [...stats].reverse();
           chronStats.forEach(stat => {
               if (stat.stat_type === 'Start Offense') od = 'O';
@@ -58,12 +65,10 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     loadGameContext();
   }, [currentGame, isTrackingActive, lastSaved]);
 
-  // Fetch active games on mount
   useEffect(() => {
     fetchActiveGames(targetTeamId).then(setActiveGames).catch(console.error);
   }, [targetTeamId]);
 
-  // Sync point if user selects an existing active game
   useEffect(() => {
     const matchedGame = activeGames.find(g => g.name === currentGame);
     if (matchedGame && matchedGame.maxPoint) {
@@ -71,7 +76,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     }
   }, [currentGame, activeGames, setCurrentPoint]);
 
-  // Auto-select first active player if none selected and lineup exists
   useEffect(() => {
     if (activeLineup.length > 0 && !activeLineup.includes(selectedPlayer)) {
       setSelectedPlayer(activeLineup[0]);
@@ -80,14 +84,15 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     }
   }, [activeLineup, selectedPlayer]);
 
-  const handleStatRecord = async (statType) => {
-    if (statType !== 'Opponent Point' && !selectedPlayer) return alert("Select a player first!");
+  const handleStatRecord = async (statType, overridePlayer = null) => {
+    const activePlayer = overridePlayer || selectedPlayer;
+    if (statType !== 'Opponent Point' && !activePlayer) return alert("Select a player first!");
     
     setIsSaving(true);
     setLastSaved(null);
     try {
       const statData = {
-        player: statType === 'Opponent Point' ? 'Opponent' : selectedPlayer,
+        player: statType === 'Opponent Point' ? 'Opponent' : activePlayer,
         stat: statType,
         timestamp: new Date().toLocaleString(),
         pointNumber: currentPoint,
@@ -96,19 +101,14 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         teamName: currentTeam,
       };
       await recordStatToDB(statData, targetTeamId);
-      setLastSaved(statType === 'Opponent Point' ? `Saved Opponent Point` : `Saved ${statType} for ${selectedPlayer}`);
+      setLastSaved(statType === 'Opponent Point' ? `Saved Opponent Point` : `Saved ${statType} for ${activePlayer}`);
       
       if (statType === 'Point' || statType === 'Opponent Point') {
         setIsTrackingActive(false);
-        
-        // Auto-clean the lineup on the backend asynchronously
         clearActiveLineup(currentTeam).catch(console.error);
-        // Instant visual clearing via optimistically mutated prop
         if (players && setPlayers) {
             setPlayers(players.map(p => ({ ...p, is_active: false })));
         }
-
-        // Seamless Loop: Auto-redirect to Lineup after a goal to prepare for the next point
         setTimeout(() => {
           onNavigate('lineup');
         }, 1000);
@@ -129,7 +129,138 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     }
   };
 
+  // Voice Tracking Engine
+  useEffect(() => {
+    if (!isVoiceEnabled || !isTrackingActive) {
+      if (recognitionRef.current) {
+        recognitionRef.current.onend = null;
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+      }
+      setVoiceFeedback('');
+      return;
+    }
 
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setVoiceFeedback("Voice tracking not supported on this browser.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false; 
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    const commands = {
+      'we scored': 'Point',
+      'pass': 'Pass',
+      'opponent scored': 'Opponent Point',
+      'throwaway': 'Throwaway',
+      'drop': 'Drop',
+      'stall out': 'Stall Out',
+      'defence': 'Defence',
+      'defense': 'Defence'
+    };
+
+    const fuse = new Fuse(activeLineup, { threshold: 0.4 });
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+      
+      let matchedAction = null;
+      let matchedActionKey = null;
+      
+      for (const [phrase, action] of Object.entries(commands)) {
+        if (transcript.includes(phrase)) {
+          matchedAction = action;
+          matchedActionKey = phrase;
+          break;
+        }
+      }
+
+      if (!matchedAction) {
+         setVoiceFeedback(`Heard: "${transcript}" (No match)`);
+         return;
+      }
+
+      if (matchedAction === 'Opponent Point') {
+         setVoiceFeedback(`Heard: "Opponent Scored" ✓`);
+         setVoiceRecognizedAction('Opponent Point');
+         playBuzz();
+         handleStatRecord('Opponent Point');
+         setTimeout(() => setVoiceRecognizedAction(null), 500);
+         return;
+      }
+
+      const remainingText = transcript.replace(matchedActionKey, '').trim();
+      const searchResult = fuse.search(remainingText);
+      
+      let targetPlayer = null;
+      if (searchResult.length > 0) {
+        targetPlayer = searchResult[0].item;
+      } else if (activeLineup.length === 1) {
+        targetPlayer = activeLineup[0];
+      } else if (selectedPlayer) {
+        targetPlayer = selectedPlayer;
+      }
+
+      if (targetPlayer) {
+        setVoiceFeedback(`Heard: "${targetPlayer} ${matchedActionKey}" ✓`);
+        setVoiceRecognizedAction(matchedAction);
+        setVoiceRecognizedPlayer(targetPlayer);
+        
+        if (['Point', 'Defence'].includes(matchedAction)) {
+           playChime();
+        } else if (matchedAction === 'Pass') {
+           playClick();
+        } else {
+           playBuzz();
+        }
+
+        handleStatRecord(matchedAction, targetPlayer);
+        
+        setTimeout(() => {
+          setVoiceRecognizedAction(null);
+          setVoiceRecognizedPlayer(null);
+        }, 500);
+      } else {
+        setVoiceFeedback(`Heard: "${matchedActionKey}" (Unknown player)`);
+      }
+    };
+
+    recognition.onerror = (event) => {
+      if (event.error !== 'no-speech') {
+         setVoiceFeedback(`Mic error: ${event.error}`);
+      }
+    };
+
+    recognition.onend = () => {
+      if (isVoiceEnabled && isTrackingActive && recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+        } catch(e) {
+          // Ignore
+        }
+      }
+    };
+
+    try {
+      recognition.start();
+      recognitionRef.current = recognition;
+      setVoiceFeedback("Listening...");
+    } catch (e) {
+      console.error("Failed to start speech recognition", e);
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.onend = null;
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+      }
+    };
+  }, [isVoiceEnabled, isTrackingActive, activeLineup, selectedPlayer]);
 
   const handleUndo = async () => {
     if (!currentGame) return;
@@ -158,6 +289,24 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     }
   };
 
+  const getActionClass = (baseClass, actionName) => {
+    const isVoiceGlow = voiceRecognizedAction === actionName;
+    return `${baseClass} ${isVoiceGlow ? '!ring-4 !ring-emerald-400 !scale-105 shadow-[0_0_30px_rgba(52,211,153,0.8)] z-50 transition-all duration-300' : ''}`;
+  };
+
+  const getPlayerClass = (player) => {
+    const isSelected = selectedPlayer === player;
+    const isVoiceGlow = voiceRecognizedPlayer === player;
+    
+    if (isVoiceGlow) {
+      return 'bg-emerald-500 text-white shadow-[0_0_30px_rgba(52,211,153,0.8)] ring-4 ring-emerald-400 scale-110 z-50 transition-all duration-300';
+    }
+    if (isSelected) {
+      return 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)] ring-2 ring-indigo-400 scale-105 z-10 transition-all';
+    }
+    return 'bg-slate-900 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105';
+  };
+
   return (
     <>
       {/* Visual Feedback Flash Overlay */}
@@ -175,6 +324,18 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         
         {/* Scoreboard Header Section */}
         <div className="p-6 sm:p-8 bg-slate-900 border-b border-slate-700/50">
+          <div className="flex items-center justify-between mb-4">
+             <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
+                  className={`p-2 rounded-xl transition-all ${isVoiceEnabled ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-[0_0_15px_rgba(52,211,153,0.2)]' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}
+                  title={isVoiceEnabled ? "Voice Tracking Active" : "Voice Tracking Off"}
+                >
+                   {isVoiceEnabled ? <Mic className="w-5 h-5 animate-pulse" /> : <MicOff className="w-5 h-5" />}
+                </button>
+             </div>
+          </div>
+
           <div className="flex items-center justify-between bg-slate-950/50 rounded-2xl border border-white/5 shadow-inner p-4">
              {/* Left Column: Us */}
              <div className="flex flex-col items-start w-1/3">
@@ -204,7 +365,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                  {isSaving && <p className="text-amber-400 text-sm font-bold animate-pulse text-left">Synchronizing...</p>}
                  {lastSaved && !isSaving && <p className="text-emerald-400 text-sm font-bold text-left">✓ {lastSaved}</p>}
              </div>
-
           </div>
         </div>
 
@@ -234,11 +394,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                     key={player}
                     onClick={() => setSelectedPlayer(player)}
                     disabled={isSaving}
-                    className={`px-3 py-3 text-sm font-bold rounded-xl transition-all ${
-                      selectedPlayer === player
-                        ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)] ring-2 ring-indigo-400 scale-105 z-10'
-                        : 'bg-slate-900 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105'
-                    }`}
+                    className={`px-3 py-3 text-sm font-bold rounded-xl ${getPlayerClass(player)}`}
                   >
                     {player}
                   </button>
@@ -268,14 +424,14 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               <button
                 onClick={() => handleStatRecord('Point')}
                 disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
-                className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-emerald-500 hover:bg-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+                className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-emerald-500 hover:bg-emerald-400 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Point')}
               >
                 We Scored!
               </button>
               <button
                 onClick={() => handleStatRecord('Pass')}
                 disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
-                className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-cyan-500 hover:bg-cyan-400 focus:outline-none focus:ring-4 focus:ring-cyan-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(6,182,212,0.2)] hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+                className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-cyan-500 hover:bg-cyan-400 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(6,182,212,0.2)] hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Pass')}
               >
                 Pass
               </button>
@@ -284,43 +440,51 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
             <button
               onClick={() => handleStatRecord('Opponent Point')}
               disabled={isSaving || activeLineup.length === 0 || !isTrackingActive}
-              className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-700 hover:bg-rose-600 focus:outline-none focus:ring-4 focus:ring-rose-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(225,29,72,0.2)] hover:shadow-[0_0_30px_rgba(225,29,72,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-700 hover:bg-rose-600 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(225,29,72,0.2)] hover:shadow-[0_0_30px_rgba(225,29,72,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Opponent Point')}
             >
               Opponent Scored
             </button>
             <button
               onClick={() => handleStatRecord('Throwaway')}
               disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
-              className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-500 hover:bg-rose-400 focus:outline-none focus:ring-4 focus:ring-rose-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(244,63,94,0.2)] hover:shadow-[0_0_30px_rgba(244,63,94,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-500 hover:bg-rose-400 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(244,63,94,0.2)] hover:shadow-[0_0_30px_rgba(244,63,94,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Throwaway')}
             >
               Throwaway
             </button>
             <button
               onClick={() => handleStatRecord('Drop')}
               disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
-              className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-600 hover:bg-rose-500 focus:outline-none focus:ring-4 focus:ring-rose-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(225,29,72,0.2)] hover:shadow-[0_0_30px_rgba(225,29,72,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-600 hover:bg-rose-500 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(225,29,72,0.2)] hover:shadow-[0_0_30px_rgba(225,29,72,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Drop')}
             >
               Drop
             </button>
             <button
               onClick={() => handleStatRecord('Stall Out')}
               disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
-              className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-violet-600 hover:bg-violet-500 focus:outline-none focus:ring-4 focus:ring-violet-600/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(124,58,237,0.2)] hover:shadow-[0_0_30px_rgba(124,58,237,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-violet-600 hover:bg-violet-500 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(124,58,237,0.2)] hover:shadow-[0_0_30px_rgba(124,58,237,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Stall Out')}
             >
               Stall Out
             </button>
             <button
               onClick={() => handleStatRecord('Defence')}
               disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer}
-              className="group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-orange-500 hover:bg-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_30px_rgba(249,115,22,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-orange-500 hover:bg-orange-400 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_30px_rgba(249,115,22,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Defence')}
             >
               Defence
             </button>
           </div>
+
+          {isVoiceEnabled && (
+            <div className="pt-2 text-center h-6 flex items-center justify-center overflow-hidden">
+               <p className={`text-xs font-mono tracking-widest uppercase transition-all duration-300 ${voiceFeedback.includes('✓') ? 'text-emerald-400 font-bold scale-105' : 'text-slate-500'}`}>
+                  {voiceFeedback || 'Mic Active... Listening'}
+               </p>
+            </div>
+          )}
           
           {/* Secondary Footer Action */}
           {activeLineup.length > 0 && (
-            <div className="pt-6 pb-2 w-full">
+            <div className="pt-2 pb-2 w-full">
               <button
                 onClick={() => onNavigate('lineup')}
                 disabled={isSaving || !currentGame || !isTrackingActive}
