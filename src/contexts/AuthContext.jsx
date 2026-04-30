@@ -97,8 +97,11 @@ export const AuthProvider = ({ children }) => {
 
   // 15-Minute Auto-Logout Timer (Robust for Mobile/Sleep)
   useEffect(() => {
+    // Do not purge timestamps or initialize timers while auth is still hydrating
+    if (loading) return;
+
     if (!user) {
-      // Failsafe: If the user is on the login screen, ensure the inactivity timer is purged
+      // Failsafe: If the user is definitively on the login screen, ensure the timer is purged
       localStorage.removeItem('ufstats_last_activity');
       return;
     }
@@ -156,7 +159,7 @@ export const AuthProvider = ({ children }) => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       events.forEach(event => window.removeEventListener(event, handleActivityEvent));
     };
-  }, [user]);
+  }, [user, loading]);
 
   const signIn = async (email, password) => {
     return supabase.auth.signInWithPassword({ email, password });
