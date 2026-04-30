@@ -1,4 +1,4 @@
-import { togglePlayerActiveStatus, clearActiveLineup, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB, checkIfHalfTimeLogged } from '../supabaseClient';
+import { togglePlayerActiveStatus, clearActiveLineup, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB, checkIfHalfTimeLogged, fetchActiveGames } from '../supabaseClient';
 import { useState, useEffect } from 'react';
 import { Undo2 } from 'lucide-react';
 
@@ -10,6 +10,11 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
   const [isUndoing, setIsUndoing] = useState(false);
 
   const [hasHalfTime, setHasHalfTime] = useState(false);
+  const [activeGames, setActiveGames] = useState([]);
+
+  useEffect(() => {
+    fetchActiveGames(targetTeamId).then(setActiveGames).catch(console.error);
+  }, [targetTeamId]);
 
   useEffect(() => {
     if (currentGame) {
@@ -268,9 +273,45 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
                 <h2 className="text-lg font-bold text-white uppercase tracking-widest">Pre-Game Configurations</h2>
              </div>
              <div className="space-y-5">
+                {activeGames.length > 0 && (
+                  <div>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">Resume Active Match</label>
+                    <select 
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner"
+                      value={activeGames.some(g => g.name === currentGame) ? currentGame : ''}
+                      onChange={(e) => {
+                         const val = e.target.value;
+                         if (val) {
+                           setCurrentGame(val);
+                           const matched = activeGames.find(g => g.name === val);
+                           if (matched) {
+                             setCurrentPoint(matched.maxPoint);
+                           }
+                         }
+                      }}
+                    >
+                      <option value="">-- Select a game to resume --</option>
+                      {activeGames.map(g => (
+                        <option key={g.name} value={g.name}>{g.name} (Point {g.maxPoint})</option>
+                      ))}
+                    </select>
+                    <div className="flex items-center gap-4 my-4">
+                      <div className="flex-1 h-px bg-slate-700"></div>
+                      <span className="text-slate-500 text-xs font-bold uppercase">OR START NEW</span>
+                      <div className="flex-1 h-px bg-slate-700"></div>
+                    </div>
+                  </div>
+                )}
                 <div>
                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">Match Identifier / Title</label>
-                   <input type="text" value={currentGame} onChange={e => setCurrentGame(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner" placeholder="e.g. EUCF Pool Play - Game 1" />
+                   <input type="text" value={currentGame} onChange={e => {
+                      setCurrentGame(e.target.value);
+                      if (activeGames.some(g => g.name === e.target.value)) {
+                         setCurrentPoint(activeGames.find(g => g.name === e.target.value).maxPoint);
+                      } else {
+                         setCurrentPoint(0);
+                      }
+                   }} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner" placeholder="e.g. EUCF Pool Play - Game 1" />
                 </div>
                 <div>
                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">Game Format</label>
