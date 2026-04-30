@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { addPlayer, removePlayer, fetchAllTeamNames } from '../supabaseClient';
 const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, targetTeamId }) => {
   const [newPlayerName, setNewPlayerName] = useState('');
+  const [newShirtNumber, setNewShirtNumber] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [allTeams, setAllTeams] = useState([]);
   const inputRef = useRef(null);
@@ -28,12 +29,20 @@ const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, targetT
 
   const handleAddPlayer = async (e) => {
     e.preventDefault();
-    const trimmed = newPlayerName.trim();
-    if (!trimmed) return;
+    const trimmedName = newPlayerName.trim();
+    const trimmedNumber = newShirtNumber.trim();
+    if (!trimmedName) return;
     
+    if (trimmedNumber && !/^[A-Za-z0-9]{1,3}$/.test(trimmedNumber)) {
+      return alert("Shirt number must be 1-3 alphanumeric characters.");
+    }
+
     // Check local array quickly
-    if (filteredPlayers.some(p => p.name.toLowerCase() === trimmed.toLowerCase())) {
-      return alert("Player already exists in this team!");
+    if (filteredPlayers.some(p => p.name.toLowerCase() === trimmedName.toLowerCase())) {
+      return alert("Player name already exists in this team!");
+    }
+    if (trimmedNumber && filteredPlayers.some(p => p.shirt_number === trimmedNumber)) {
+      return alert("Shirt number already exists in this team!");
     }
     if (filteredPlayers.length >= 21) {
       return alert("Maximum 21 players allowed.");
@@ -41,12 +50,13 @@ const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, targetT
 
     setIsProcessing(true);
     try {
-      const savedPlayer = await addPlayer(trimmed, currentTeam, targetTeamId);
+      const savedPlayer = await addPlayer(trimmedName, currentTeam, targetTeamId, trimmedNumber || null);
       if (savedPlayer) {
         // Append to the full global players array
         setPlayers([...players, savedPlayer]);
       }
       setNewPlayerName('');
+      setNewShirtNumber('');
       setTimeout(() => inputRef.current?.focus(), 0);
     } catch (err) {
       alert("Failed to add player to database: " + (err.message || err.details || JSON.stringify(err)));
@@ -104,7 +114,15 @@ const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, targetT
         </div>
 
         <div className="p-6 sm:p-8 space-y-6">
-          <form onSubmit={handleAddPlayer} className="flex gap-3">
+          <form onSubmit={handleAddPlayer} className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              value={newShirtNumber}
+              onChange={(e) => setNewShirtNumber(e.target.value)}
+              placeholder="#"
+              disabled={isProcessing}
+              className="w-full sm:w-24 appearance-none bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium disabled:opacity-50 text-center"
+            />
             <input
               ref={inputRef}
               type="text"
@@ -131,7 +149,9 @@ const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, targetT
             <ul className="space-y-2">
               {filteredPlayers.map((player) => (
                 <li key={player.id} className="flex justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
-                  <span className="text-slate-200 font-semibold">{player.name}</span>
+                  <span className="text-slate-200 font-semibold">
+                    {player.name} {player.shirt_number ? <span className="text-indigo-400 font-mono ml-1">#{player.shirt_number}</span> : ''}
+                  </span>
                   <button 
                     onClick={() => handleRemovePlayer(player.id)}
                     disabled={isProcessing}

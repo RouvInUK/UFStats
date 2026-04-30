@@ -12,6 +12,23 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
   const [hasHalfTime, setHasHalfTime] = useState(false);
   const [activeGames, setActiveGames] = useState([]);
 
+  const filteredPlayers = players.filter(p => {
+    if (currentTeam === 'Default Team (Migrated)' || currentTeam === 'Default Team') {
+      return p.team_name === 'Default Team' || p.team_name === 'Default Team (Migrated)' || !p.team_name;
+    }
+    return p.team_name === currentTeam;
+  });
+
+  const handleVoiceToggle = () => {
+    if (!isVoiceEnabled) {
+      const missingNumbers = filteredPlayers.filter(p => !p.shirt_number);
+      if (missingNumbers.length > 0) {
+        return alert(`Voice tracking requires every player to have a shirt number. Please add numbers for: ${missingNumbers.map(p => p.name).join(', ')}`);
+      }
+    }
+    setIsVoiceEnabled(!isVoiceEnabled);
+  };
+
   useEffect(() => {
     fetchActiveGames(targetTeamId).then(setActiveGames).catch(console.error);
   }, [targetTeamId]);
@@ -349,7 +366,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
                   </div>
                </div>
                <button 
-                  onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
+                  onClick={handleVoiceToggle}
                   className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ${isVoiceEnabled ? 'bg-emerald-500' : 'bg-slate-700'}`}
                >
                   <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${isVoiceEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -384,7 +401,9 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
                     } ${isProcessing ? 'opacity-50 animate-pulse' : ''}`}
                   >
                     <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-white shadow-sm' : 'bg-slate-700'}`} />
-                    {player.name}
+                    <span className="text-center">
+                      {player.name} {player.shirt_number ? <span className="opacity-70 font-mono ml-1">#{player.shirt_number}</span> : ''}
+                    </span>
                   </button>
                 )
               })}

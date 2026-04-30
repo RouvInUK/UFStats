@@ -87,14 +87,15 @@ export const fetchPlayers = async (teamIdentifier) => {
   return data || [];
 };
 
-export const addPlayer = async (name, teamName, currentTeamId) => {
+export const addPlayer = async (name, teamName, currentTeamId, shirtNumber) => {
   const { data, error } = await supabase
     .from('players')
     .insert([{ 
       name, 
       is_active: false, 
       team_name: teamName || 'Default Team', 
-      team_id: currentTeamId 
+      team_id: currentTeamId,
+      shirt_number: shirtNumber || null
     }])
     .select();
 

@@ -91,8 +91,11 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     setIsSaving(true);
     setLastSaved(null);
     try {
+      const pObj = players?.find(p => p.name === activePlayer);
+      const dbPlayer = pObj?.shirt_number ? `${activePlayer} ${pObj.shirt_number}` : activePlayer;
+      
       const statData = {
-        player: statType === 'Opponent Point' ? 'Opponent' : activePlayer,
+        player: statType === 'Opponent Point' ? 'Opponent' : dbPlayer,
         stat: statType,
         timestamp: new Date().toLocaleString(),
         pointNumber: currentPoint,
@@ -163,7 +166,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       'defense': 'Defence'
     };
 
-    const fuse = new Fuse(activeLineup, { threshold: 0.4 });
+    // We no longer use fuse for phonetic name matching; we strictly match shirt numbers
+    // const fuse = new Fuse(activeLineup, { threshold: 0.4 });
 
     recognition.onresult = (event) => {
       const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
@@ -194,13 +198,19 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       }
 
       const remainingText = transcript.replace(matchedActionKey, '').trim();
-      const searchResult = fuse.search(remainingText);
       
       let targetPlayer = null;
-      if (searchResult.length > 0) {
-        targetPlayer = searchResult[0].item;
+      const numberMatch = remainingText.match(/\b([A-Za-z0-9]{1,3})\b/);
+      
+      if (numberMatch) {
+         const spokenNumber = numberMatch[1];
+         const activePlayerObjects = activeLineup.map(name => players?.find(p => p.name === name)).filter(Boolean);
+         const foundObj = activePlayerObjects.find(p => p.shirt_number && p.shirt_number.toLowerCase() === spokenNumber);
+         if (foundObj) {
+            targetPlayer = foundObj.name;
+         }
       } else if (activeLineup.length === 1) {
-        targetPlayer = activeLineup[0];
+         targetPlayer = activeLineup[0];
       }
 
       if (targetPlayer) {
@@ -397,7 +407,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                     disabled={isSaving || isVoiceEnabled}
                     className={`px-3 py-3 text-sm font-bold rounded-xl ${getPlayerClass(player)}`}
                   >
-                    {player}
+                    <span className="flex flex-col items-center">
+                       <span>{player}</span>
+                       {players?.find(p => p.name === player)?.shirt_number && (
+                          <span className="opacity-70 font-mono text-xs">#{players.find(p => p.name === player).shirt_number}</span>
+                       )}
+                    </span>
                   </button>
                 ))}
               </div>
