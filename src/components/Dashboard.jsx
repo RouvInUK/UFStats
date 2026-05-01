@@ -326,6 +326,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
           
           const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
           audioContextRef.current = audioContext;
+          const actualSampleRate = audioContext.sampleRate;
 
           const source = audioContext.createMediaStreamSource(stream);
           const analyser = audioContext.createAnalyser();
@@ -374,10 +375,25 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                       mergedArray.set(chunk, offset);
                       offset += chunk.length;
                    }
-                   if (totalLength > 16000 * 0.4) { // > 0.4 seconds
+                   if (totalLength > actualSampleRate * 0.4) { // > 0.4 seconds
                       isTranscribingRef.current = true;
                       setVoiceFeedback('Transcribing...');
-                      workerRef.current.postMessage({ type: 'transcribe', payload: mergedArray });
+                      
+                      // Resample to 16000Hz if the browser ignored our sampleRate request
+                      let finalArray = mergedArray;
+                      if (actualSampleRate !== 16000) {
+                          const ratio = actualSampleRate / 16000;
+                          const newLength = Math.round(mergedArray.length / ratio);
+                          finalArray = new Float32Array(newLength);
+                          for (let i = 0; i < newLength; i++) {
+                              const index = i * ratio;
+                              const idx1 = Math.floor(index);
+                              const idx2 = Math.min(idx1 + 1, mergedArray.length - 1);
+                              finalArray[i] = mergedArray[idx1] * (1 - (index - idx1)) + mergedArray[idx2] * (index - idx1);
+                          }
+                      }
+                      
+                      workerRef.current.postMessage({ type: 'transcribe', payload: finalArray });
                    } else {
                       setVoiceFeedback('Ready');
                    }
