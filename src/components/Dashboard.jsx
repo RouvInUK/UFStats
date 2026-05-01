@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { recordStatToDB, fetchActiveGames, clearActiveLineup, fetchLastStatForGame, deleteStat, fetchGameStats } from '../supabaseClient';
-import { Undo2, ArrowLeftRight, Mic, MicOff } from 'lucide-react';
+import { Undo2, ArrowLeftRight, Mic, MicOff, DownloadCloud } from 'lucide-react';
 import Fuse from 'fuse.js';
 import { playChime, playClick, playBuzz } from '../utils/audioFeedback';
 
@@ -15,7 +15,15 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   const [voiceFeedback, setVoiceFeedback] = useState('');
   const [voiceRecognizedAction, setVoiceRecognizedAction] = useState(null);
   const [voiceRecognizedPlayer, setVoiceRecognizedPlayer] = useState(null);
-  const recognitionRef = useRef(null);
+  
+  // Whisper Models State
+  const workerRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const processorRef = useRef(null);
+  const streamRef = useRef(null);
+  const [modelStatus, setModelStatus] = useState('unloaded'); // unloaded, loading, ready, error
+  const [modelProgress, setModelProgress] = useState(0);
+  const [showModelModal, setShowModelModal] = useState(false);
 
   const triggerFeedback = (type) => {
     setFlashType(type);
@@ -132,53 +140,60 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     }
   };
 
-  // Voice Tracking Engine
+  // Web Worker Initialization
   useEffect(() => {
-    if (!isVoiceEnabled || !isTrackingActive) {
-      if (recognitionRef.current) {
-        recognitionRef.current.onend = null;
-        recognitionRef.current.stop();
-        recognitionRef.current = null;
+    workerRef.current = new Worker(new URL('../whisperWorker.js', import.meta.url), { type: 'module' });
+
+    workerRef.current.onmessage = (e) => {
+      const { type, status, payload, error } = e.data;
+      if (type === 'status') {
+        setModelStatus(status);
+        if (status === 'error') {
+           setVoiceFeedback(`Model error: ${error}`);
+        } else if (status === 'ready') {
+           setVoiceFeedback(`Offline mode ready.`);
+           setShowModelModal(false);
+        }
+      } else if (type === 'progress') {
+         if (payload && payload.progress) {
+             setModelProgress(payload.progress);
+         }
+      } else if (type === 'transcribed') {
+         if (payload && payload.trim().length > 0) {
+             processTranscription(payload);
+         }
       }
-      setVoiceFeedback('');
-      return;
-    }
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setVoiceFeedback("Voice tracking not supported on this browser.");
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false; 
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
-
-    const commands = {
-      'opponent score': 'Opponent Point',
-      'opponent scored': 'Opponent Point',
-      'opponent point': 'Opponent Point',
-      'score': 'Point',
-      'scored': 'Point',
-      'point': 'Point',
-      'pass': 'Pass',
-      'incomplete': 'Throwaway',
-      'drop': 'Drop',
-      'stall out': 'Stall Out',
-      'defence': 'Defence',
-      'defense': 'Defence'
     };
 
-    // We no longer use fuse for phonetic name matching; we strictly match shirt numbers
-    // const fuse = new Fuse(activeLineup, { threshold: 0.4 });
+    return () => {
+      if (workerRef.current) workerRef.current.terminate();
+    };
+  }, []);
 
-    recognition.onresult = (event) => {
-      const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+  const loadModel = () => {
+    if (workerRef.current && modelStatus === 'unloaded') {
+      workerRef.current.postMessage({ type: 'load' });
+    }
+  };
+
+  const processTranscription = (transcript) => {
+      const normalizedTranscript = transcript.toLowerCase().replace(/£/g, ' pass').replace(/pounds/g, 'pass').replace(/pence/g, 'pass');
       
-      // Fix fast speech swallowing "pass" into "pounds" or "£"
-      let normalizedTranscript = transcript.replace(/£/g, ' pass').replace(/pounds/g, 'pass').replace(/pence/g, 'pass');
-      
+      const commands = {
+        'opponent score': 'Opponent Point',
+        'opponent scored': 'Opponent Point',
+        'opponent point': 'Opponent Point',
+        'score': 'Point',
+        'scored': 'Point',
+        'point': 'Point',
+        'pass': 'Pass',
+        'incomplete': 'Throwaway',
+        'drop': 'Drop',
+        'stall out': 'Stall Out',
+        'defence': 'Defence',
+        'defense': 'Defence'
+      };
+
       let matchedAction = null;
       let matchedActionKey = null;
       
@@ -222,12 +237,10 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       };
       
       for (const [word, digit] of Object.entries(wordMap)) {
-        // Broaden the replacement to not just rely on word boundaries, but also handle exact matches or spaced words
         remainingText = remainingText.replace(new RegExp(`\\b${word}\\b`, 'g'), digit);
       }
       
       let targetPlayer = null;
-      // Also grab digits that might be attached to letters if boundary fails, but \b is usually fine.
       const numberMatch = remainingText.match(/\b([A-Za-z0-9]{1,3})\b/);
       
       if (numberMatch) {
@@ -237,7 +250,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
          const foundObj = activePlayerObjects.find(p => {
             if (p.shirt_number == null) return false;
             const dbNum = String(p.shirt_number).toLowerCase();
-            // Match exactly, or match integer value (handles "0" vs "00" or "8" vs "08")
             return dbNum === spokenNumber || 
                    (!isNaN(parseInt(dbNum, 10)) && !isNaN(parseInt(spokenNumber, 10)) && parseInt(dbNum, 10) === parseInt(spokenNumber, 10));
          });
@@ -271,40 +283,102 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       } else {
         setVoiceFeedback(`Heard: "${matchedActionKey}" (Unknown player)`);
       }
-    };
+  };
 
-    recognition.onerror = (event) => {
-      if (event.error !== 'no-speech') {
-         setVoiceFeedback(`Mic error: ${event.error}`);
+  const stopAudioCapture = () => {
+      if (processorRef.current) {
+          processorRef.current.disconnect();
+          processorRef.current = null;
       }
-    };
-
-    recognition.onend = () => {
-      if (isVoiceEnabled && isTrackingActive && recognitionRef.current) {
-        try {
-          recognitionRef.current.start();
-        } catch(e) {
-          // Ignore
-        }
+      if (audioContextRef.current) {
+          audioContextRef.current.close();
+          audioContextRef.current = null;
       }
-    };
-
-    try {
-      recognition.start();
-      recognitionRef.current = recognition;
-      setVoiceFeedback("Listening...");
-    } catch (e) {
-      console.error("Failed to start speech recognition", e);
-    }
-
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.onend = null;
-        recognitionRef.current.stop();
-        recognitionRef.current = null;
+      if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
       }
-    };
-  }, [isVoiceEnabled, isTrackingActive, activeLineup, selectedPlayer]);
+      if (modelStatus === 'ready') {
+          setVoiceFeedback('Voice tracking paused.');
+      }
+  };
+
+  const startAudioCapture = async () => {
+      stopAudioCapture(); 
+      try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          streamRef.current = stream;
+          
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+          audioContextRef.current = audioContext;
+
+          const source = audioContext.createMediaStreamSource(stream);
+          const analyser = audioContext.createAnalyser();
+          analyser.fftSize = 512;
+          source.connect(analyser);
+
+          const processor = audioContext.createScriptProcessor(4096, 1, 1);
+          source.connect(processor);
+          processor.connect(audioContext.destination);
+          processorRef.current = processor;
+
+          let audioChunks = [];
+          let silenceFrames = 0;
+          let isSpeaking = false;
+
+          processor.onaudioprocess = (e) => {
+             const inputData = e.inputBuffer.getChannelData(0);
+             const dataArray = new Float32Array(analyser.fftSize);
+             analyser.getFloatTimeDomainData(dataArray);
+             let sumSquares = 0.0;
+             for (let i = 0; i < dataArray.length; i++) {
+                sumSquares += dataArray[i] * dataArray[i];
+             }
+             const rms = Math.sqrt(sumSquares / dataArray.length);
+             const isSilence = rms < 0.02;
+
+             if (!isSilence) {
+                isSpeaking = true;
+                silenceFrames = 0;
+                audioChunks.push(new Float32Array(inputData));
+                setVoiceFeedback('Listening (Speech detected)...');
+             } else if (isSpeaking) {
+                silenceFrames++;
+                audioChunks.push(new Float32Array(inputData));
+                if (silenceFrames > 4) { // ~1 second of silence
+                   isSpeaking = false;
+                   setVoiceFeedback('Transcribing...');
+                   const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.length, 0);
+                   const mergedArray = new Float32Array(totalLength);
+                   let offset = 0;
+                   for (const chunk of audioChunks) {
+                      mergedArray.set(chunk, offset);
+                      offset += chunk.length;
+                   }
+                   if (totalLength > 16000 * 0.3) { // > 0.3 seconds
+                      workerRef.current.postMessage({ type: 'transcribe', payload: mergedArray });
+                   } else {
+                      setVoiceFeedback('Ready');
+                   }
+                   audioChunks = [];
+                }
+             } else {
+                setVoiceFeedback('Ready');
+             }
+          };
+      } catch (err) {
+          console.error("Audio capture failed:", err);
+          setVoiceFeedback("Microphone access denied.");
+      }
+  };
+
+  useEffect(() => {
+     if (isVoiceEnabled && isTrackingActive && modelStatus === 'ready') {
+         startAudioCapture();
+     } else {
+         stopAudioCapture();
+     }
+  }, [isVoiceEnabled, isTrackingActive, modelStatus]);
 
   const handleUndo = async () => {
     if (!currentGame) return;
@@ -356,6 +430,41 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
 
   return (
     <>
+      {/* Model Download Modal */}
+      {showModelModal && (
+        <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl max-w-sm w-full">
+            <h3 className="text-xl font-bold text-white mb-2">Offline Voice Tracking</h3>
+            <p className="text-slate-400 text-sm mb-6">
+              To enable lightning-fast, offline voice tracking, we need to download a small AI model (~75MB) to your browser cache. This only happens once.
+            </p>
+            {modelStatus === 'loading' ? (
+              <div className="space-y-2">
+                <div className="h-3 w-full bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${modelProgress}%` }} />
+                </div>
+                <p className="text-xs text-slate-500 text-center font-mono">{modelProgress.toFixed(1)}% Downloaded</p>
+              </div>
+            ) : (
+              <div className="flex gap-3 mt-6">
+                <button 
+                  onClick={() => { setShowModelModal(false); setIsVoiceEnabled(false); }}
+                  className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold transition-all text-sm"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => loadModel()}
+                  className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition-all text-sm"
+                >
+                  Download Model
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Visual Feedback Flash Overlay */}
       <div 
         className={`pointer-events-none fixed inset-0 z-[100] transition-colors duration-200 ${
@@ -455,6 +564,11 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                       if (missingNumbers.length > 0) {
                         return alert(`Voice tracking requires every active player to have a shirt number. Please add numbers for: ${missingNumbers.map(p => p.name).join(', ')}`);
                       }
+                      if (modelStatus === 'unloaded') {
+                        setShowModelModal(true);
+                      }
+                    } else {
+                      setShowModelModal(false);
                     }
                     setIsVoiceEnabled(!isVoiceEnabled);
                   }}
@@ -538,7 +652,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
           </div>
 
           {isVoiceEnabled && (
-            <div className="pt-2 text-center h-6 flex items-center justify-center overflow-hidden">
+            <div className="pt-2 text-center h-6 flex items-center justify-center gap-2 overflow-hidden">
+               {modelStatus === 'ready' ? (
+                  <DownloadCloud className="w-4 h-4 text-emerald-500" />
+               ) : (
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+               )}
                <p className={`text-xs font-mono tracking-widest uppercase transition-all duration-300 ${voiceFeedback.includes('✓') ? 'text-emerald-400 font-bold scale-105' : 'text-slate-500'}`}>
                   {voiceFeedback || 'Mic Active... Listening'}
                </p>
