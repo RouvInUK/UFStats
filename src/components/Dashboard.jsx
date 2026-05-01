@@ -144,6 +144,15 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   useEffect(() => {
     workerRef.current = new Worker(new URL('../whisperWorker.js', import.meta.url), { type: 'module' });
 
+    // Auto-load if model is already cached
+    caches.open('transformers-cache').then(cache => {
+        cache.keys().then(keys => {
+           if (keys.some(req => req.url.includes('whisper-tiny.en'))) {
+               workerRef.current.postMessage({ type: 'load' });
+           }
+        });
+    }).catch(e => console.error("Cache check failed:", e));
+
     workerRef.current.onmessage = (e) => {
       const { type, status, payload, error } = e.data;
       if (type === 'status') {
@@ -161,6 +170,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       } else if (type === 'transcribed') {
          if (payload && payload.trim().length > 0) {
              processTranscription(payload);
+         } else {
+             setVoiceFeedback('Ready');
          }
       }
     };
@@ -566,6 +577,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                       }
                       if (modelStatus === 'unloaded') {
                         setShowModelModal(true);
+                      } else if (modelStatus === 'loading') {
+                        setVoiceFeedback('Loading cached model...');
                       }
                     } else {
                       setShowModelModal(false);
