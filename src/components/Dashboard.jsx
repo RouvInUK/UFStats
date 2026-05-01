@@ -409,6 +409,11 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                               offset += chunk.length;
                           }
 
+                          let mergedMax = 0;
+                          for (let i = 0; i < mergedArray.length; i++) {
+                              if (Math.abs(mergedArray[i]) > mergedMax) mergedMax = Math.abs(mergedArray[i]);
+                          }
+
                           let finalArray;
                           if (actualSampleRate !== 16000) {
                               try {
@@ -436,6 +441,18 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                               const abs = Math.abs(finalArray[i]);
                               if (abs > maxAmplitude) maxAmplitude = abs;
                           }
+
+                          if (mergedMax === 0) {
+                              showFeedback(`ERR: Captured Audio is pure silence (0s)`);
+                              isTranscribingRef.current = false;
+                              return;
+                          }
+                          if (maxAmplitude === 0) {
+                              showFeedback(`ERR: Resampler output is pure silence (0s)`);
+                              isTranscribingRef.current = false;
+                              return;
+                          }
+
                           if (maxAmplitude > 0 && maxAmplitude < 0.99) {
                               const scale = 1.0 / maxAmplitude;
                               for (let i = 0; i < finalArray.length; i++) {
