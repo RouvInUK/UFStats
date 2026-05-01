@@ -156,8 +156,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     recognition.lang = 'en-US';
 
     const commands = {
-      'opponent scored': 'Opponent Point',
-      'scored': 'Point',
+      'opponent point': 'Opponent Point',
+      'point': 'Point',
       'pass': 'Pass',
       'incomplete': 'Throwaway',
       'drop': 'Drop',
@@ -189,7 +189,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       }
 
       if (matchedAction === 'Opponent Point') {
-         setVoiceFeedback(`Heard: "Opponent Scored" ✓`);
+         setVoiceFeedback(`Heard: "Opponent Point" ✓`);
          setVoiceRecognizedAction('Opponent Point');
          playBuzz();
          handleStatRecord('Opponent Point');
@@ -463,7 +463,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                 disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer || isVoiceEnabled}
                 className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-emerald-500 hover:bg-emerald-400 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Point')}
               >
-                Scored
+                Point
               </button>
               <button
                 onClick={() => handleStatRecord('Pass')}
@@ -479,7 +479,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || isVoiceEnabled}
               className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-700 hover:bg-rose-600 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(225,29,72,0.2)] hover:shadow-[0_0_30px_rgba(225,29,72,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Opponent Point')}
             >
-              Opponent Scored
+              Opponent Point
             </button>
             <button
               onClick={() => handleStatRecord('Throwaway')}
