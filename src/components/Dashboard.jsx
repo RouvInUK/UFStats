@@ -179,7 +179,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     // Initialize Fuse for full-phrase matching
     const fuse = new Fuse(expectedCommands, {
        keys: ['text'],
-       threshold: 0.4, // Generous fuzziness (e.g. allows 1-2 char errors)
+       threshold: 0.3, // Tighter fuzziness to prevent matching incorrect numbers
        includeScore: true
     });
 
@@ -195,7 +195,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     // 3. Aggressive phonetic map
     const wordMap = {
       'double zero': '00', 'double oh': '00', 'zero zero': '00', 'double hero': '00', 'double arrow': '00',
-      'zero': '0', 'oh': '0', 'o': '0', 'null': '0', 'nil': '0', 'nought': '0', 'hero': '0', 'arrow': '0', 'narrow': '0', 'zorro': '0', 'sarah': '0', 'borough': '0', 'borrow': '0', 'sorrow': '0', 'tomorrow': '0',
+      'zero': '0', 'oh': '0', 'o': '0', 'null': '0', 'nil': '0', 'nought': '0', 'hero': '0', 'arrow': '0', 'narrow': '0', 'zorro': '0', 'sarah': '0', 'borough': '0', 'borrow': '0', 'sorrow': '0', 'tomorrow': '0', 'cereal': '0', 'serial': '0',
       'one': '1', 'won': '1', 'want': '1', 'juan': '1',
       'two': '2', 'to': '2', 'too': '2', 'chew': '2', 'shoe': '2',
       'three': '3', 'tree': '3', 'free': '3',
@@ -239,7 +239,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       if (results.length > 0) {
          // Check if the match is good enough
          const bestMatch = results[0];
-         if (bestMatch.score > 0.45) { // Too fuzzy
+         if (bestMatch.score > 0.35) { // Too fuzzy (e.g. said 29 but matched 8)
             setVoiceFeedback(`Heard: "${transcript}" (Poor match)`);
             return;
          }
