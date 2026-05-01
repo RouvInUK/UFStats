@@ -167,14 +167,14 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         if (player.shirt_number != null && player.shirt_number !== '') {
            const num = String(player.shirt_number).toLowerCase();
            expectedCommands.push({ text: `${num} pass`, action: 'Pass', player: player.name });
-           expectedCommands.push({ text: `${num} point`, action: 'Point', player: player.name });
+           expectedCommands.push({ text: `${num} score`, action: 'Point', player: player.name });
            expectedCommands.push({ text: `${num} drop`, action: 'Drop', player: player.name });
            expectedCommands.push({ text: `${num} throwaway`, action: 'Throwaway', player: player.name });
            expectedCommands.push({ text: `${num} stall out`, action: 'Stall Out', player: player.name });
            expectedCommands.push({ text: `${num} defence`, action: 'Defence', player: player.name });
         }
     });
-    expectedCommands.push({ text: `opponent point`, action: 'Opponent Point', player: 'Opponent' });
+    expectedCommands.push({ text: `opponent score`, action: 'Opponent Point', player: 'Opponent' });
 
     // Initialize Fuse for full-phrase matching
     const fuse = new Fuse(expectedCommands, {
@@ -194,8 +194,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
 
     // 3. Aggressive phonetic map
     const wordMap = {
-      'double zero': '00', 'double oh': '00', 'zero zero': '00',
-      'zero': '0', 'oh': '0', 'o': '0', 'null': '0', 'nil': '0', 'nought': '0',
+      'double zero': '00', 'double oh': '00', 'zero zero': '00', 'double hero': '00', 'double arrow': '00',
+      'zero': '0', 'oh': '0', 'o': '0', 'null': '0', 'nil': '0', 'nought': '0', 'hero': '0', 'arrow': '0', 'narrow': '0', 'zorro': '0', 'sarah': '0', 'borough': '0', 'borrow': '0', 'sorrow': '0', 'tomorrow': '0',
       'one': '1', 'won': '1', 'want': '1', 'juan': '1',
       'two': '2', 'to': '2', 'too': '2', 'chew': '2', 'shoe': '2',
       'three': '3', 'tree': '3', 'free': '3',
@@ -208,7 +208,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       'ten': '10', 'tin': '10', 'pen': '10', 'then': '10',
       // Actions and variants
       'paths': 'pass', 'past': 'pass', 'pats': 'pass', 'fast': 'pass', 'path': 'pass', 'pence': 'pass', 'pounds': 'pass', '£': 'pass',
-      'score': 'point', 'scored': 'point', 'points': 'point', 'coin': 'point', 'boy': 'point',
+      'score': 'score', 'scored': 'score', 'point': 'score', 'points': 'score', 'coin': 'score', 'boy': 'score', 'store': 'score', 'soar': 'score', 'sore': 'score', 'door': 'score',
       'drop': 'drop', 'dropped': 'drop', 'cop': 'drop', 'crop': 'drop',
       'defense': 'defence', 'fence': 'defence', 'defend': 'defence',
       'incomplete': 'throwaway', 'away': 'throwaway', 'throw away': 'throwaway',
@@ -497,7 +497,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                 disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer || isVoiceEnabled}
                 className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-emerald-500 hover:bg-emerald-400 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Point')}
               >
-                Point
+                Score
               </button>
               <button
                 onClick={() => handleStatRecord('Pass')}
@@ -513,7 +513,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || isVoiceEnabled}
               className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-700 hover:bg-rose-600 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(225,29,72,0.2)] hover:shadow-[0_0_30px_rgba(225,29,72,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Opponent Point')}
             >
-              Opponent Point
+              Opponent Score
             </button>
             <button
               onClick={() => handleStatRecord('Throwaway')}
