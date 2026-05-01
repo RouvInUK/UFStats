@@ -197,7 +197,26 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
          return;
       }
 
-      const remainingText = transcript.replace(matchedActionKey, '').trim();
+      let remainingText = transcript.replace(matchedActionKey, '').trim();
+      
+      const wordMap = {
+        'double zero': '00', 'double oh': '00', 'zero zero': '00',
+        'zero': '0', 'oh': '0', 'o': '0',
+        'one': '1', 'won': '1',
+        'two': '2', 'to': '2', 'too': '2',
+        'three': '3', 'tree': '3',
+        'four': '4', 'for': '4',
+        'five': '5',
+        'six': '6',
+        'seven': '7',
+        'eight': '8', 'ate': '8',
+        'nine': '9',
+        'ten': '10'
+      };
+      
+      for (const [word, digit] of Object.entries(wordMap)) {
+        remainingText = remainingText.replace(new RegExp(`\\b${word}\\b`, 'g'), digit);
+      }
       
       let targetPlayer = null;
       const numberMatch = remainingText.match(/\b([A-Za-z0-9]{1,3})\b/);
