@@ -460,7 +460,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                               }
                           }
                           
-                          workerRef.current.postMessage({ type: 'transcribe', payload: finalArray });
+                          // Pad audio to 30 seconds to ensure Whisper processes it correctly
+                          const TARGET_LENGTH = 16000 * 30; // 30 seconds at 16kHz
+                          let paddedArray = new Float32Array(TARGET_LENGTH);
+                          paddedArray.set(finalArray.length > TARGET_LENGTH ? finalArray.slice(0, TARGET_LENGTH) : finalArray);
+                          
+                          workerRef.current.postMessage({ type: 'transcribe', payload: paddedArray });
                       };
                       
                       processAndTranscribe(audioChunks, totalLength);
