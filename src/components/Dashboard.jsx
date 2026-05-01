@@ -156,7 +156,11 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     recognition.lang = 'en-US';
 
     const commands = {
+      'opponent score': 'Opponent Point',
+      'opponent scored': 'Opponent Point',
       'opponent point': 'Opponent Point',
+      'score': 'Point',
+      'scored': 'Point',
       'point': 'Point',
       'pass': 'Pass',
       'incomplete': 'Throwaway',
@@ -354,17 +358,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         
         {/* Scoreboard Header Section */}
         <div className="p-6 sm:p-8 bg-slate-900 border-b border-slate-700/50">
-          <div className="flex items-center justify-between mb-4">
-             <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
-                  className={`p-2 rounded-xl transition-all ${isVoiceEnabled ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-[0_0_15px_rgba(52,211,153,0.2)]' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}
-                  title={isVoiceEnabled ? "Voice Tracking Active" : "Voice Tracking Off"}
-                >
-                   {isVoiceEnabled ? <Mic className="w-5 h-5 animate-pulse" /> : <MicOff className="w-5 h-5" />}
-                </button>
-             </div>
-          </div>
+
 
           <div className="flex items-center justify-between bg-slate-950/50 rounded-2xl border border-white/5 shadow-inner p-4">
              {/* Left Column: Us */}
