@@ -349,24 +349,6 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
         )}
 
         <div className="p-6 sm:p-8">
-            {/* Voice Tracking Toggle */}
-            <div className="mb-6 flex items-center justify-between bg-slate-900 border border-slate-700/50 p-4 rounded-2xl">
-               <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-xl transition-all ${isVoiceEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
-                     {isVoiceEnabled ? <Mic className="w-5 h-5 animate-pulse" /> : <MicOff className="w-5 h-5" />}
-                  </div>
-                  <div>
-                     <h3 className="text-white font-bold text-sm">Voice Tracking Engine</h3>
-                     <p className="text-slate-500 text-xs font-medium">Log stats completely hands-free via speech.</p>
-                  </div>
-               </div>
-               <button 
-                  onClick={handleVoiceToggle}
-                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ${isVoiceEnabled ? 'bg-emerald-500' : 'bg-slate-700'}`}
-               >
-                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${isVoiceEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-               </button>
-            </div>
 
           {filteredPlayers.length === 0 ? (
             <div className="text-center py-10 bg-slate-900/50 rounded-2xl border border-slate-700/50 space-y-4">

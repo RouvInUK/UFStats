@@ -422,6 +422,27 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
             {activeLineup.length > 0 && (
               <div className="flex justify-end gap-3 mt-4">
                 <button
+                  onClick={() => {
+                    if (!isVoiceEnabled) {
+                      const activeObjects = activeLineup.map(name => players?.find(p => p.name === name)).filter(Boolean);
+                      const missingNumbers = activeObjects.filter(p => !p.shirt_number);
+                      if (missingNumbers.length > 0) {
+                        return alert(`Voice tracking requires every active player to have a shirt number. Please add numbers for: ${missingNumbers.map(p => p.name).join(', ')}`);
+                      }
+                    }
+                    setIsVoiceEnabled(!isVoiceEnabled);
+                  }}
+                  className={`w-full sm:w-auto py-3 px-6 flex items-center justify-center gap-2 font-bold rounded-xl transition-all border ${
+                    isVoiceEnabled
+                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/40'
+                      : 'border-slate-700/50 text-slate-400 bg-slate-900 shadow-md hover:bg-slate-800 hover:text-white'
+                  }`}
+                  title={isVoiceEnabled ? "Disable Voice Tracking" : "Enable Voice Tracking"}
+                >
+                  {isVoiceEnabled ? <Mic className="w-5 h-5 animate-pulse" /> : <MicOff className="w-5 h-5" />}
+                  <span className="sm:hidden">Voice</span>
+                </button>
+                <button
                   onClick={handleUndo}
                   disabled={isSaving || !currentGame}
                   className="w-full sm:w-auto py-3 px-6 flex items-center justify-center gap-2 font-bold rounded-xl transition-all border border-slate-700/50 text-slate-400 hover:text-white bg-slate-900 shadow-md hover:bg-slate-800"
