@@ -21,6 +21,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   const audioContextRef = useRef(null);
   const processorRef = useRef(null);
   const streamRef = useRef(null);
+  const isTranscribingRef = useRef(false);
   const [modelStatus, setModelStatus] = useState('unloaded'); // unloaded, loading, ready, error
   const [modelProgress, setModelProgress] = useState(0);
   const [showModelModal, setShowModelModal] = useState(false);
@@ -168,6 +169,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
              setModelProgress(payload.progress);
          }
       } else if (type === 'transcribed') {
+         isTranscribingRef.current = false;
          if (payload && payload.trim().length > 0) {
              processTranscription(payload);
          } else {
@@ -338,6 +340,11 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
           let isSpeaking = false;
 
           processor.onaudioprocess = (e) => {
+             const outputData = e.outputBuffer.getChannelData(0);
+             outputData.fill(0); // Prevent feedback & keep node alive
+
+             if (isTranscribingRef.current) return;
+
              const inputData = e.inputBuffer.getChannelData(0);
              const dataArray = new Float32Array(analyser.fftSize);
              analyser.getFloatTimeDomainData(dataArray);
@@ -358,7 +365,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                 audioChunks.push(new Float32Array(inputData));
                 if (silenceFrames > 4) { // ~1 second of silence
                    isSpeaking = false;
-                   setVoiceFeedback('Transcribing...');
                    const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.length, 0);
                    const mergedArray = new Float32Array(totalLength);
                    let offset = 0;
@@ -366,7 +372,9 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                       mergedArray.set(chunk, offset);
                       offset += chunk.length;
                    }
-                   if (totalLength > 16000 * 0.3) { // > 0.3 seconds
+                   if (totalLength > 16000 * 0.4) { // > 0.4 seconds
+                      isTranscribingRef.current = true;
+                      setVoiceFeedback('Transcribing...');
                       workerRef.current.postMessage({ type: 'transcribe', payload: mergedArray });
                    } else {
                       setVoiceFeedback('Ready');
