@@ -360,6 +360,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
           processorRef.current = processor;
 
           let audioChunks = [];
+          let prerollBuffer = [];
           let silenceFrames = 0;
           let isSpeaking = false;
 
@@ -377,11 +378,14 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                 sumSquares += dataArray[i] * dataArray[i];
              }
              const rms = Math.sqrt(sumSquares / dataArray.length);
-             const isSilence = rms < 0.02;
+             const isSilence = rms < 0.015; // lower threshold slightly
              const isFeedbackLocked = Date.now() < feedbackTimeoutRef.current;
 
              if (!isSilence) {
-                isSpeaking = true;
+                if (!isSpeaking) {
+                    isSpeaking = true;
+                    audioChunks = [...prerollBuffer]; // Pre-pend preroll to catch start of word
+                }
                 silenceFrames = 0;
                 audioChunks.push(new Float32Array(inputData));
                 setVoiceFeedback('Listening (Speech detected)...');
@@ -389,16 +393,11 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
              } else if (isSpeaking) {
                 silenceFrames++;
                 audioChunks.push(new Float32Array(inputData));
-                if (silenceFrames > 4) { // ~1 second of silence
+                if (silenceFrames > 5) { // ~1.25 seconds of silence
                    isSpeaking = false;
                    const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.length, 0);
-                   const mergedArray = new Float32Array(totalLength);
-                   let offset = 0;
-                   for (const chunk of audioChunks) {
-                      mergedArray.set(chunk, offset);
-                      offset += chunk.length;
-                   }
-                   if (totalLength > actualSampleRate * 0.4) { // > 0.4 seconds
+                   
+                   if (totalLength > actualSampleRate * 0.5) { // > 0.5 seconds
                       isTranscribingRef.current = true;
                       setVoiceFeedback('Transcribing...');
                       
@@ -421,7 +420,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                                   source.connect(offlineCtx.destination);
                                   source.start();
                                   const renderedBuffer = await offlineCtx.startRendering();
-                                  finalArray = renderedBuffer.getChannelData(0);
+                                  // Must clone to prevent detached array buffer errors during worker postMessage
+                                  finalArray = new Float32Array(renderedBuffer.getChannelData(0));
                               } catch(e) {
                                   console.error("Resampling failed, falling back to original:", e);
                                   finalArray = mergedArray;
@@ -451,9 +451,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                       if (!isFeedbackLocked) setVoiceFeedback('Ready');
                    }
                    audioChunks = [];
+                   prerollBuffer = [];
                 }
              } else {
                 if (!isFeedbackLocked) setVoiceFeedback('Ready');
+                prerollBuffer.push(new Float32Array(inputData));
+                if (prerollBuffer.length > 3) prerollBuffer.shift(); // keep ~0.75s of preroll
              }
           };
       } catch (err) {
