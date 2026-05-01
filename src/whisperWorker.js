@@ -38,7 +38,17 @@ self.onmessage = async (e) => {
         task: 'transcribe',
         return_timestamps: false,
       });
-      self.postMessage({ type: 'transcribed', payload: output.text });
+      
+      let transcriptText = '';
+      if (typeof output === 'string') {
+          transcriptText = output;
+      } else if (Array.isArray(output)) {
+          transcriptText = output.map(chunk => chunk.text || '').join(' ');
+      } else if (output && typeof output === 'object') {
+          transcriptText = output.text || '';
+      }
+      
+      self.postMessage({ type: 'transcribed', payload: transcriptText });
     } catch (err) {
       console.error("Worker transcription error:", err);
       self.postMessage({ type: 'status', status: 'error', error: err.message });
