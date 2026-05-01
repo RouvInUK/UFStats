@@ -34,11 +34,8 @@ self.onmessage = async (e) => {
     try {
       // payload is expected to be a Float32Array at 16000 Hz
       const output = await transcriber(payload, {
-        // Force the model to focus on English
         language: 'english',
         task: 'transcribe',
-        chunk_length_s: 30,
-        stride_length_s: 5,
         return_timestamps: false,
       });
       self.postMessage({ type: 'transcribed', payload: output.text });

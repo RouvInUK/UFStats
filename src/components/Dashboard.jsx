@@ -161,7 +161,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
          }
       } else if (type === 'transcribed') {
          isTranscribingRef.current = false;
-         if (payload && payload.trim().length > 0) {
+         if (payload !== undefined && payload !== null) {
              processTranscription(payload);
          } else {
              setVoiceFeedback('Ready');
@@ -192,6 +192,11 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   };
 
   const processTranscription = (transcript) => {
+      if (!transcript || transcript.trim() === '') {
+         setVoiceFeedback(`Heard: [silence / noise]`);
+         setTimeout(() => setVoiceFeedback('Ready'), 2000);
+         return;
+      }
       const normalizedTranscript = transcript.toLowerCase().replace(/£/g, ' pass').replace(/pounds/g, 'pass').replace(/pence/g, 'pass');
       
       const commands = {
@@ -390,6 +395,19 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                               const idx1 = Math.floor(index);
                               const idx2 = Math.min(idx1 + 1, mergedArray.length - 1);
                               finalArray[i] = mergedArray[idx1] * (1 - (index - idx1)) + mergedArray[idx2] * (index - idx1);
+                          }
+                      }
+                      
+                      // Normalize audio to [-1.0, 1.0] for maximum accuracy
+                      let maxAmplitude = 0;
+                      for (let i = 0; i < finalArray.length; i++) {
+                          const abs = Math.abs(finalArray[i]);
+                          if (abs > maxAmplitude) maxAmplitude = abs;
+                      }
+                      if (maxAmplitude > 0) {
+                          const scale = 1.0 / maxAmplitude;
+                          for (let i = 0; i < finalArray.length; i++) {
+                              finalArray[i] *= scale;
                           }
                       }
                       
