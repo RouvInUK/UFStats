@@ -200,18 +200,29 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       const normalizedTranscript = transcript.toLowerCase().replace(/£/g, ' pass').replace(/pounds/g, 'pass').replace(/pence/g, 'pass');
       
       const commands = {
-        'opponent score': 'Opponent Point',
-        'opponent scored': 'Opponent Point',
-        'opponent point': 'Opponent Point',
+        "opponent's score": 'Opponent Point',
+        "opponents score": 'Opponent Point',
+        "opponent score": 'Opponent Point',
+        "opponent's scored": 'Opponent Point',
+        "opponents scored": 'Opponent Point',
+        "opponent scored": 'Opponent Point',
+        "opponent's point": 'Opponent Point',
+        "opponents point": 'Opponent Point',
+        "opponent point": 'Opponent Point',
         'score': 'Point',
         'scored': 'Point',
         'point': 'Point',
         'pass': 'Pass',
+        'throwaway': 'Throwaway',
+        'throw away': 'Throwaway',
         'incomplete': 'Throwaway',
         'drop': 'Drop',
+        'dropped': 'Drop',
         'stall out': 'Stall Out',
+        'stalled out': 'Stall Out',
         'defence': 'Defence',
-        'defense': 'Defence'
+        'defense': 'Defence',
+        'defend': 'Defence'
       };
 
       let matchedAction = null;
@@ -384,34 +395,51 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                       isTranscribingRef.current = true;
                       setVoiceFeedback('Transcribing...');
                       
-                      // Resample to 16000Hz if the browser ignored our sampleRate request
-                      let finalArray = mergedArray;
-                      if (actualSampleRate !== 16000) {
-                          const ratio = actualSampleRate / 16000;
-                          const newLength = Math.round(mergedArray.length / ratio);
-                          finalArray = new Float32Array(newLength);
-                          for (let i = 0; i < newLength; i++) {
-                              const index = i * ratio;
-                              const idx1 = Math.floor(index);
-                              const idx2 = Math.min(idx1 + 1, mergedArray.length - 1);
-                              finalArray[i] = mergedArray[idx1] * (1 - (index - idx1)) + mergedArray[idx2] * (index - idx1);
+                      const processAndTranscribe = async (chunksToProcess, totalLen) => {
+                          const mergedArray = new Float32Array(totalLen);
+                          let offset = 0;
+                          for (const chunk of chunksToProcess) {
+                              mergedArray.set(chunk, offset);
+                              offset += chunk.length;
                           }
-                      }
-                      
-                      // Normalize audio to [-1.0, 1.0] for maximum accuracy
-                      let maxAmplitude = 0;
-                      for (let i = 0; i < finalArray.length; i++) {
-                          const abs = Math.abs(finalArray[i]);
-                          if (abs > maxAmplitude) maxAmplitude = abs;
-                      }
-                      if (maxAmplitude > 0) {
-                          const scale = 1.0 / maxAmplitude;
+
+                          let finalArray;
+                          if (actualSampleRate !== 16000) {
+                              try {
+                                  const offlineCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, Math.round(totalLen * 16000 / actualSampleRate), 16000);
+                                  const buffer = offlineCtx.createBuffer(1, totalLen, actualSampleRate);
+                                  buffer.getChannelData(0).set(mergedArray);
+                                  const source = offlineCtx.createBufferSource();
+                                  source.buffer = buffer;
+                                  source.connect(offlineCtx.destination);
+                                  source.start();
+                                  const renderedBuffer = await offlineCtx.startRendering();
+                                  finalArray = renderedBuffer.getChannelData(0);
+                              } catch(e) {
+                                  console.error("Resampling failed, falling back to original:", e);
+                                  finalArray = mergedArray;
+                              }
+                          } else {
+                              finalArray = mergedArray;
+                          }
+                          
+                          // Normalize audio to [-1.0, 1.0] for maximum accuracy
+                          let maxAmplitude = 0;
                           for (let i = 0; i < finalArray.length; i++) {
-                              finalArray[i] *= scale;
+                              const abs = Math.abs(finalArray[i]);
+                              if (abs > maxAmplitude) maxAmplitude = abs;
                           }
-                      }
+                          if (maxAmplitude > 0 && maxAmplitude < 0.99) {
+                              const scale = 1.0 / maxAmplitude;
+                              for (let i = 0; i < finalArray.length; i++) {
+                                  finalArray[i] *= scale;
+                              }
+                          }
+                          
+                          workerRef.current.postMessage({ type: 'transcribe', payload: finalArray });
+                      };
                       
-                      workerRef.current.postMessage({ type: 'transcribe', payload: finalArray });
+                      processAndTranscribe(audioChunks, totalLength);
                    } else {
                       setVoiceFeedback('Ready');
                    }
