@@ -145,15 +145,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   useEffect(() => {
     workerRef.current = new Worker(new URL('../whisperWorker.js', import.meta.url), { type: 'module' });
 
-    // Auto-load if model is already cached
-    caches.open('transformers-cache').then(cache => {
-        cache.keys().then(keys => {
-           if (keys.some(req => req.url.includes('whisper-tiny.en'))) {
-               workerRef.current.postMessage({ type: 'load' });
-           }
-        });
-    }).catch(e => console.error("Cache check failed:", e));
-
     workerRef.current.onmessage = (e) => {
       const { type, status, payload, error } = e.data;
       if (type === 'status') {
@@ -177,6 +168,17 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
          }
       }
     };
+
+    // Auto-load if model is already cached
+    if (typeof caches !== 'undefined') {
+        caches.open('transformers-cache').then(cache => {
+            cache.keys().then(keys => {
+               if (keys.some(req => req.url.includes('whisper-tiny.en'))) {
+                   workerRef.current.postMessage({ type: 'load' });
+               }
+            });
+        }).catch(e => console.error("Cache check failed:", e));
+    }
 
     return () => {
       if (workerRef.current) workerRef.current.terminate();
