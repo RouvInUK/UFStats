@@ -21,7 +21,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
 
   const handleVoiceToggle = () => {
     if (!isVoiceEnabled) {
-      const missingNumbers = filteredPlayers.filter(p => !p.shirt_number);
+      const missingNumbers = filteredPlayers.filter(p => p.shirt_number == null || p.shirt_number === '');
       if (missingNumbers.length > 0) {
         return alert(`Voice tracking requires every player to have a shirt number. Please add numbers for: ${missingNumbers.map(p => p.name).join(', ')}`);
       }

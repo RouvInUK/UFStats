@@ -205,7 +205,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       
       const wordMap = {
         'double zero': '00', 'double oh': '00', 'zero zero': '00',
-        'zero': '0', 'oh': '0', 'o': '0',
+        'zero': '0', 'oh': '0', 'o': '0', 'null': '0', 'nil': '0', 'nought': '0',
         'one': '1', 'won': '1',
         'two': '2', 'to': '2', 'too': '2',
         'three': '3', 'tree': '3',
@@ -228,7 +228,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       if (numberMatch) {
          const spokenNumber = numberMatch[1];
          const activePlayerObjects = activeLineup.map(name => players?.find(p => p.name === name)).filter(Boolean);
-         const foundObj = activePlayerObjects.find(p => p.shirt_number && p.shirt_number.toLowerCase() === spokenNumber);
+         const foundObj = activePlayerObjects.find(p => p.shirt_number != null && String(p.shirt_number).toLowerCase() === spokenNumber);
          if (foundObj) {
             targetPlayer = foundObj.name;
          }
@@ -438,7 +438,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                   onClick={() => {
                     if (!isVoiceEnabled) {
                       const activeObjects = activeLineup.map(name => players?.find(p => p.name === name)).filter(Boolean);
-                      const missingNumbers = activeObjects.filter(p => !p.shirt_number);
+                      const missingNumbers = activeObjects.filter(p => p.shirt_number == null || p.shirt_number === '');
                       if (missingNumbers.length > 0) {
                         return alert(`Voice tracking requires every active player to have a shirt number. Please add numbers for: ${missingNumbers.map(p => p.name).join(', ')}`);
                       }
