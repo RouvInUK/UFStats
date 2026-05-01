@@ -133,6 +133,9 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   };
 
   // Voice Tracking Engine
+  // Add a ref to lock out duplicates
+  const lastActionTimeRef = useRef(0);
+
   useEffect(() => {
     if (!isVoiceEnabled || !isTrackingActive) {
       if (recognitionRef.current) {
@@ -145,6 +148,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechGrammarList = window.SpeechGrammarList || window.webkitSpeechGrammarList;
     if (!SpeechRecognition) {
       setVoiceFeedback("Voice tracking not supported on this browser.");
       return;
@@ -155,121 +159,125 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     recognition.interimResults = false;
     recognition.lang = 'en-US';
 
-    const commands = {
-      'opponent score': 'Opponent Point',
-      'opponent scored': 'Opponent Point',
-      'opponent point': 'Opponent Point',
-      'score': 'Point',
-      'scored': 'Point',
-      'point': 'Point',
-      'pass': 'Pass',
-      'incomplete': 'Throwaway',
-      'drop': 'Drop',
-      'stall out': 'Stall Out',
-      'defence': 'Defence',
-      'defense': 'Defence'
+    // 1. Generate Dictionary of expected exact commands
+    const expectedCommands = [];
+    const activeObjects = activeLineup.map(name => players?.find(p => p.name === name)).filter(Boolean);
+    
+    activeObjects.forEach(player => {
+        if (player.shirt_number != null && player.shirt_number !== '') {
+           const num = String(player.shirt_number).toLowerCase();
+           expectedCommands.push({ text: `${num} pass`, action: 'Pass', player: player.name });
+           expectedCommands.push({ text: `${num} point`, action: 'Point', player: player.name });
+           expectedCommands.push({ text: `${num} drop`, action: 'Drop', player: player.name });
+           expectedCommands.push({ text: `${num} throwaway`, action: 'Throwaway', player: player.name });
+           expectedCommands.push({ text: `${num} stall out`, action: 'Stall Out', player: player.name });
+           expectedCommands.push({ text: `${num} defence`, action: 'Defence', player: player.name });
+        }
+    });
+    expectedCommands.push({ text: `opponent point`, action: 'Opponent Point', player: 'Opponent' });
+
+    // Initialize Fuse for full-phrase matching
+    const fuse = new Fuse(expectedCommands, {
+       keys: ['text'],
+       threshold: 0.4, // Generous fuzziness (e.g. allows 1-2 char errors)
+       includeScore: true
+    });
+
+    // 2. Build and apply Grammar Hints (Chrome only)
+    if (SpeechGrammarList && expectedCommands.length > 0) {
+        const phrases = expectedCommands.map(cmd => cmd.text);
+        const grammar = `#JSGF V1.0; grammar ufstats; public <command> = ${phrases.join(' | ')} ;`;
+        const speechRecognitionList = new SpeechGrammarList();
+        speechRecognitionList.addFromString(grammar, 1);
+        recognition.grammars = speechRecognitionList;
+    }
+
+    // 3. Aggressive phonetic map
+    const wordMap = {
+      'double zero': '00', 'double oh': '00', 'zero zero': '00',
+      'zero': '0', 'oh': '0', 'o': '0', 'null': '0', 'nil': '0', 'nought': '0',
+      'one': '1', 'won': '1', 'want': '1', 'juan': '1',
+      'two': '2', 'to': '2', 'too': '2', 'chew': '2', 'shoe': '2',
+      'three': '3', 'tree': '3', 'free': '3',
+      'four': '4', 'for': '4', 'fall': '4', 'full': '4',
+      'five': '5', 'hive': '5', 'pipe': '5',
+      'six': '6', 'sex': '6', 'sick': '6', 'ticks': '6',
+      'seven': '7', 'steven': '7', 'kevin': '7', 'heaven': '7',
+      'eight': '8', 'ate': '8', 'hate': '8', 'hey': '8', 'late': '8',
+      'nine': '9', 'nein': '9', 'line': '9', 'mine': '9',
+      'ten': '10', 'tin': '10', 'pen': '10', 'then': '10',
+      // Actions and variants
+      'paths': 'pass', 'past': 'pass', 'pats': 'pass', 'fast': 'pass', 'path': 'pass', 'pence': 'pass', 'pounds': 'pass', '£': 'pass',
+      'score': 'point', 'scored': 'point', 'points': 'point', 'coin': 'point', 'boy': 'point',
+      'drop': 'drop', 'dropped': 'drop', 'cop': 'drop', 'crop': 'drop',
+      'defense': 'defence', 'fence': 'defence', 'defend': 'defence',
+      'incomplete': 'throwaway', 'away': 'throwaway', 'throw away': 'throwaway',
+      'stall': 'stall out', 'stalled': 'stall out', 'out': 'stall out'
     };
 
-    // We no longer use fuse for phonetic name matching; we strictly match shirt numbers
-    // const fuse = new Fuse(activeLineup, { threshold: 0.4 });
-
     recognition.onresult = (event) => {
-      const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+      let transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
       
-      // Fix fast speech swallowing "pass" into "pounds" or "£"
-      let normalizedTranscript = transcript.replace(/£/g, ' pass').replace(/pounds/g, 'pass').replace(/pence/g, 'pass');
-      
-      let matchedAction = null;
-      let matchedActionKey = null;
-      
-      for (const [phrase, action] of Object.entries(commands)) {
-        if (normalizedTranscript.includes(phrase)) {
-          matchedAction = action;
-          matchedActionKey = phrase;
-          break;
-        }
+      // Debounce lock (ignore if recognized something in the last 1500ms)
+      if (Date.now() - lastActionTimeRef.current < 1500) {
+          console.log("Ignored duplicate recognition:", transcript);
+          return;
       }
 
-      if (!matchedAction) {
-         setVoiceFeedback(`Heard: "${normalizedTranscript}" (No match)`);
-         return;
+      // Pre-process transcript with word map
+      let normalizedTranscript = transcript;
+      for (const [word, replacement] of Object.entries(wordMap)) {
+         normalizedTranscript = normalizedTranscript.replace(new RegExp(`\\b${word}\\b`, 'g'), replacement);
       }
+      
+      // Handle edge cases without boundaries just in case
+      normalizedTranscript = normalizedTranscript.replace(/£/g, 'pass');
 
-      if (matchedAction === 'Opponent Point') {
-         setVoiceFeedback(`Heard: "Opponent Point" ✓`);
-         setVoiceRecognizedAction('Opponent Point');
-         playBuzz();
-         handleStatRecord('Opponent Point');
-         setTimeout(() => setVoiceRecognizedAction(null), 500);
-         return;
-      }
-
-      let remainingText = normalizedTranscript.replace(matchedActionKey, '').trim();
+      // 4. Execute Fuzzy Search
+      const results = fuse.search(normalizedTranscript);
       
-      const wordMap = {
-        'double zero': '00', 'double oh': '00', 'zero zero': '00',
-        'zero': '0', 'oh': '0', 'o': '0', 'null': '0', 'nil': '0', 'nought': '0',
-        'one': '1', 'won': '1',
-        'two': '2', 'to': '2', 'too': '2',
-        'three': '3', 'tree': '3',
-        'four': '4', 'for': '4',
-        'five': '5',
-        'six': '6',
-        'seven': '7',
-        'eight': '8', 'ate': '8',
-        'nine': '9',
-        'ten': '10'
-      };
-      
-      for (const [word, digit] of Object.entries(wordMap)) {
-        // Broaden the replacement to not just rely on word boundaries, but also handle exact matches or spaced words
-        remainingText = remainingText.replace(new RegExp(`\\b${word}\\b`, 'g'), digit);
-      }
-      
-      let targetPlayer = null;
-      // Also grab digits that might be attached to letters if boundary fails, but \b is usually fine.
-      const numberMatch = remainingText.match(/\b([A-Za-z0-9]{1,3})\b/);
-      
-      if (numberMatch) {
-         const spokenNumber = numberMatch[1].toLowerCase();
-         const activePlayerObjects = activeLineup.map(name => players?.find(p => p.name === name)).filter(Boolean);
-         
-         const foundObj = activePlayerObjects.find(p => {
-            if (p.shirt_number == null) return false;
-            const dbNum = String(p.shirt_number).toLowerCase();
-            // Match exactly, or match integer value (handles "0" vs "00" or "8" vs "08")
-            return dbNum === spokenNumber || 
-                   (!isNaN(parseInt(dbNum, 10)) && !isNaN(parseInt(spokenNumber, 10)) && parseInt(dbNum, 10) === parseInt(spokenNumber, 10));
-         });
-         
-         if (foundObj) {
-            targetPlayer = foundObj.name;
+      if (results.length > 0) {
+         // Check if the match is good enough
+         const bestMatch = results[0];
+         if (bestMatch.score > 0.45) { // Too fuzzy
+            setVoiceFeedback(`Heard: "${transcript}" (Poor match)`);
+            return;
          }
-      } else if (activeLineup.length === 1) {
-         targetPlayer = activeLineup[0];
-      }
 
-      if (targetPlayer) {
-        setVoiceFeedback(`Heard: "${targetPlayer} ${matchedActionKey}" ✓`);
-        setVoiceRecognizedAction(matchedAction);
-        setVoiceRecognizedPlayer(targetPlayer);
-        
-        if (['Point', 'Defence'].includes(matchedAction)) {
-           playChime();
-        } else if (matchedAction === 'Pass') {
-           playClick();
-        } else {
-           playBuzz();
-        }
+         const cmd = bestMatch.item;
+         lastActionTimeRef.current = Date.now(); // Lock
+         
+         if (cmd.action === 'Opponent Point') {
+             setVoiceFeedback(`Heard: "Opponent Point" ✓`);
+             setVoiceRecognizedAction('Opponent Point');
+             playBuzz();
+             handleStatRecord('Opponent Point');
+             setTimeout(() => setVoiceRecognizedAction(null), 500);
+             return;
+         }
 
-        handleStatRecord(matchedAction, targetPlayer);
-        
-        setTimeout(() => {
-          setVoiceRecognizedAction(null);
-          setVoiceRecognizedPlayer(null);
-        }, 500);
+         // Standard action
+         setVoiceFeedback(`Heard: "${cmd.text}" ✓`);
+         setVoiceRecognizedAction(cmd.action);
+         setVoiceRecognizedPlayer(cmd.player);
+         
+         if (['Point', 'Defence'].includes(cmd.action)) {
+            playChime();
+         } else if (cmd.action === 'Pass') {
+            playClick();
+         } else {
+            playBuzz();
+         }
+
+         handleStatRecord(cmd.action, cmd.player);
+         
+         setTimeout(() => {
+           setVoiceRecognizedAction(null);
+           setVoiceRecognizedPlayer(null);
+         }, 500);
+
       } else {
-        setVoiceFeedback(`Heard: "${matchedActionKey}" (Unknown player)`);
+         setVoiceFeedback(`Heard: "${transcript}" (No match)`);
       }
     };
 
