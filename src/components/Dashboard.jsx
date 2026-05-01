@@ -208,7 +208,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       'nine': '9', 'nein': '9', 'line': '9', 'mine': '9',
       'ten': '10', 'tin': '10', 'pen': '10', 'then': '10',
       // Actions and variants
-      'paths': 'pass', 'past': 'pass', 'pats': 'pass', 'fast': 'pass', 'path': 'pass', 'pence': 'pass', 'pounds': 'pass', '£': 'pass',
+      'paths': 'pass', 'past': 'pass', 'pats': 'pass', 'fast': 'pass', 'path': 'pass', 'pence': 'pass', 'pounds': 'pass',
       'score': 'score', 'scored': 'score', 'point': 'score', 'points': 'score', 'coin': 'score', 'boy': 'score', 'store': 'score', 'soar': 'score', 'sore': 'score', 'door': 'score',
       'drop': 'drop', 'dropped': 'drop', 'cop': 'drop', 'crop': 'drop',
       'defense': 'defence', 'fence': 'defence', 'defend': 'defence',
@@ -231,8 +231,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
          normalizedTranscript = normalizedTranscript.replace(new RegExp(`\\b${word}\\b`, 'g'), replacement);
       }
       
-      // Handle edge cases without boundaries just in case
-      normalizedTranscript = normalizedTranscript.replace(/£/g, 'pass');
+      // Handle currency edge cases where numbers are attached to symbols (e.g. "£28" -> "28 pass")
+      normalizedTranscript = normalizedTranscript.replace(/£\s*(\d+)/g, '$1 pass').replace(/(\d+)\s*£/g, '$1 pass').replace(/£/g, ' pass ');
 
       // 4. Execute Fuzzy Search
       const results = fuse.search(normalizedTranscript);
