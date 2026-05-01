@@ -176,11 +176,14 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     recognition.onresult = (event) => {
       const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
       
+      // Fix fast speech swallowing "pass" into "pounds" or "£"
+      let normalizedTranscript = transcript.replace(/£/g, ' pass').replace(/pounds/g, 'pass').replace(/pence/g, 'pass');
+      
       let matchedAction = null;
       let matchedActionKey = null;
       
       for (const [phrase, action] of Object.entries(commands)) {
-        if (transcript.includes(phrase)) {
+        if (normalizedTranscript.includes(phrase)) {
           matchedAction = action;
           matchedActionKey = phrase;
           break;
@@ -188,7 +191,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       }
 
       if (!matchedAction) {
-         setVoiceFeedback(`Heard: "${transcript}" (No match)`);
+         setVoiceFeedback(`Heard: "${normalizedTranscript}" (No match)`);
          return;
       }
 
@@ -201,7 +204,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
          return;
       }
 
-      let remainingText = transcript.replace(matchedActionKey, '').trim();
+      let remainingText = normalizedTranscript.replace(matchedActionKey, '').trim();
       
       const wordMap = {
         'double zero': '00', 'double oh': '00', 'zero zero': '00',
@@ -219,16 +222,26 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       };
       
       for (const [word, digit] of Object.entries(wordMap)) {
+        // Broaden the replacement to not just rely on word boundaries, but also handle exact matches or spaced words
         remainingText = remainingText.replace(new RegExp(`\\b${word}\\b`, 'g'), digit);
       }
       
       let targetPlayer = null;
+      // Also grab digits that might be attached to letters if boundary fails, but \b is usually fine.
       const numberMatch = remainingText.match(/\b([A-Za-z0-9]{1,3})\b/);
       
       if (numberMatch) {
-         const spokenNumber = numberMatch[1];
+         const spokenNumber = numberMatch[1].toLowerCase();
          const activePlayerObjects = activeLineup.map(name => players?.find(p => p.name === name)).filter(Boolean);
-         const foundObj = activePlayerObjects.find(p => p.shirt_number != null && String(p.shirt_number).toLowerCase() === spokenNumber);
+         
+         const foundObj = activePlayerObjects.find(p => {
+            if (p.shirt_number == null) return false;
+            const dbNum = String(p.shirt_number).toLowerCase();
+            // Match exactly, or match integer value (handles "0" vs "00" or "8" vs "08")
+            return dbNum === spokenNumber || 
+                   (!isNaN(parseInt(dbNum, 10)) && !isNaN(parseInt(spokenNumber, 10)) && parseInt(dbNum, 10) === parseInt(spokenNumber, 10));
+         });
+         
          if (foundObj) {
             targetPlayer = foundObj.name;
          }
