@@ -22,6 +22,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   const processorRef = useRef(null);
   const streamRef = useRef(null);
   const isTranscribingRef = useRef(false);
+  const feedbackTimeoutRef = useRef(0);
   const [modelStatus, setModelStatus] = useState('unloaded'); // unloaded, loading, ready, error
   const [modelProgress, setModelProgress] = useState(0);
   const [showModelModal, setShowModelModal] = useState(false);
@@ -191,10 +192,14 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     }
   };
 
+  const showFeedback = (msg, duration = 2500) => {
+      setVoiceFeedback(msg);
+      feedbackTimeoutRef.current = Date.now() + duration;
+  };
+
   const processTranscription = (transcript) => {
       if (!transcript || transcript.trim() === '') {
-         setVoiceFeedback(`Heard: [silence / noise]`);
-         setTimeout(() => setVoiceFeedback('Ready'), 2000);
+         showFeedback(`Heard: [silence / noise]`);
          return;
       }
       const normalizedTranscript = transcript.toLowerCase().replace(/£/g, ' pass').replace(/pounds/g, 'pass').replace(/pence/g, 'pass');
@@ -237,12 +242,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       }
 
       if (!matchedAction) {
-         setVoiceFeedback(`Heard: "${normalizedTranscript}" (No match)`);
+         showFeedback(`Heard: "${normalizedTranscript}" (No match)`);
          return;
       }
 
       if (matchedAction === 'Opponent Point') {
-         setVoiceFeedback(`Heard: "Opponent Point" ✓`);
+         showFeedback(`Heard: "Opponent Point" ✓`);
          setVoiceRecognizedAction('Opponent Point');
          playBuzz();
          handleStatRecord('Opponent Point');
@@ -293,7 +298,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       }
 
       if (targetPlayer) {
-        setVoiceFeedback(`Heard: "${targetPlayer} ${matchedActionKey}" ✓`);
+        showFeedback(`Heard: "${targetPlayer} ${matchedActionKey}" ✓`);
         setVoiceRecognizedAction(matchedAction);
         setVoiceRecognizedPlayer(targetPlayer);
         
@@ -312,7 +317,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
           setVoiceRecognizedPlayer(null);
         }, 500);
       } else {
-        setVoiceFeedback(`Heard: "${matchedActionKey}" (Unknown player)`);
+        showFeedback(`Heard: "${matchedActionKey}" (Unknown player)`);
       }
   };
 
@@ -373,12 +378,14 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
              }
              const rms = Math.sqrt(sumSquares / dataArray.length);
              const isSilence = rms < 0.02;
+             const isFeedbackLocked = Date.now() < feedbackTimeoutRef.current;
 
              if (!isSilence) {
                 isSpeaking = true;
                 silenceFrames = 0;
                 audioChunks.push(new Float32Array(inputData));
                 setVoiceFeedback('Listening (Speech detected)...');
+                feedbackTimeoutRef.current = 0; // break feedback lock to show listening status
              } else if (isSpeaking) {
                 silenceFrames++;
                 audioChunks.push(new Float32Array(inputData));
@@ -441,12 +448,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                       
                       processAndTranscribe(audioChunks, totalLength);
                    } else {
-                      setVoiceFeedback('Ready');
+                      if (!isFeedbackLocked) setVoiceFeedback('Ready');
                    }
                    audioChunks = [];
                 }
              } else {
-                setVoiceFeedback('Ready');
+                if (!isFeedbackLocked) setVoiceFeedback('Ready');
              }
           };
       } catch (err) {
