@@ -1,8 +1,8 @@
 import { togglePlayerActiveStatus, clearActiveLineup, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB, checkIfHalfTimeLogged, fetchActiveGames } from '../supabaseClient';
 import { useState, useEffect } from 'react';
-import { Undo2 } from 'lucide-react';
+import { Undo2, Mic, MicOff } from 'lucide-react';
 
-const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavigate, currentGame, setCurrentGame, currentPoint, setCurrentPoint, gameType, setGameType, setIsTrackingActive, opponentName, setOpponentName, initialPossession, setInitialPossession }) => {
+const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavigate, currentGame, setCurrentGame, currentPoint, setCurrentPoint, gameType, setGameType, setIsTrackingActive, opponentName, setOpponentName, initialPossession, setInitialPossession, isVoiceEnabled, setIsVoiceEnabled }) => {
   const [processingId, setProcessingId] = useState(null);
   const [isClearing, setIsClearing] = useState(false);
   const [isStartingPoint, setIsStartingPoint] = useState(false);
@@ -12,6 +12,22 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
   const [hasHalfTime, setHasHalfTime] = useState(false);
   const [activeGames, setActiveGames] = useState([]);
 
+  const filteredPlayers = players.filter(p => {
+    if (currentTeam === 'Default Team (Migrated)' || currentTeam === 'Default Team') {
+      return p.team_name === 'Default Team' || p.team_name === 'Default Team (Migrated)' || !p.team_name;
+    }
+    return p.team_name === currentTeam;
+  });
+
+  const handleVoiceToggle = () => {
+    if (!isVoiceEnabled) {
+      const missingNumbers = filteredPlayers.filter(p => p.shirt_number == null || p.shirt_number === '');
+      if (missingNumbers.length > 0) {
+        return alert(`Voice tracking requires every player to have a shirt number. Please add numbers for: ${missingNumbers.map(p => p.name).join(', ')}`);
+      }
+    }
+    setIsVoiceEnabled(!isVoiceEnabled);
+  };
   useEffect(() => {
     fetchActiveGames(targetTeamId).then(setActiveGames).catch(console.error);
   }, [targetTeamId]);
@@ -209,12 +225,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     }
   };
 
-  const filteredPlayers = players.filter(p => {
-    if (currentTeam === 'Default Team (Migrated)' || currentTeam === 'Default Team') {
-      return p.team_name === 'Default Team' || p.team_name === 'Default Team (Migrated)' || !p.team_name;
-    }
-    return p.team_name === currentTeam;
-  });
+
 
   const activeCount = filteredPlayers.filter(p => p.is_active).length;
 
@@ -337,6 +348,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
         )}
 
         <div className="p-6 sm:p-8">
+
           {filteredPlayers.length === 0 ? (
             <div className="text-center py-10 bg-slate-900/50 rounded-2xl border border-slate-700/50 space-y-4">
               <p className="text-slate-400 font-medium">Your roster is currently empty.</p>
@@ -365,7 +377,9 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
                     } ${isProcessing ? 'opacity-50 animate-pulse' : ''}`}
                   >
                     <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-white shadow-sm' : 'bg-slate-700'}`} />
-                    {player.name}
+                    <span className="text-center">
+                      {player.name} {player.shirt_number ? <span className="opacity-70 font-mono ml-1">#{player.shirt_number}</span> : ''}
+                    </span>
                   </button>
                 )
               })}

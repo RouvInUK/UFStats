@@ -79,6 +79,14 @@ function App() {
     localStorage.setItem('ufstats_possession', initialPossession);
   }, [initialPossession]);
 
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(() => {
+    return localStorage.getItem('ufstats_voice_enabled') === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('ufstats_voice_enabled', isVoiceEnabled);
+  }, [isVoiceEnabled]);
+
   const targetTeamId = shadowTeam?.id
     ? shadowTeam.id
     : profile?.is_system_admin && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentTeam)
@@ -308,6 +316,8 @@ function App() {
           onNavigate={setCurrentView} 
           players={players}
           setPlayers={setPlayers}
+          isVoiceEnabled={isVoiceEnabled}
+          setIsVoiceEnabled={setIsVoiceEnabled}
         />
       )}
 
@@ -344,6 +354,8 @@ function App() {
           setOpponentName={setOpponentName}
           initialPossession={initialPossession}
           setInitialPossession={setInitialPossession}
+          isVoiceEnabled={isVoiceEnabled}
+          setIsVoiceEnabled={setIsVoiceEnabled}
         />
       )}
 
