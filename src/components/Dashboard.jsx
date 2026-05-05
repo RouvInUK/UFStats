@@ -155,7 +155,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     }
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = true; 
+    recognition.continuous = false; // Must be false so it doesn't create run-on sentences
     recognition.interimResults = true;
     recognition.lang = 'en-US';
 
@@ -233,6 +233,13 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       
       // Handle currency edge cases where numbers are attached to symbols (e.g. "£28" -> "28 pass")
       normalizedTranscript = normalizedTranscript.replace(/£\s*(\d+)/g, '$1 pass').replace(/(\d+)\s*£/g, '$1 pass').replace(/£/g, ' pass ');
+
+      // Require an action word to be present to prevent interim results (e.g. just "0") from prematurely triggering an action
+      const validActions = ['pass', 'score', 'drop', 'throwaway', 'defence', 'stall out', 'point'];
+      const hasAction = validActions.some(action => normalizedTranscript.includes(action));
+      if (!hasAction) {
+          return; // Wait for the rest of the sentence
+      }
 
       // 4. Execute Fuzzy Search
       const results = fuse.search(normalizedTranscript);
