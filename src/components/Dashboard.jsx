@@ -496,15 +496,16 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                     }
                     setIsVoiceEnabled(!isVoiceEnabled);
                   }}
-                  className={`w-full sm:w-auto py-3 px-6 flex items-center justify-center gap-2 font-bold rounded-xl transition-all border ${
+                  className={`w-full sm:w-auto py-3 px-6 flex items-center justify-center gap-2 font-extrabold rounded-xl transition-all ${
                     isVoiceEnabled
-                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/40'
-                      : 'border-slate-700/50 text-slate-400 bg-slate-900 shadow-md hover:bg-slate-800 hover:text-white'
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-[0_0_20px_rgba(245,158,11,0.4)] border border-transparent animate-pulse'
+                      : 'border border-slate-700/50 text-slate-400 bg-slate-900 shadow-md hover:bg-slate-800 hover:text-amber-400'
                   }`}
-                  title={isVoiceEnabled ? "Disable Voice Tracking" : "Enable Voice Tracking"}
+                  title={isVoiceEnabled ? "Disable Voice Pro" : "Enable Voice Pro"}
                 >
-                  {isVoiceEnabled ? <Mic className="w-5 h-5 animate-pulse" /> : <MicOff className="w-5 h-5" />}
-                  <span className="sm:hidden">Voice</span>
+                  {isVoiceEnabled ? <Mic className="w-5 h-5 text-white" /> : <MicOff className="w-5 h-5" />}
+                  <span className="sm:hidden">Voice Pro ★</span>
+                  <span className="hidden sm:inline">Voice Pro ★</span>
                 </button>
                 <button
                   onClick={handleUndo}
