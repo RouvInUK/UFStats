@@ -103,7 +103,7 @@ function App() {
       ? currentTeam.id
       : null;
 
-  const effectiveTeamName = shadowTeam?.name || (typeof currentTeam === 'object' ? currentTeam.name : currentTeam);
+  const effectiveTeamName = shadowTeam?.name || currentTeam?.name || (typeof currentTeam === 'string' ? currentTeam : '');
 
   useEffect(() => {
     if (!user) return;

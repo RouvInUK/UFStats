@@ -1,6 +1,6 @@
 -- 1. Add Tier to Profiles and remove deprecated team_id
 ALTER TABLE public.profiles ADD COLUMN tier TEXT DEFAULT 'FREE';
-ALTER TABLE public.profiles DROP COLUMN IF EXISTS team_id;
+ALTER TABLE public.profiles DROP COLUMN IF EXISTS team_id CASCADE;
 
 -- 2. Create Clubs Table
 CREATE TABLE public.clubs (
