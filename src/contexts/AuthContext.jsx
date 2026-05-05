@@ -21,7 +21,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('team_id, is_system_admin, teams(name)')
+        .select('is_system_admin, tier')
         .eq('id', userId)
         .single();
         

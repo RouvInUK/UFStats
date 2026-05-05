@@ -7,9 +7,7 @@ const STAT_TYPES = ['Point', 'Pass', 'Throwaway', 'Drop', 'Stall Out', 'Defence'
 
 const EventLog = ({ currentGame, onNavigate, currentTeam }) => {
   const { profile } = useAuth();
-  const targetTeamId = profile?.is_system_admin && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentTeam) 
-        ? currentTeam 
-        : profile?.team_id;
+  const targetTeamId = currentTeam;
 
   const [selectedGame, setSelectedGame] = useState(currentGame);
   const [allGames, setAllGames] = useState([]);
