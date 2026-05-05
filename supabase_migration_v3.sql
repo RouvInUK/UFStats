@@ -1,65 +1,72 @@
--- 1. Add Tier to Teams
-ALTER TABLE public.teams ADD COLUMN IF NOT EXISTS tier TEXT DEFAULT 'FREE';
+-- 1. Add Tier to Profiles and remove deprecated team_id
+ALTER TABLE public.profiles ADD COLUMN tier TEXT DEFAULT 'FREE';
+ALTER TABLE public.profiles DROP COLUMN IF EXISTS team_id;
 
--- 2. Create Beta Keys Table
-CREATE TABLE IF NOT EXISTS public.beta_keys (
+-- 2. Create Clubs Table
+CREATE TABLE public.clubs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    key TEXT UNIQUE NOT NULL,
-    is_used BOOLEAN DEFAULT FALSE,
-    used_by UUID REFERENCES auth.users(id),
+    name TEXT NOT NULL,
+    owner_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 3. RLS for Beta Keys
-ALTER TABLE public.beta_keys ENABLE ROW LEVEL SECURITY;
+-- 3. Modify Teams Table
+ALTER TABLE public.teams ADD COLUMN club_id UUID REFERENCES public.clubs(id) ON DELETE CASCADE;
+ALTER TABLE public.teams ADD COLUMN owner_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE;
+ALTER TABLE public.teams DROP COLUMN IF EXISTS tier;
 
-CREATE POLICY "Admins can manage beta keys" ON public.beta_keys FOR ALL USING (
-    (SELECT is_system_admin FROM public.profiles WHERE profiles.id = auth.uid()) = true
+-- Ensure Stats and Players cascade on Team delete (if not already)
+-- Since they currently reference teams(id), we can drop and re-add the constraint to be sure
+ALTER TABLE public.stats DROP CONSTRAINT IF EXISTS stats_team_id_fkey;
+ALTER TABLE public.stats ADD CONSTRAINT stats_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.teams(id) ON DELETE CASCADE;
+
+ALTER TABLE public.players DROP CONSTRAINT IF EXISTS players_team_id_fkey;
+ALTER TABLE public.players ADD CONSTRAINT players_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.teams(id) ON DELETE CASCADE;
+
+-- 4. Update Row Level Security (RLS) Policies
+
+-- Clubs
+ALTER TABLE public.clubs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can CRUD their own clubs" ON public.clubs FOR ALL USING (
+    owner_id = auth.uid() OR 
+    (SELECT is_system_admin FROM public.profiles WHERE id = auth.uid()) = true
 );
 
-CREATE POLICY "Anyone can read beta keys" ON public.beta_keys FOR SELECT USING (true);
-CREATE POLICY "Anyone can update beta keys during signup" ON public.beta_keys FOR UPDATE USING (is_used = false);
+-- Teams
+DROP POLICY IF EXISTS "Users can view their team" ON public.teams;
+CREATE POLICY "Users can CRUD their own teams" ON public.teams FOR ALL USING (
+    owner_id = auth.uid() OR 
+    (SELECT is_system_admin FROM public.profiles WHERE id = auth.uid()) = true
+);
 
--- 4. Create Global Health RPC
-CREATE OR REPLACE FUNCTION get_actions_per_day_30d()
-RETURNS TABLE(day DATE, action_count BIGINT) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT DATE(created_at) as day, COUNT(*) as action_count
-    FROM public.stats
-    WHERE created_at >= (NOW() - INTERVAL '30 days')
-    GROUP BY DATE(created_at)
-    ORDER BY day ASC;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- Stats & Players RLS (Cascade ownership access)
+DROP POLICY IF EXISTS "Users can view stats for their team" ON public.stats;
+DROP POLICY IF EXISTS "Users can insert stats for their team" ON public.stats;
+DROP POLICY IF EXISTS "Users can update stats for their team" ON public.stats;
+DROP POLICY IF EXISTS "Users can delete stats for their team" ON public.stats;
 
--- 5. Create Data Hygiene Pruning RPC
-CREATE OR REPLACE FUNCTION prune_incomplete_games()
-RETURNS INTEGER AS $$
-DECLARE
-    deleted_count INTEGER;
+CREATE POLICY "Users can CRUD stats for their owned teams" ON public.stats FOR ALL USING (
+    team_id IN (SELECT id FROM public.teams WHERE owner_id = auth.uid()) OR
+    (SELECT is_system_admin FROM public.profiles WHERE id = auth.uid()) = true
+);
+
+DROP POLICY IF EXISTS "Users can view players for their team" ON public.players;
+DROP POLICY IF EXISTS "Users can insert players for their team" ON public.players;
+DROP POLICY IF EXISTS "Users can update players for their team" ON public.players;
+DROP POLICY IF EXISTS "Users can delete players for their team" ON public.players;
+
+CREATE POLICY "Users can CRUD players for their owned teams" ON public.players FOR ALL USING (
+    team_id IN (SELECT id FROM public.teams WHERE owner_id = auth.uid()) OR
+    (SELECT is_system_admin FROM public.profiles WHERE id = auth.uid()) = true
+);
+
+-- 5. Update New User Trigger (Do NOT create default team anymore)
+CREATE OR REPLACE FUNCTION public.handle_new_user() 
+RETURNS TRIGGER AS $$
 BEGIN
-    WITH games_to_delete AS (
-        SELECT game_name, team_id
-        FROM public.stats
-        GROUP BY game_name, team_id
-        HAVING 
-            SUM(CASE WHEN stat_type NOT IN ('Lineup', 'Match Metadata', 'Start Offense', 'Start Defense', 'Half Time', 'Game Completed') THEN 1 ELSE 0 END) = 0
-            AND MAX(created_at) < (NOW() - INTERVAL '48 hours')
-    )
-    DELETE FROM public.stats
-    WHERE (game_name, team_id) IN (SELECT game_name, team_id FROM games_to_delete);
+    INSERT INTO public.profiles (id, email, is_system_admin, tier)
+    VALUES (NEW.id, NEW.email, FALSE, 'FREE');
     
-    GET DIAGNOSTICS deleted_count = ROW_COUNT;
-    RETURN deleted_count;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- 6. Unlink any auto-generated teams from existing System Admins
-UPDATE public.profiles
-SET team_id = NULL
-WHERE is_system_admin = true;
-
--- 7. Prune those abandoned admin teams from the database
-DELETE FROM public.teams
-WHERE id NOT IN (SELECT team_id FROM public.profiles WHERE team_id IS NOT NULL);

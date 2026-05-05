@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, updateTeamTier, fetchBetaKeys, generateBetaKey, pruneIncompleteGames, fetchActionsPerDay } from '../supabaseClient';
+import { supabase, fetchBetaKeys, generateBetaKey, pruneIncompleteGames, fetchActionsPerDay } from '../supabaseClient';
 import { Shield, ArrowLeft, Users, Activity, Key, Trash2, Crown, LayoutDashboard, Database, RefreshCw, BarChart2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [teams, setTeams] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [expandedUser, setExpandedUser] = useState(null);
   const [betaKeys, setBetaKeys] = useState([]);
   const [actionsData, setActionsData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,49 +15,48 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
   const fetchAdminData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch Teams
+      // 1. Fetch Users (Profiles)
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (profilesError) throw profilesError;
+
+      // 2. Fetch Clubs
+      const { data: clubsData, error: clubsError } = await supabase
+        .from('clubs')
+        .select('*');
+      if (clubsError) throw clubsError;
+
+      // 3. Fetch Teams
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
-        .select(`
-          *,
-          profiles (is_system_admin)
-        `)
-        .order('created_at', { ascending: false });
+        .select('*');
       if (teamsError) throw teamsError;
 
-      // 2. Fetch unique games per team
-      const { data: statsData, error: statsError } = await supabase
-        .from('stats')
-        .select('game_name, team_id');
-      if (statsError) throw statsError;
+      // Filter out system admins
+      const regularUsers = profilesData.filter(p => !p.is_system_admin);
 
-      const gamesPerTeam = {};
-      let totalGames = 0;
-      statsData.forEach(stat => {
-        if (stat.team_id && stat.game_name) {
-          if (!gamesPerTeam[stat.team_id]) {
-            gamesPerTeam[stat.team_id] = new Set();
+      const enrichedUsers = regularUsers.map(user => {
+        const userClubs = clubsData.filter(c => c.owner_id === user.id);
+        const userTeams = teamsData.filter(t => t.owner_id === user.id);
+        
+        let gamesTracked = 0;
+        userTeams.forEach(team => {
+          if (gamesPerTeam[team.id]) {
+            gamesTracked += gamesPerTeam[team.id].size;
           }
-          gamesPerTeam[stat.team_id].add(stat.game_name);
-        }
-      });
-      
-      Object.values(gamesPerTeam).forEach(s => totalGames += s.size);
+        });
 
-      // Filter out admin teams
-      const regularTeams = teamsData.filter(team => {
-        // If any profile in this team is a system admin, exclude the team
-        if (team.profiles && team.profiles.some(p => p.is_system_admin)) {
-          return false;
-        }
-        return true;
+        return {
+          ...user,
+          clubs: userClubs,
+          teams: userTeams,
+          gamesTracked
+        };
       });
 
-      const mergedTeams = regularTeams.map(team => ({
-        ...team,
-        gamesTracked: gamesPerTeam[team.id] ? gamesPerTeam[team.id].size : 0
-      }));
-      setTeams(mergedTeams);
+      setUsers(enrichedUsers);
 
       // 3. Fetch Beta Keys
       const keys = await fetchBetaKeys();
@@ -90,10 +90,11 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
     }
   };
 
-  const handleUpdateTier = async (teamId, tier) => {
+  const handleUpdateTier = async (userId, tier) => {
     try {
-      await updateTeamTier(teamId, tier);
-      setTeams(teams.map(t => t.id === teamId ? { ...t, tier } : t));
+      const { updateUserTier } = await import('../supabaseClient');
+      await updateUserTier(userId, tier);
+      setUsers(users.map(u => u.id === userId ? { ...u, tier } : u));
     } catch (err) {
       alert("Failed to update tier.");
     }
@@ -114,7 +115,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
     }
   };
 
-  const totalGamesTracked = teams.reduce((acc, t) => acc + t.gamesTracked, 0);
+  const totalGamesTracked = users.reduce((acc, u) => acc + u.gamesTracked, 0);
 
   return (
     <div className="min-h-screen bg-slate-950 p-4 sm:p-8 pb-32">
@@ -149,7 +150,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
         <div className="flex overflow-x-auto gap-2 p-2 bg-slate-900/50 border border-white/5 rounded-2xl">
           {[
             { id: 'overview', icon: LayoutDashboard, label: 'Global Health' },
-            { id: 'teams', icon: Users, label: 'Teams & Tiers' },
+            { id: 'users', icon: Users, label: 'Users & Tiers' },
             { id: 'beta', icon: Key, label: 'Beta Keys' },
             { id: 'data', icon: Database, label: 'Data Hygiene' }
           ].map(tab => (
@@ -176,8 +177,8 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl flex items-center justify-between">
                     <div>
-                      <p className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-1">Total Active Teams</p>
-                      <h2 className="text-4xl font-black text-white">{teams.length}</h2>
+                      <p className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-1">Total Active Users</p>
+                      <h2 className="text-4xl font-black text-white">{users.length}</h2>
                     </div>
                     <Users className="w-12 h-12 text-indigo-500/20" />
                   </div>
@@ -212,12 +213,12 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
               </div>
             )}
 
-            {/* TEAMS & TIERS TAB */}
-            {activeTab === 'teams' && (
+            {/* USERS & TIERS TAB */}
+            {activeTab === 'users' && (
               <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl overflow-hidden">
                 <div className="p-6 border-b border-white/10 flex items-center justify-between">
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Users className="w-5 h-5 text-indigo-400" /> Registered Teams
+                    <Users className="w-5 h-5 text-indigo-400" /> Registered Users
                   </h3>
                 </div>
                 
@@ -225,44 +226,78 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-950/80 text-slate-400 text-xs uppercase tracking-widest">
-                        <th className="p-4 font-bold">Team Name</th>
+                        <th className="p-4 font-bold">User Email</th>
+                        <th className="p-4 font-bold text-center">Clubs / Teams</th>
                         <th className="p-4 font-bold text-center">Games</th>
                         <th className="p-4 font-bold text-center">Tier</th>
-                        <th className="p-4 font-bold text-right">Impersonate</th>
+                        <th className="p-4 font-bold text-right">View Data</th>
                       </tr>
                     </thead>
                     <tbody className="text-sm">
-                      {teams.map((team, i) => (
-                        <tr key={team.id} className={`border-b border-white/5 ${i % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-950/30'} hover:bg-slate-800 transition-colors`}>
-                          <td className="p-4">
-                            <span className="font-bold text-white">{team.name}</span>
-                            <div className="text-[10px] text-slate-500 font-mono mt-1">{team.id}</div>
-                          </td>
-                          <td className="p-4 text-center text-slate-300 font-bold">
-                            {team.gamesTracked}
-                          </td>
-                          <td className="p-4 text-center">
-                            <select 
-                              value={team.tier || 'FREE'} 
-                              onChange={(e) => handleUpdateTier(team.id, e.target.value)}
-                              className="bg-slate-900 border border-slate-700 text-xs font-bold rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-indigo-500"
-                            >
-                              <option value="FREE">FREE</option>
-                              <option value="PRO">PRO</option>
-                            </select>
-                          </td>
-                          <td className="p-4 text-right">
-                            <button 
-                              onClick={() => {
-                                onShadowTeam({ id: team.id, name: team.name });
-                                onNavigate('dashboard');
-                              }}
-                              className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 font-bold rounded-lg border border-indigo-500/20 transition-all text-xs flex items-center justify-center gap-1 ml-auto"
-                            >
-                              <Shield className="w-3 h-3" /> Shadow
-                            </button>
-                          </td>
-                        </tr>
+                      {users.map((user, i) => (
+                        <React.Fragment key={user.id}>
+                          <tr className={`border-b border-white/5 ${i % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-950/30'} hover:bg-slate-800 transition-colors cursor-pointer`} onClick={() => setExpandedUser(expandedUser === user.id ? null : user.id)}>
+                            <td className="p-4">
+                              <span className="font-bold text-white">{user.email}</span>
+                              <div className="text-[10px] text-slate-500 font-mono mt-1">{user.id}</div>
+                            </td>
+                            <td className="p-4 text-center text-slate-300 font-bold">
+                              {user.clubs.length} / {user.teams.length}
+                            </td>
+                            <td className="p-4 text-center text-slate-300 font-bold">
+                              {user.gamesTracked}
+                            </td>
+                            <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+                              <select 
+                                value={user.tier || 'FREE'} 
+                                onChange={(e) => handleUpdateTier(user.id, e.target.value)}
+                                className="bg-slate-900 border border-slate-700 text-xs font-bold rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-indigo-500"
+                              >
+                                <option value="FREE">FREE</option>
+                                <option value="PRO">PRO</option>
+                              </select>
+                            </td>
+                            <td className="p-4 text-right">
+                              <span className="text-xs text-indigo-400 font-bold">
+                                {expandedUser === user.id ? 'Hide Details' : 'Show Details'}
+                              </span>
+                            </td>
+                          </tr>
+                          {expandedUser === user.id && (
+                            <tr className="bg-slate-950/50">
+                              <td colSpan={5} className="p-6 border-b border-white/5">
+                                <h4 className="text-slate-300 font-bold mb-4 uppercase tracking-widest text-xs">Clubs & Teams Hierarchy</h4>
+                                {user.clubs.length === 0 && <p className="text-slate-500 text-sm">No clubs created.</p>}
+                                <div className="space-y-4">
+                                  {user.clubs.map(club => (
+                                    <div key={club.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                                      <h5 className="font-black text-white text-lg mb-3">{club.name}</h5>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {user.teams.filter(t => t.club_id === club.id).map(team => (
+                                          <div key={team.id} className="flex items-center justify-between bg-slate-950 p-3 rounded-lg border border-slate-800">
+                                            <span className="font-bold text-slate-300">{team.name}</span>
+                                            <button 
+                                              onClick={() => {
+                                                onShadowTeam({ id: team.id, name: team.name });
+                                                onNavigate('dashboard');
+                                              }}
+                                              className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 font-bold rounded-lg border border-indigo-500/20 transition-all text-[10px] flex items-center justify-center gap-1 uppercase tracking-widest"
+                                            >
+                                              <Shield className="w-3 h-3" /> Shadow Team
+                                            </button>
+                                          </div>
+                                        ))}
+                                        {user.teams.filter(t => t.club_id === club.id).length === 0 && (
+                                          <div className="text-slate-500 text-sm font-medium">No teams in this club.</div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>

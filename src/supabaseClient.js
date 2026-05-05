@@ -320,15 +320,105 @@ export const deleteGame = async (gameName, teamId) => {
   }
 };
 
-export const updateTeamTier = async (teamId, tier) => {
+export const updateUserTier = async (userId, tier) => {
   const { data, error } = await supabase
-    .from('teams')
+    .from('profiles')
     .update({ tier })
-    .eq('id', teamId)
+    .eq('id', userId)
     .select();
 
   if (error) throw error;
   return data[0];
+};
+
+export const fetchUserHierarchy = async (userId) => {
+  if (!userId) return { clubs: [], teams: [] };
+  
+  const { data: clubs, error: clubError } = await supabase
+    .from('clubs')
+    .select('*')
+    .eq('owner_id', userId)
+    .order('created_at', { ascending: true });
+    
+  if (clubError) throw clubError;
+  
+  const { data: teams, error: teamError } = await supabase
+    .from('teams')
+    .select('*')
+    .eq('owner_id', userId)
+    .order('created_at', { ascending: true });
+    
+  if (teamError) throw teamError;
+  
+  return { clubs: clubs || [], teams: teams || [] };
+};
+
+export const checkTierLimits = async (userId) => {
+  const { data: profile, error: pError } = await supabase
+    .from('profiles')
+    .select('tier')
+    .eq('id', userId)
+    .single();
+    
+  if (pError) throw pError;
+  const isPro = profile.tier === 'PRO';
+  
+  if (isPro) {
+    return { canAddClub: true, canAddTeam: true, isPro: true };
+  }
+  
+  const { count: clubCount, error: cError } = await supabase
+    .from('clubs')
+    .select('*', { count: 'exact', head: true })
+    .eq('owner_id', userId);
+    
+  const { count: teamCount, error: tError } = await supabase
+    .from('teams')
+    .select('*', { count: 'exact', head: true })
+    .eq('owner_id', userId);
+    
+  if (cError || tError) throw new Error("Failed to check tier limits");
+  
+  return {
+    canAddClub: clubCount < 1,
+    canAddTeam: teamCount < 3,
+    isPro: false
+  };
+};
+
+export const createClub = async (name, ownerId) => {
+  const limits = await checkTierLimits(ownerId);
+  if (!limits.canAddClub) throw new Error("Free Tier Limit Reached: Maximum 1 Club allowed.");
+  
+  const { data, error } = await supabase
+    .from('clubs')
+    .insert([{ name, owner_id: ownerId }])
+    .select();
+    
+  if (error) throw error;
+  return data[0];
+};
+
+export const createTeam = async (name, clubId, ownerId) => {
+  const limits = await checkTierLimits(ownerId);
+  if (!limits.canAddTeam) throw new Error("Free Tier Limit Reached: Maximum 3 Teams allowed.");
+  
+  const { data, error } = await supabase
+    .from('teams')
+    .insert([{ name, club_id: clubId, owner_id: ownerId }])
+    .select();
+    
+  if (error) throw error;
+  return data[0];
+};
+
+export const deleteClub = async (clubId) => {
+  const { error } = await supabase
+    .from('clubs')
+    .delete()
+    .eq('id', clubId);
+    
+  if (error) throw error;
 };
 
 export const fetchBetaKeys = async () => {

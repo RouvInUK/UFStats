@@ -8,6 +8,7 @@ import CoachDashboard from './components/CoachDashboard';
 import BetaBadge from './components/BetaBadge';
 import AuthScreen from './components/AuthScreen';
 import AdminDashboard from './components/AdminDashboard';
+import TeamSelectionScreen from './components/TeamSelectionScreen';
 import { fetchPlayers } from './supabaseClient';
 import { useAuth } from './contexts/AuthContext';
 import { ShieldCheck, Star, LogOut } from 'lucide-react';
@@ -43,7 +44,15 @@ function App() {
   }, [gameType]);
 
   const [currentTeam, setCurrentTeam] = useState(() => {
-    return localStorage.getItem('ufstats_team') || '';
+    try {
+      const saved = localStorage.getItem('ufstats_team');
+      if (saved && saved.startsWith('{')) {
+        return JSON.parse(saved);
+      }
+      return null;
+    } catch {
+      return null;
+    }
   });
 
   const [shadowTeam, setShadowTeam] = useState(null);
@@ -54,13 +63,14 @@ function App() {
       // Don't auto-sync if we are actively shadowing
       return;
     }
-    if (profile?.teams?.name && (!currentTeam || currentTeam === 'Default Team (Migrated)')) {
-      setCurrentTeam(profile.teams.name);
-    }
   }, [profile, currentTeam, shadowTeam]);
 
   useEffect(() => {
-    localStorage.setItem('ufstats_team', currentTeam);
+    if (currentTeam) {
+      localStorage.setItem('ufstats_team', JSON.stringify(currentTeam));
+    } else {
+      localStorage.removeItem('ufstats_team');
+    }
   }, [currentTeam]);
 
   const [opponentName, setOpponentName] = useState(() => {
@@ -89,11 +99,11 @@ function App() {
 
   const targetTeamId = shadowTeam?.id
     ? shadowTeam.id
-    : profile?.is_system_admin && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentTeam)
-      ? currentTeam
-      : profile?.team_id;
+    : typeof currentTeam === 'object' && currentTeam?.id
+      ? currentTeam.id
+      : null;
 
-  const effectiveTeamName = shadowTeam?.name || currentTeam;
+  const effectiveTeamName = shadowTeam?.name || (typeof currentTeam === 'object' ? currentTeam.name : currentTeam);
 
   useEffect(() => {
     if (!user) return;
@@ -217,6 +227,18 @@ function App() {
   // Derive active lineup (array of strings) for Dashboard compatibility
   const activeLineup = players.filter(p => p.is_active).map(p => p.name);
 
+  if (!effectiveTeamName && !shadowTeam && currentView !== 'admin') {
+    return (
+      <TeamSelectionScreen 
+        onSelectTeam={(team) => {
+          setCurrentTeam(team);
+          setCurrentView('dashboard');
+        }}
+        onNavigateToAdmin={() => setCurrentView('admin')}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-900 selection:bg-indigo-500 selection:text-white pb-24">
       {shadowTeam && (
@@ -230,9 +252,16 @@ function App() {
       
       {/* Premium Desktop Header */}
       <div className="hidden sm:flex justify-between items-center px-8 py-4 bg-slate-950/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 shadow-xl">
-        <div className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-2">
-          UF<span className="text-indigo-500 font-light">STATS</span>
-          <BetaBadge />
+        <div className="flex items-center gap-6">
+          <div className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-2 cursor-pointer" onClick={() => setCurrentTeam(null)}>
+            UF<span className="text-indigo-500 font-light">STATS</span>
+            <BetaBadge />
+          </div>
+          {effectiveTeamName && (
+             <div className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-widest flex items-center gap-2 cursor-pointer hover:bg-indigo-500/20 transition-all" onClick={() => setCurrentTeam(null)}>
+               {effectiveTeamName} <span className="opacity-50 hover:opacity-100">Switch</span>
+             </div>
+          )}
         </div>
         <div className="flex items-center gap-4">
           {profile?.is_system_admin && (
@@ -263,11 +292,12 @@ function App() {
       </div>
 
       {/* Mobile Header */}
-      <div className="sm:hidden flex justify-between items-center px-4 py-3 bg-slate-950/90 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 shadow-md">
-        <div className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-1.5">
-          UF<span className="text-indigo-500 font-light">STATS</span>
-        </div>
-        <div className="flex items-center gap-1">
+      <div className="sm:hidden flex flex-col px-4 py-3 bg-slate-950/90 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 shadow-md gap-2">
+        <div className="flex justify-between items-center w-full">
+          <div className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-1.5 cursor-pointer" onClick={() => setCurrentTeam(null)}>
+            UF<span className="text-indigo-500 font-light">STATS</span>
+          </div>
+          <div className="flex items-center gap-1">
           {profile?.is_system_admin && (
              <button 
                 onClick={() => setCurrentView('admin')}
@@ -296,6 +326,13 @@ function App() {
             <LogOut className="w-5 h-5" />
           </button>
         </div>
+        </div>
+        {effectiveTeamName && (
+           <div className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest flex items-center justify-between w-full cursor-pointer active:bg-indigo-500/20 transition-all" onClick={() => setCurrentTeam(null)}>
+             <span>{effectiveTeamName}</span>
+             <span className="opacity-50">Switch</span>
+           </div>
+        )}
       </div>
 
       {currentView === 'dashboard' && (
