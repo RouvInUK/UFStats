@@ -155,8 +155,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     }
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = false; 
-    recognition.interimResults = false;
+    recognition.continuous = true; 
+    recognition.interimResults = true;
     recognition.lang = 'en-US';
 
     // 1. Generate Dictionary of expected exact commands
@@ -283,18 +283,20 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     };
 
     recognition.onerror = (event) => {
-      if (event.error !== 'no-speech') {
+      if (event.error !== 'no-speech' && event.error !== 'no-match' && event.error !== 'aborted') {
          setVoiceFeedback(`Mic error: ${event.error}`);
       }
     };
 
     recognition.onend = () => {
       if (isVoiceEnabled && isTrackingActive && recognitionRef.current) {
-        try {
-          recognitionRef.current.start();
-        } catch(e) {
-          // Ignore
-        }
+        setTimeout(() => {
+           try {
+             if (recognitionRef.current) recognitionRef.current.start();
+           } catch(e) {
+             // Ignore already started errors
+           }
+        }, 250);
       }
     };
 
