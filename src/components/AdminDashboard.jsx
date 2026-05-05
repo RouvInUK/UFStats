@@ -34,6 +34,22 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
         .select('*');
       if (teamsError) throw teamsError;
 
+      // 4. Fetch unique games per team
+      const { data: statsData, error: statsError } = await supabase
+        .from('stats')
+        .select('game_name, team_id');
+      if (statsError) throw statsError;
+
+      const gamesPerTeam = {};
+      statsData.forEach(stat => {
+        if (stat.team_id && stat.game_name) {
+          if (!gamesPerTeam[stat.team_id]) {
+            gamesPerTeam[stat.team_id] = new Set();
+          }
+          gamesPerTeam[stat.team_id].add(stat.game_name);
+        }
+      });
+
       // Filter out system admins
       const regularUsers = profilesData.filter(p => !p.is_system_admin);
 
