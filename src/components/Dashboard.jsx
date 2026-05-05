@@ -254,6 +254,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
              playBuzz();
              handleStatRecord('Opponent Point');
              setTimeout(() => setVoiceRecognizedAction(null), 500);
+             try { recognition.stop(); } catch(e) {} // Flush the buffer
              return;
          }
 
@@ -276,6 +277,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
            setVoiceRecognizedAction(null);
            setVoiceRecognizedPlayer(null);
          }, 500);
+         
+         try { recognition.stop(); } catch(e) {} // Flush the buffer
 
       } else {
          setVoiceFeedback(`Heard: "${transcript}" (No match)`);
