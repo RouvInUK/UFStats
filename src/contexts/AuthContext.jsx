@@ -183,6 +183,7 @@ export const AuthProvider = ({ children }) => {
     });
     localStorage.removeItem('ufstats_last_activity');
     localStorage.removeItem('ufstats_cached_profile');
+    localStorage.removeItem('ufstats_team');
     
     // Hard reload the browser to purge all React state and reset immediately
     window.location.reload();
