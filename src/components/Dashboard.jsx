@@ -135,6 +135,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   // Voice Tracking Engine
   // Add a ref to lock out duplicates
   const lastActionTimeRef = useRef(0);
+  const processedTranscriptLengthRef = useRef(0);
 
   useEffect(() => {
     if (!isVoiceEnabled || !isTrackingActive) {
@@ -235,15 +236,17 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
 
     recognition.onresult = (event) => {
       // With continuous=true, we must look at the entire transcript since the last start
-      let transcript = Array.from(event.results)
+      let fullTranscript = Array.from(event.results)
         .map(result => result[0].transcript)
         .join(' ')
         .toLowerCase()
         .trim();
+        
+      // Extract the unprocessed part of the transcript
+      let transcript = fullTranscript.substring(processedTranscriptLengthRef.current);
       
       // Debounce lock (ignore if recognized something in the last 1500ms)
       if (Date.now() - lastActionTimeRef.current < 1500) {
-          console.log("Ignored duplicate recognition:", transcript);
           return;
       }
 
@@ -268,16 +271,26 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       const sortedCommands = [...expectedCommands].sort((a, b) => b.text.length - a.text.length);
       
       let matchedCmd = null;
+      let matchedCmdLength = 0;
+      
       for (const cmd of sortedCommands) {
           const regex = new RegExp(`\\b${cmd.text}\\b`, 'i');
-          if (regex.test(normalizedTranscript)) {
+          const match = normalizedTranscript.match(regex);
+          if (match) {
               matchedCmd = cmd;
+              // To advance the cursor, we want to know how many characters in the *raw* transcript we consumed.
+              // Since normalizedTranscript might have a different length, we just approximate it by clearing everything up to the match.
+              // Actually, since we only need to not process it again, we can just consume the whole transcript we've seen so far!
+              // Because if we successfully match something, anything before it is likely junk background noise anyway.
+              matchedCmdLength = transcript.length; 
               break;
           }
       }
       
       if (matchedCmd) {
          const cmd = matchedCmd;
+         // Advance the cursor so we don't process this junk again
+         processedTranscriptLengthRef.current += matchedCmdLength;
          lastActionTimeRef.current = Date.now(); // Lock
          
          if (cmd.action === 'Opponent Point') {
@@ -286,7 +299,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
              playBuzz();
              handleStatRecord('Opponent Point');
              setTimeout(() => setVoiceRecognizedAction(null), 500);
-             try { recognition.stop(); } catch(e) {} // Flush the buffer
              return;
          }
 
@@ -309,8 +321,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
            setVoiceRecognizedAction(null);
            setVoiceRecognizedPlayer(null);
          }, 500);
-         
-         try { recognition.stop(); } catch(e) {} // Flush the buffer
 
       } else {
          setVoiceFeedback(`Heard: "${transcript}" (No match)`);
@@ -327,6 +337,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       if (isVoiceEnabled && isTrackingActive && recognitionRef.current) {
         setTimeout(() => {
            try {
+             processedTranscriptLengthRef.current = 0; // Reset buffer tracker on hard restart
              if (recognitionRef.current) recognitionRef.current.start();
            } catch(e) {
              // Ignore already started errors
