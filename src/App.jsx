@@ -227,17 +227,12 @@ function App() {
   // Derive active lineup (array of strings) for Dashboard compatibility
   const activeLineup = players.filter(p => p.is_active).map(p => p.name);
 
-  if (!effectiveTeamName && !shadowTeam && currentView !== 'admin') {
-    return (
-      <TeamSelectionScreen 
-        onSelectTeam={(team) => {
-          setCurrentTeam(team);
-          setCurrentView('dashboard');
-        }}
-        onNavigateToAdmin={() => setCurrentView('admin')}
-      />
-    );
-  }
+  // If there's no team selected and we're not in the admin view, force team_selection view
+  useEffect(() => {
+    if (!effectiveTeamName && !shadowTeam && currentView !== 'admin' && currentView !== 'team_selection') {
+      setCurrentView('team_selection');
+    }
+  }, [effectiveTeamName, shadowTeam, currentView]);
 
   return (
     <div className="min-h-screen bg-slate-900 selection:bg-indigo-500 selection:text-white pb-24">
@@ -418,6 +413,16 @@ function App() {
         <AdminDashboard 
           onNavigate={setCurrentView}
           onShadowTeam={setShadowTeam}
+        />
+      )}
+
+      {currentView === 'team_selection' && (
+        <TeamSelectionScreen 
+          onSelectTeam={(team) => {
+            setCurrentTeam(team);
+            setCurrentView('dashboard');
+          }}
+          onNavigateToAdmin={() => setCurrentView('admin')}
         />
       )}
 
