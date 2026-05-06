@@ -107,14 +107,20 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       setLastSaved(statType === 'Opponent Point' ? `Saved Opponent Point` : `Saved ${statType} for ${activePlayer}`);
       
       if (statType === 'Point' || statType === 'Opponent Point') {
-        setIsTrackingActive(false);
-        clearActiveLineup(targetTeamId).catch(console.error);
-        if (players && setPlayers) {
-            setPlayers(players.map(p => ({ ...p, is_active: false })));
-        }
+        // Show success state on the tracking UI for 1.5 seconds before kicking out
+        setIsSaving(true); // Locks all buttons
+        triggerFeedback(statType === 'Point' ? 'success' : 'error');
+        setVoiceFeedback(statType === 'Opponent Point' ? 'Opponent Scored!' : `Point Scored by ${activePlayer}!`);
+        
         setTimeout(() => {
-          onNavigate('lineup');
-        }, 1000);
+           setIsTrackingActive(false);
+           clearActiveLineup(targetTeamId).catch(console.error);
+           if (players && setPlayers) {
+               setPlayers(players.map(p => ({ ...p, is_active: false })));
+           }
+           onNavigate('lineup');
+        }, 1500);
+        return; // Skip the standard feedback and finally block
       }
 
       if (statType === 'Point') {
@@ -124,10 +130,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       } else {
         triggerFeedback('neutral');
       }
+      if (statType !== 'Point' && statType !== 'Opponent Point') {
+        setIsSaving(false);
+      }
     } catch (error) {
       console.error('Save failed:', error);
       alert('Failed to save. Check server logs.');
-    } finally {
       setIsSaving(false);
     }
   };
@@ -205,7 +213,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       'five': '5', 'hive': '5', 'pipe': '5', 'dive': '5', 'live': '5', 'drive': '5', 'alive': '5', 'arrive': '5', 'wife': '5', 'knife': '5', 'life': '5',
       'six': '6', 'sex': '6', 'sick': '6', 'ticks': '6', 'mix': '6', 'fix': '6', 'kicks': '6', 'picks': '6', 'bricks': '6', 'tricks': '6', 'sticks': '6', 'clicks': '6', 'chicks': '6',
       'seven': '7', 'steven': '7', 'kevin': '7', 'heaven': '7', 'eleven': '7', 'leaven': '7', 'evan': '7', 'devon': '7', 'lemon': '7', 'melon': '7', 'felon': '7',
-      'eight': '8', 'ate': '8', 'hate': '8', 'hey': '8', 'late': '8', 'great': '8', 'weight': '8', 'wait': '8', 'straight': '8', 'state': '8', 'rate': '8', 'mate': '8', 'gate': '8', 'date': '8', 'fate': '8',
+      'eight': '8', 'ate': '8', 'hate': '8', 'hey': '8', 'late': '8', 'great': '8', 'weight': '8', 'wait': '8', 'straight': '8', 'state': '8', 'rate': '8', 'mate': '8', 'gate': '8', 'date': '8', 'fate': '8', 'eat': '8', 'aid': '8', 'age': '8', 'ache': '8', 'eggs': '8',
       'nine': '9', 'nein': '9', 'line': '9', 'mine': '9', 'fine': '9', 'dine': '9', 'wine': '9', 'sign': '9', 'shine': '9', 'spine': '9', 'pine': '9', 'vine': '9', 'rhyme': '9', 'time': '9', 'dime': '9', 'chime': '9', 'climb': '9', 'crime': '9', 'prime': '9', 'slime': '9',
       'ten': '10', 'tin': '10', 'pen': '10', 'then': '10', 'tan': '10', 'den': '10', 'ken': '10', 'men': '10', 'ben': '10', 'zen': '10', 'hen': '10', 'tent': '10', 'tenth': '10', 'can': '10', 'pan': '10', 'ran': '10', 'man': '10', 'fan': '10', 'van': '10',
       'eleven': '11', 'leaven': '11', 'evan': '11', 'kevin': '11', 'heaven': '11', 'seven': '11', 'steven': '11', 'lemon': '11', 'melon': '11',
