@@ -338,6 +338,20 @@ export const deleteGame = async (gameName, teamId) => {
   }
 };
 
+export const deletePoint = async (gameName, teamId, pointNumber) => {
+  const { error } = await supabase
+    .from('stats')
+    .delete()
+    .eq('game_name', gameName)
+    .eq('team_id', teamId)
+    .eq('point_number', pointNumber);
+
+  if (error) {
+    console.error("Supabase Delete Point Error:", error);
+    throw error;
+  }
+};
+
 export const updateUserTier = async (userId, tier) => {
   const { data, error } = await supabase
     .from('profiles')

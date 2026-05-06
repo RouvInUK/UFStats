@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchGameStats, updateStat, deleteStat, deleteGame, fetchAllGameNames } from '../supabaseClient';
+import { fetchGameStats, updateStat, deleteStat, deleteGame, deletePoint, fetchAllGameNames } from '../supabaseClient';
 import { Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -76,6 +76,32 @@ const EventLog = ({ currentGame, onNavigate, targetTeamId }) => {
       alert('Failed to delete event');
     } finally {
       setSavingId(null);
+    }
+  };
+
+  const handleDeletePoint = async (pointNumber) => {
+    if (!window.confirm(`Are you sure you want to delete ALL events for Point ${pointNumber}? This cannot be undone.`)) return;
+    setLoading(true);
+    try {
+      await deletePoint(selectedGame, targetTeamId, pointNumber);
+      
+      // If deleting the currently active point, we should decrement the point counter
+      const activeGame = localStorage.getItem('ufstats_game');
+      const activePoint = parseInt(localStorage.getItem('ufstats_point'), 10);
+      
+      if (activeGame === selectedGame && activePoint === pointNumber) {
+         const newPoint = Math.max(0, pointNumber - 1);
+         localStorage.setItem('ufstats_point', newPoint.toString());
+         window.location.reload(); // Hard reset to sync App.jsx state
+         return;
+      }
+      
+      await loadLogs();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete point data');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -184,9 +210,19 @@ const EventLog = ({ currentGame, onNavigate, targetTeamId }) => {
 
                    return (
                      <div key={pointNum} className={`p-5 rounded-xl border bg-white/5 backdrop-blur-sm ${endedInGoal ? 'border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'border-white/10'}`}>
-                       <h3 className="text-slate-400 font-semibold uppercase tracking-wider mb-4 border-b border-slate-700/50 pb-2">
-                         Point {pointNum}
-                       </h3>
+                       <div className="flex justify-between items-center mb-4 border-b border-slate-700/50 pb-2">
+                         <h3 className="text-slate-400 font-semibold uppercase tracking-wider">
+                           Point {pointNum}
+                         </h3>
+                         <button 
+                           onClick={() => handleDeletePoint(pointNum)}
+                           className="text-rose-400 hover:text-rose-300 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider bg-rose-500/10 px-2 py-1 rounded-md hover:bg-rose-500/20 transition-all"
+                           title="Delete Entire Point"
+                         >
+                           <Trash2 className="w-3.5 h-3.5" />
+                           Delete Point
+                         </button>
+                       </div>
                        {pointLogs.length === 0 ? (
                          <p className="text-slate-500 italic text-sm">No actions logged for this point</p>
                        ) : (
