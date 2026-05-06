@@ -89,6 +89,11 @@ const EventLog = ({ currentGame, onNavigate, targetTeamId }) => {
       
       // If we deleted the current active game, reset the app state
       if (selectedGame === currentGame) {
+        localStorage.removeItem('ufstats_game');
+        localStorage.removeItem('ufstats_point');
+        localStorage.removeItem('ufstats_tracking');
+        localStorage.removeItem('ufstats_opponent');
+        localStorage.removeItem('ufstats_possession');
         onNavigate('dashboard');
         window.location.reload(); // Hard reset to clear out Dashboard local state hooks easily
         return;
