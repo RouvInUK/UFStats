@@ -31,6 +31,18 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     if (currentGame) {
       fetchLastStatForGame(currentGame, targetTeamId)
         .then(lastStat => {
+          if (!lastStat && currentPoint > 0) {
+            // If we are ostensibly in the middle of a point, but NO stats exist in the DB, 
+            // it means the game was deleted from another device. Auto-heal the local state.
+            console.log("Game deleted remotely, clearing local state.");
+            setCurrentGame('');
+            setCurrentPoint(0);
+            setOpponentName('');
+            setInitialPossession('');
+            setIsTrackingActive(false);
+            return;
+          }
+
           if (lastStat && lastStat.game_type) {
             setGameType(lastStat.game_type);
           }
@@ -42,7 +54,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
         .then(setHasHalfTime)
         .catch(console.error);
     }
-  }, [currentGame, targetTeamId, setGameType, currentPoint]);
+  }, [currentGame, targetTeamId, setGameType, currentPoint, setCurrentGame, setCurrentPoint, setOpponentName, setInitialPossession, setIsTrackingActive]);
 
   const handleUndoLastPoint = async () => {
     if (!lastAction || !lastAction.id) return;
