@@ -44,20 +44,38 @@ DROP POLICY IF EXISTS "Users can view stats for their team" ON public.stats;
 DROP POLICY IF EXISTS "Users can insert stats for their team" ON public.stats;
 DROP POLICY IF EXISTS "Users can update stats for their team" ON public.stats;
 DROP POLICY IF EXISTS "Users can delete stats for their team" ON public.stats;
+DROP POLICY IF EXISTS "Users can CRUD stats for their owned teams" ON public.stats;
+
+-- Create a robust security definer function to avoid nested RLS bugs during INSERT
+CREATE OR REPLACE FUNCTION public.user_owns_team(target_team_id UUID)
+RETURNS boolean AS $$
+BEGIN
+  IF public.is_admin() THEN
+    RETURN true;
+  END IF;
+  RETURN EXISTS (
+    SELECT 1 FROM public.teams 
+    WHERE id = target_team_id AND owner_id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE POLICY "Users can CRUD stats for their owned teams" ON public.stats FOR ALL USING (
-    team_id IN (SELECT id FROM public.teams WHERE owner_id = auth.uid()) OR
-    (SELECT is_system_admin FROM public.profiles WHERE id = auth.uid()) = true
+    public.user_owns_team(team_id)
+) WITH CHECK (
+    public.user_owns_team(team_id)
 );
 
 DROP POLICY IF EXISTS "Users can view players for their team" ON public.players;
 DROP POLICY IF EXISTS "Users can insert players for their team" ON public.players;
 DROP POLICY IF EXISTS "Users can update players for their team" ON public.players;
 DROP POLICY IF EXISTS "Users can delete players for their team" ON public.players;
+DROP POLICY IF EXISTS "Users can CRUD players for their owned teams" ON public.players;
 
 CREATE POLICY "Users can CRUD players for their owned teams" ON public.players FOR ALL USING (
-    team_id IN (SELECT id FROM public.teams WHERE owner_id = auth.uid()) OR
-    (SELECT is_system_admin FROM public.profiles WHERE id = auth.uid()) = true
+    public.user_owns_team(team_id)
+) WITH CHECK (
+    public.user_owns_team(team_id)
 );
 
 -- 5. Update New User Trigger (Do NOT create default team anymore)
@@ -70,3 +88,17 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 6. Update Profiles RLS so admins can view all users
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can view profiles" ON public.profiles;
+
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean AS $$
+  SELECT COALESCE(is_system_admin, false) FROM public.profiles WHERE id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER;
+
+CREATE POLICY "Users can view profiles" ON public.profiles FOR SELECT USING (
+    auth.uid() = id OR 
+    public.is_admin()
+);

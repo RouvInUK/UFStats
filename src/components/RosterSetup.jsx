@@ -78,37 +78,17 @@ const RosterSetup = ({ players, setPlayers, currentTeam, setCurrentTeam, targetT
     }
   };
 
-  const handleCreateNewTeam = () => {
-    const newTeam = prompt("Enter new team name:");
-    if (newTeam && newTeam.trim()) {
-      setCurrentTeam(newTeam.trim());
-    }
-  };
+
 
   return (
     <div className="flex flex-col items-center p-4 py-8 sm:py-12 min-h-screen">
       <div className="w-full max-w-xl bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-slate-700 pb-6">
         
         <div className="p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-800 border-b border-slate-700/50">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
-            <div className="flex items-center gap-2">
-              <select
-                value={currentTeam}
-                onChange={(e) => setCurrentTeam(e.target.value)}
-                className="bg-slate-900 border border-slate-600 text-white rounded-lg px-3 py-2 font-bold outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner max-w-[200px]"
-              >
-                {[...new Set([...allTeams, currentTeam])].map(team => (
-                  <option key={team} value={team}>{team}</option>
-                ))}
-              </select>
-              <button 
-                onClick={handleCreateNewTeam}
-                className="p-2 px-3 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 rounded-lg transition-all font-bold"
-                title="Create New Team"
-              >
-                +
-              </button>
-            </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full">
+            <h2 className="text-xl font-bold text-white mb-2 sm:mb-0">
+              Roster: <span className="text-indigo-400">{typeof currentTeam === 'object' ? currentTeam.name : currentTeam}</span>
+            </h2>
             <p className="text-slate-400 text-sm font-medium">{filteredPlayers.length} / 21 Players Configured</p>
           </div>
         </div>

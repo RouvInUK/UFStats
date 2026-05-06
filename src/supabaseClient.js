@@ -88,6 +88,7 @@ export const fetchPlayers = async (teamIdentifier) => {
 };
 
 export const addPlayer = async (name, teamName, currentTeamId, shirtNumber) => {
+  console.log("addPlayer called with currentTeamId:", currentTeamId, "teamName:", teamName, "name:", name);
   const { data, error } = await supabase
     .from('players')
     .insert([{ 
