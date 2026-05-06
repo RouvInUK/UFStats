@@ -178,6 +178,14 @@ function App() {
     localStorage.setItem('ufstats_tracking', isTrackingActive.toString());
   }, [isTrackingActive]);
 
+  // If there's no team selected and we're not in the admin view, force team_selection view
+  useEffect(() => {
+    // Only run this logic if auth has finished loading and we have a profile to avoid premature redirects
+    if (!authLoading && profile && !effectiveTeamName && !shadowTeam && currentView !== 'admin' && currentView !== 'team_selection') {
+      setCurrentView('team_selection');
+    }
+  }, [effectiveTeamName, shadowTeam, currentView, authLoading, profile]);
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center text-indigo-400 font-bold tracking-widest text-lg">
@@ -227,12 +235,6 @@ function App() {
   // Derive active lineup (array of strings) for Dashboard compatibility
   const activeLineup = players.filter(p => p.is_active).map(p => p.name);
 
-  // If there's no team selected and we're not in the admin view, force team_selection view
-  useEffect(() => {
-    if (!effectiveTeamName && !shadowTeam && currentView !== 'admin' && currentView !== 'team_selection') {
-      setCurrentView('team_selection');
-    }
-  }, [effectiveTeamName, shadowTeam, currentView]);
 
   return (
     <div className="min-h-screen bg-slate-900 selection:bg-indigo-500 selection:text-white pb-24">
