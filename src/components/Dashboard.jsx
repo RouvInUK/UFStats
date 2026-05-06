@@ -234,7 +234,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     };
 
     recognition.onresult = (event) => {
-      let transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
+      // With continuous=true, we must look at the entire transcript since the last start
+      let transcript = Array.from(event.results)
+        .map(result => result[0].transcript)
+        .join(' ')
+        .toLowerCase()
+        .trim();
       
       // Debounce lock (ignore if recognized something in the last 1500ms)
       if (Date.now() - lastActionTimeRef.current < 1500) {
@@ -258,18 +263,21 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
           return; // Wait for the rest of the sentence
       }
 
-      // 4. Execute Fuzzy Search
-      const results = fuse.search(normalizedTranscript);
+      // 4. Find the best match inside the run-on transcript
+      // Sort commands by length descending so "34 pass" is checked before "4 pass"
+      const sortedCommands = [...expectedCommands].sort((a, b) => b.text.length - a.text.length);
       
-      if (results.length > 0) {
-         // Check if the match is good enough
-         const bestMatch = results[0];
-         if (bestMatch.score > 0.2) { // Extremely tight cutoff so mismatched numbers aren't logged to the wrong player
-            setVoiceFeedback(`Heard: "${transcript}" (Poor match)`);
-            return;
-         }
-
-         const cmd = bestMatch.item;
+      let matchedCmd = null;
+      for (const cmd of sortedCommands) {
+          const regex = new RegExp(`\\b${cmd.text}\\b`, 'i');
+          if (regex.test(normalizedTranscript)) {
+              matchedCmd = cmd;
+              break;
+          }
+      }
+      
+      if (matchedCmd) {
+         const cmd = matchedCmd;
          lastActionTimeRef.current = Date.now(); // Lock
          
          if (cmd.action === 'Opponent Point') {
