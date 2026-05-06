@@ -103,7 +103,11 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         gameType: gameType,
         teamName: currentTeam,
       };
-      await recordStatToDB(statData, targetTeamId);
+      
+      console.log(`[Dashboard] Attempting to save stat:`, statData);
+      const dbResponse = await recordStatToDB(statData, targetTeamId);
+      console.log(`[Dashboard] Save successful. DB Response:`, dbResponse);
+      
       setLastSaved(statType === 'Opponent Point' ? `Saved Opponent Point` : `Saved ${statType} for ${activePlayer}`);
       
       if (statType === 'Point' || statType === 'Opponent Point') {
@@ -289,6 +293,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
           const countExecuted = executedCommandsCountRef.current[cmd.text] || 0;
 
           if (countInTranscript > countExecuted) {
+              console.log(`[Voice] MATCHED: "${cmd.text}" (Found: ${countInTranscript}, Executed: ${countExecuted})`);
               matchedCmd = cmd;
               break;
           }
