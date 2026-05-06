@@ -55,14 +55,14 @@ export const recordLineup = async (players, pointNumber, gameName, gameType, tea
 
 export const fetchAllTeamNames = async () => {
   const { data, error } = await supabase
-    .from('players')
-    .select('team_name')
-    .limit(100000);
+    .from('teams')
+    .select('name')
+    .order('name', { ascending: true });
 
   if (error) throw error;
   if (!data) return [];
   
-  return [...new Set(data.map(p => p.team_name))].filter(Boolean);
+  return data.map(t => t.name);
 };
 
 export const fetchPlayers = async (teamId) => {
