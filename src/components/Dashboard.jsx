@@ -155,7 +155,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     }
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = false; // Must be false so it doesn't create run-on sentences
+    recognition.continuous = true; // Set to true to prevent constant restarting and system mic beeping
     recognition.interimResults = true;
     recognition.lang = 'en-US';
 
