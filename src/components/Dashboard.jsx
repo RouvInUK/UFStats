@@ -133,18 +133,18 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   };
 
   // Voice Tracking Engine
-  // Add a ref to lock out duplicates
   const lastActionTimeRef = useRef(0);
-  const processedTranscriptLengthRef = useRef(0);
+  const executedCommandsCountRef = useRef({});
 
   useEffect(() => {
     if (!isVoiceEnabled || !isTrackingActive) {
       if (recognitionRef.current) {
         recognitionRef.current.onend = null;
-        recognitionRef.current.stop();
+        try { recognitionRef.current.stop(); } catch(e) {}
         recognitionRef.current = null;
       }
       setVoiceFeedback('');
+      executedCommandsCountRef.current = {};
       return;
     }
 
@@ -231,7 +231,9 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       'drop': 'drop', 'dropped': 'drop', 'cop': 'drop', 'crop': 'drop',
       'defense': 'defence', 'fence': 'defence', 'defend': 'defence',
       'incomplete': 'throwaway', 'away': 'throwaway', 'throw away': 'throwaway',
-      'stall': 'stall out', 'stalled': 'stall out', 'out': 'stall out'
+      'stall': 'stall out', 'stalled': 'stall out', 'out': 'stall out',
+      'past': 'pass', 'paths': 'pass', 'path': 'pass', 'pats': 'pass', 'pad': 'pass', 'pads': 'pass',
+      'store': 'score', 'core': 'score', 'soar': 'score', 'shore': 'score'
     };
 
     recognition.onresult = (event) => {
@@ -242,8 +244,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         .toLowerCase()
         .trim();
         
-      // Extract the unprocessed part of the transcript
-      let transcript = fullTranscript.substring(processedTranscriptLengthRef.current);
+      // Show the user exactly what the mic is hearing in real-time
+      setVoiceFeedback(`Hearing: "${fullTranscript}"...`);
       
       // Debounce lock (ignore if recognized something in the last 1500ms)
       if (Date.now() - lastActionTimeRef.current < 1500) {
@@ -251,7 +253,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       }
 
       // Pre-process transcript with word map
-      let normalizedTranscript = transcript;
+      let normalizedTranscript = fullTranscript;
       for (const [word, replacement] of Object.entries(wordMap)) {
          normalizedTranscript = normalizedTranscript.replace(new RegExp(`\\b${word}\\b`, 'g'), replacement);
       }
@@ -266,31 +268,28 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
           return; // Wait for the rest of the sentence
       }
 
-      // 4. Find the best match inside the run-on transcript
+      // 4. Find the best match using counting logic
       // Sort commands by length descending so "34 pass" is checked before "4 pass"
       const sortedCommands = [...expectedCommands].sort((a, b) => b.text.length - a.text.length);
       
       let matchedCmd = null;
-      let matchedCmdLength = 0;
       
       for (const cmd of sortedCommands) {
-          const regex = new RegExp(`\\b${cmd.text}\\b`, 'i');
-          const match = normalizedTranscript.match(regex);
-          if (match) {
+          const regex = new RegExp(`\\b${cmd.text}\\b`, 'ig');
+          const matches = normalizedTranscript.match(regex);
+          const countInTranscript = matches ? matches.length : 0;
+          const countExecuted = executedCommandsCountRef.current[cmd.text] || 0;
+
+          if (countInTranscript > countExecuted) {
               matchedCmd = cmd;
-              // To advance the cursor, we want to know how many characters in the *raw* transcript we consumed.
-              // Since normalizedTranscript might have a different length, we just approximate it by clearing everything up to the match.
-              // Actually, since we only need to not process it again, we can just consume the whole transcript we've seen so far!
-              // Because if we successfully match something, anything before it is likely junk background noise anyway.
-              matchedCmdLength = transcript.length; 
               break;
           }
       }
       
       if (matchedCmd) {
          const cmd = matchedCmd;
-         // Advance the cursor so we don't process this junk again
-         processedTranscriptLengthRef.current += matchedCmdLength;
+         // Increment the execution count for this specific command text
+         executedCommandsCountRef.current[cmd.text] = (executedCommandsCountRef.current[cmd.text] || 0) + 1;
          lastActionTimeRef.current = Date.now(); // Lock
          
          if (cmd.action === 'Opponent Point') {
@@ -337,7 +336,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       if (isVoiceEnabled && isTrackingActive && recognitionRef.current) {
         setTimeout(() => {
            try {
-             processedTranscriptLengthRef.current = 0; // Reset buffer tracker on hard restart
+             executedCommandsCountRef.current = {}; // Reset counts on hard restart
              if (recognitionRef.current) recognitionRef.current.start();
            } catch(e) {
              // Ignore already started errors
