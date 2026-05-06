@@ -253,13 +253,13 @@ function App() {
       {/* Premium Desktop Header */}
       <div className="hidden sm:flex justify-between items-center px-8 py-4 bg-slate-950/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 shadow-xl">
         <div className="flex items-center gap-6">
-          <div className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-2 cursor-pointer" onClick={() => setCurrentTeam(null)}>
+          <div className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView('dashboard')}>
             UF<span className="text-indigo-500 font-light">STATS</span>
             <BetaBadge />
           </div>
           {effectiveTeamName && (
-             <div className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-widest flex items-center gap-2 cursor-pointer hover:bg-indigo-500/20 transition-all" onClick={() => setCurrentTeam(null)}>
-               {effectiveTeamName} <span className="opacity-50 hover:opacity-100">Switch</span>
+             <div className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+               {effectiveTeamName}
              </div>
           )}
         </div>
@@ -294,7 +294,7 @@ function App() {
       {/* Mobile Header */}
       <div className="sm:hidden flex flex-col px-4 py-3 bg-slate-950/90 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 shadow-md gap-2">
         <div className="flex justify-between items-center w-full">
-          <div className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-1.5 cursor-pointer" onClick={() => setCurrentTeam(null)}>
+          <div className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-1.5 cursor-pointer" onClick={() => setCurrentView('dashboard')}>
             UF<span className="text-indigo-500 font-light">STATS</span>
           </div>
           <div className="flex items-center gap-1">
@@ -367,7 +367,7 @@ function App() {
           players={players} 
           setPlayers={setPlayers}
           currentTeam={effectiveTeamName}
-          setCurrentTeam={setCurrentTeam}
+          currentTeamObject={currentTeam}
           targetTeamId={targetTeamId}
           onNavigate={setCurrentView} 
         />
@@ -422,20 +422,24 @@ function App() {
       )}
 
       {/* Fixed Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 flex justify-around items-center px-2 py-3 sm:py-4 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] pb-safe">
-        <button onClick={() => setCurrentView('dashboard')} className={`flex flex-col items-center gap-1.5 w-16 transition-colors ${currentView === 'dashboard' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
+      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 flex justify-around items-center px-1 py-3 sm:py-4 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] pb-safe">
+        <button onClick={() => setCurrentView('team_selection')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'team_selection' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
+          <span className={`text-xl leading-none transition-transform ${currentView === 'team_selection' ? 'scale-125' : 'scale-100'}`}>🛡️</span>
+          <span className="text-[10px] uppercase tracking-wider">Teams</span>
+        </button>
+        <button onClick={() => setCurrentView('dashboard')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'dashboard' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
           <span className={`text-xl leading-none transition-transform ${currentView === 'dashboard' ? 'scale-125' : 'scale-100'}`}>🎯</span>
           <span className="text-[10px] uppercase tracking-wider">Track</span>
         </button>
-        <button onClick={() => setCurrentView('lineup')} className={`flex flex-col items-center gap-1.5 w-16 transition-colors ${currentView === 'lineup' || currentView === 'roster' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
+        <button onClick={() => setCurrentView('lineup')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'lineup' || currentView === 'roster' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
           <span className={`text-xl leading-none transition-transform ${currentView === 'lineup' || currentView === 'roster' ? 'scale-125' : 'scale-100'}`}>👕</span>
           <span className="text-[10px] uppercase tracking-wider">Lineup</span>
         </button>
-        <button onClick={() => setCurrentView('log')} className={`flex flex-col items-center gap-1.5 w-16 transition-colors ${currentView === 'log' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
+        <button onClick={() => setCurrentView('log')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'log' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
           <span className={`text-xl leading-none transition-transform ${currentView === 'log' ? 'scale-125' : 'scale-100'}`}>📜</span>
           <span className="text-[10px] uppercase tracking-wider">Log</span>
         </button>
-        <button onClick={() => setCurrentView('analytics')} className={`flex flex-col items-center gap-1.5 w-16 transition-colors ${currentView === 'analytics' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
+        <button onClick={() => setCurrentView('analytics')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'analytics' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
           <span className={`text-xl leading-none transition-transform ${currentView === 'analytics' ? 'scale-125' : 'scale-100'}`}>📊</span>
           <span className="text-[10px] uppercase tracking-wider">Data</span>
         </button>

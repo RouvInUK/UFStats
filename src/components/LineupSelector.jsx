@@ -195,12 +195,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     
     try {
       // Fire request to Supabase
-      const updatedPlayer = await togglePlayerActiveStatus(player.id, player.is_active);
-      
-      // Update with confirmed data
-      if (updatedPlayer) {
-        setPlayers(players.map(p => p.id === player.id ? updatedPlayer : p));
-      }
+      await togglePlayerActiveStatus(player.id, targetTeamId, player.is_active);
     } catch {
       alert("Failed to update status in cloud.");
       // Revert optimistic update on failure
@@ -216,7 +211,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     
     setIsClearing(true);
     try {
-      await clearActiveLineup(currentTeam);
+      await clearActiveLineup(targetTeamId);
     } catch {
       alert("Failed to clear lineup in cloud.");
       setPlayers(players); // revert

@@ -108,7 +108,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       
       if (statType === 'Point' || statType === 'Opponent Point') {
         setIsTrackingActive(false);
-        clearActiveLineup(currentTeam).catch(console.error);
+        clearActiveLineup(targetTeamId).catch(console.error);
         if (players && setPlayers) {
             setPlayers(players.map(p => ({ ...p, is_active: false })));
         }

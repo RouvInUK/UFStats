@@ -65,37 +65,41 @@ export const fetchAllTeamNames = async () => {
   return [...new Set(data.map(p => p.team_name))].filter(Boolean);
 };
 
-export const fetchPlayers = async (teamIdentifier) => {
-  if (!teamIdentifier) return [];
-  let query = supabase.from('players').select('*').order('name', { ascending: true });
-  
-  if (teamIdentifier) {
-    // Check if it's a UUID (team_id) or a team_name string
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamIdentifier);
+export const fetchPlayers = async (teamId) => {
+  if (!teamId) return [];
+  const { data, error } = await supabase
+    .from('players')
+    .select('*, team_players!inner(*)')
+    .eq('team_players.team_id', teamId)
+    .order('name', { ascending: true });
     
-    if (isUUID) {
-      query = query.eq('team_id', teamIdentifier);
-    } else if (teamIdentifier === 'Default Team' || teamIdentifier === 'Default Team (Migrated)') {
-      query = query.or(`team_name.eq.${teamIdentifier},team_name.is.null`);
-    } else {
-      query = query.eq('team_name', teamIdentifier);
-    }
-  }
+  if (error) throw error;
   
-  const { data, error } = await query;
+  // Flatten the is_active property from the junction table onto the player object
+  return data.map(player => ({
+    ...player,
+    is_active: player.team_players[0]?.is_active || false
+  }));
+};
+
+export const fetchClubPlayers = async (clubId) => {
+  if (!clubId) return [];
+  const { data, error } = await supabase
+    .from('players')
+    .select('*')
+    .eq('club_id', clubId)
+    .order('name', { ascending: true });
+    
   if (error) throw error;
   return data || [];
 };
 
-export const addPlayer = async (name, teamName, currentTeamId, shirtNumber) => {
-  console.log("addPlayer called with currentTeamId:", currentTeamId, "teamName:", teamName, "name:", name);
+export const addPlayerToClub = async (name, clubId, shirtNumber) => {
   const { data, error } = await supabase
     .from('players')
     .insert([{ 
       name, 
-      is_active: false, 
-      team_name: teamName || 'Default Team', 
-      team_id: currentTeamId,
+      club_id: clubId,
       shirt_number: shirtNumber || null
     }])
     .select();
@@ -107,36 +111,49 @@ export const addPlayer = async (name, teamName, currentTeamId, shirtNumber) => {
   return data[0];
 };
 
-export const removePlayer = async (id) => {
+export const togglePlayerOnTeam = async (playerId, teamId, isAdding) => {
+  if (isAdding) {
+    const { error } = await supabase
+      .from('team_players')
+      .insert([{ player_id: playerId, team_id: teamId, is_active: false }]);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from('team_players')
+      .delete()
+      .match({ player_id: playerId, team_id: teamId });
+    if (error) throw error;
+  }
+};
+
+export const removePlayerGlobally = async (playerId) => {
   const { error } = await supabase
     .from('players')
     .delete()
-    .eq('id', id);
+    .eq('id', playerId);
 
   if (error) throw error;
 };
 
-export const togglePlayerActiveStatus = async (id, currentStatus) => {
+export const togglePlayerActiveStatus = async (playerId, teamId, currentStatus) => {
   const { data, error } = await supabase
-    .from('players')
+    .from('team_players')
     .update({ is_active: !currentStatus })
-    .eq('id', id)
+    .eq('player_id', playerId)
+    .eq('team_id', teamId)
     .select();
 
   if (error) throw error;
   return data[0];
 };
 
-export const clearActiveLineup = async (teamName) => {
-  let query = supabase.from('players').update({ is_active: false }).eq('is_active', true);
-  if (teamName) {
-    if (teamName === 'Default Team') {
-      query = query.or('team_name.eq.Default Team,team_name.is.null');
-    } else {
-      query = query.eq('team_name', teamName);
-    }
-  }
-  const { error } = await query;
+export const clearActiveLineup = async (teamId) => {
+  if (!teamId) return;
+  const { error } = await supabase
+    .from('team_players')
+    .update({ is_active: false })
+    .eq('team_id', teamId)
+    .eq('is_active', true);
 
   if (error) throw error;
 };
