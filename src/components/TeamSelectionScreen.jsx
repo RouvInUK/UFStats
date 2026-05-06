@@ -3,7 +3,7 @@ import { fetchUserHierarchy, createClub, createTeam, checkTierLimits } from '../
 import { useAuth } from '../contexts/AuthContext';
 import { Shield, Plus, LogOut, ChevronRight, AlertTriangle, Crown } from 'lucide-react';
 
-const TeamSelectionScreen = ({ onSelectTeam, onNavigateToAdmin }) => {
+const TeamSelectionScreen = ({ onSelectTeam, onNavigateToAdmin, allowAutoSelect = true }) => {
   const { user, profile, signOut } = useAuth();
   const [hierarchy, setHierarchy] = useState({ clubs: [], teams: [] });
   const [loading, setLoading] = useState(true);
@@ -27,7 +27,7 @@ const TeamSelectionScreen = ({ onSelectTeam, onNavigateToAdmin }) => {
       setLimits(userLimits);
       
       // Auto-select if exactly 1 club and 1 team
-      if (data.teams.length === 1 && data.clubs.length === 1 && onSelectTeam) {
+      if (allowAutoSelect && data.teams.length === 1 && data.clubs.length === 1 && onSelectTeam) {
         onSelectTeam(data.teams[0]);
       }
     } catch (err) {

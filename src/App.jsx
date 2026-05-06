@@ -420,6 +420,7 @@ function App() {
 
       {currentView === 'team_selection' && (
         <TeamSelectionScreen 
+          allowAutoSelect={false}
           onSelectTeam={(team) => {
             setCurrentTeam(team);
             setCurrentView('dashboard');

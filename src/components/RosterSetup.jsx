@@ -99,9 +99,15 @@ const RosterSetup = ({ players, setPlayers, currentTeam, currentTeamObject, targ
         
         <div className="p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-800 border-b border-slate-700/50">
           <div className="flex flex-col w-full gap-4">
-            <h2 className="text-xl font-bold text-white mb-2 sm:mb-0">
-              Roster: <span className="text-indigo-400">{typeof currentTeamObject === 'object' ? currentTeamObject.name : currentTeam}</span>
-            </h2>
+            <div className="flex justify-between items-start">
+              <h2 className="text-xl font-bold text-white mb-2 sm:mb-0">
+                Roster: <span className="text-indigo-400">{typeof currentTeamObject === 'object' ? currentTeamObject.name : currentTeam}</span>
+              </h2>
+            </div>
+            
+            <p className="text-xs text-slate-400">
+              Need to create a new team or switch teams? Go to the <span className="text-indigo-400 font-bold">🛡️ Teams</span> tab in the bottom menu.
+            </p>
             
             <div className="flex bg-slate-900 rounded-lg p-1 w-full sm:w-auto">
               <button 
