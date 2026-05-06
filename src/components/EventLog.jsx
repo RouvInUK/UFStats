@@ -5,9 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 
 const STAT_TYPES = ['Point', 'Pass', 'Throwaway', 'Drop', 'Stall Out', 'Defence'];
 
-const EventLog = ({ currentGame, onNavigate, currentTeam }) => {
+const EventLog = ({ currentGame, onNavigate, targetTeamId }) => {
   const { profile } = useAuth();
-  const targetTeamId = currentTeam;
 
   const [selectedGame, setSelectedGame] = useState(currentGame);
   const [allGames, setAllGames] = useState([]);
@@ -96,7 +95,7 @@ const EventLog = ({ currentGame, onNavigate, currentTeam }) => {
       }
 
       setSelectedGame('');
-      const names = await fetchAllGameNames();
+      const names = await fetchAllGameNames(targetTeamId);
       setAllGames(names);
       if (names.length > 0) {
         setSelectedGame(names[names.length - 1]);
