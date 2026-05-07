@@ -101,11 +101,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     setIsSaving(true);
     setLastSaved(null);
     try {
-      const pObj = players?.find(p => p.name === activePlayer);
-      const dbPlayer = pObj?.shirt_number ? `${activePlayer} ${pObj.shirt_number}` : activePlayer;
-      
       const statData = {
-        player: statType === 'Opponent Point' ? 'Opponent' : dbPlayer,
+        player: statType === 'Opponent Point' ? 'Opponent' : activePlayer,
         stat: statType,
         timestamp: new Date().toLocaleString(),
         pointNumber: currentPoint,
