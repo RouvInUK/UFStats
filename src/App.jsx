@@ -356,7 +356,7 @@ function App() {
       )}
 
       {currentView === 'analytics' && (
-        <Analytics targetTeamId={targetTeamId} />
+        <Analytics targetTeamId={targetTeamId} players={players} />
       )}
       
       {currentView === 'roster' && (

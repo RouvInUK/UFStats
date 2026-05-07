@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { fetchStats } from '../supabaseClient';
 
-const Analytics = ({ targetTeamId }) => {
+const Analytics = ({ targetTeamId, players = [] }) => {
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedGames, setSelectedGames] = useState([]);
@@ -49,7 +49,26 @@ const Analytics = ({ targetTeamId }) => {
     filteredStats.forEach((stat, index) => {
       if (stat.player === 'System' || stat.player === 'Opponent' || stat.stat_type === 'Match Metadata') return;
       
-      const p = ensurePlayer(stat.player);
+      let normalizedPlayerName = stat.player;
+      
+      // Group legacy stats where the user manually typed "Name 10" or "Name #10" before the shirt_number field existed
+      if (players && players.length > 0) {
+        const match = players.find(p => {
+          if (p.name === stat.player) return true;
+          if (p.shirt_number) {
+             const numStr = String(p.shirt_number);
+             if (stat.player === `${p.name} ${numStr}`) return true;
+             if (stat.player === `${p.name} #${numStr}`) return true;
+             if (stat.player === `${numStr} ${p.name}`) return true;
+          }
+          return false;
+        });
+        if (match) {
+          normalizedPlayerName = match.name;
+        }
+      }
+      
+      const p = ensurePlayer(normalizedPlayerName);
       
       if (stat.stat_type === 'Lineup') {
         p.pointsSet.add(`${stat.game_name}-${stat.point_number}`);
