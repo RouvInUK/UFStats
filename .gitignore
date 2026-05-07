@@ -27,3 +27,6 @@ dist-ssr
 credentials.json
 .env
 .env.*
+
+# Local Bug Ledger
+DEFECTS.md
