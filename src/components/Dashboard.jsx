@@ -117,12 +117,19 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         setVoiceFeedback(statType === 'Opponent Point' ? 'Opponent Scored!' : `Point Scored by ${activePlayer}!`);
         
         setTimeout(() => {
-           setIsTrackingActive(false);
-           clearActiveLineup(targetTeamId).catch(console.error);
-           if (players && setPlayers) {
-               setPlayers(players.map(p => ({ ...p, is_active: false })));
+           if (gameType !== 'training') {
+             setIsTrackingActive(false);
+             clearActiveLineup(targetTeamId).catch(console.error);
+             if (players && setPlayers) {
+                 setPlayers(players.map(p => ({ ...p, is_active: false })));
+             }
+             onNavigate('lineup');
+           } else {
+             // In training mode, a score doesn't end the session. Just reset state.
+             setIsSaving(false);
+             setSelectedPlayer('');
+             setVoiceFeedback('');
            }
-           onNavigate('lineup');
         }, 1500);
         return; // Skip the standard feedback and finally block
       }
