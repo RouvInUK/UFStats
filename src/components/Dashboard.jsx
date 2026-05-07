@@ -44,13 +44,23 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
           const stats = await fetchGameStats(currentGame, targetTeamId);
           let us = 0, them = 0;
           let od = initialPossession || 'O';
+          let gameStartOD = initialPossession || null;
           let oppName = opponentName || 'Opponent';
 
           const chronStats = [...stats].reverse();
           chronStats.forEach(stat => {
-              if (stat.stat_type === 'Start Offense') od = 'O';
-              if (stat.stat_type === 'Start Defense') od = 'D';
-              if (stat.stat_type === 'Half Time') od = od === 'O' ? 'D' : 'O';
+              if (stat.stat_type === 'Start Offense') {
+                  od = 'O';
+                  if (!gameStartOD) gameStartOD = 'O';
+              }
+              if (stat.stat_type === 'Start Defense') {
+                  od = 'D';
+                  if (!gameStartOD) gameStartOD = 'D';
+              }
+              if (stat.stat_type === 'Half Time') {
+                  // Half time possession is ALWAYS the exact opposite of the initial game start possession
+                  od = gameStartOD === 'O' ? 'D' : 'O';
+              }
               if (stat.stat_type === 'Point') { us += 1; od = 'D'; }
               if (stat.stat_type === 'Opponent Point') { them += 1; od = 'O'; }
               if (stat.stat_type === 'Match Metadata') oppName = stat.player;
