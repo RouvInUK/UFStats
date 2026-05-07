@@ -139,7 +139,7 @@ const Analytics = ({ targetTeamId, players = [] }) => {
       if (a.name > b.name) return 1;
       return 0;
     });
-  }, [stats, selectedGames, sortConfig]);
+  }, [stats, selectedGames, sortConfig, players]);
 
   const handleSort = (key) => {
     let direction = 'desc';
