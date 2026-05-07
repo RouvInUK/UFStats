@@ -3,7 +3,7 @@ import { fetchGameStats, fetchAllGameNames, fetchAllTeamNames } from '../supabas
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
 import { Lock, Zap, Target, AlertTriangle, Presentation, Users, ChevronDown, Check, Activity, TrendingUp, TrendingDown } from 'lucide-react';
 
-const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam }) => {
+const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam, players = [] }) => {
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [visualGameType, setVisualGameType] = useState('beach');
@@ -90,7 +90,28 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
     const pointPossessions = {};
     const pointCleanHolds = {};
 
-    stats.forEach((stat, index) => {
+    const normalizedStats = stats.map(stat => {
+      let normalizedName = stat.player;
+      if (players && players.length > 0 && stat.player && stat.player !== 'System' && stat.player !== 'Opponent') {
+        const match = players.find(p => {
+          if (!p.name) return false;
+          const statP = stat.player.trim().toLowerCase().replace(/\s+/g, ' ');
+          const pName = String(p.name).trim().toLowerCase().replace(/\s+/g, ' ');
+          if (pName === statP) return true;
+          if (p.shirt_number) {
+             const numStr = String(p.shirt_number).trim().toLowerCase();
+             if (statP === `${pName} ${numStr}`) return true;
+             if (statP === `${pName} #${numStr}`) return true;
+             if (statP === `${numStr} ${pName}`) return true;
+          }
+          return false;
+        });
+        if (match) normalizedName = match.name;
+      }
+      return { ...stat, player: normalizedName };
+    });
+
+    normalizedStats.forEach((stat, index) => {
       const pointKey = `${stat.game_name}_${stat.point_number}`;
       
       if (!currentLineStatePerGame[stat.game_name]) {
@@ -153,20 +174,20 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
         p.goals += 1;
         
         // Track the connection
-        const assister = stats[index - 1];
+        const assister = normalizedStats[index - 1];
         if (assister && assister.game_name === stat.game_name && assister.point_number === stat.point_number && assister.stat_type === 'Pass') {
            const pairKey = `${assister.player} → ${stat.player}`;
            connectionsMap[pairKey] = (connectionsMap[pairKey] || 0) + 1;
            
            // Secondary Assist Logic
-           const hockeyAssister = stats[index - 2];
+           const hockeyAssister = normalizedStats[index - 2];
            if (hockeyAssister && hockeyAssister.game_name === stat.game_name && hockeyAssister.point_number === stat.point_number && hockeyAssister.stat_type === 'Pass') {
               const saPlayer = ensurePlayer(hockeyAssister.player);
               saPlayer.secondaryAssists += 1;
            }
         }
       } else if (stat.stat_type === 'Pass') {
-        const nextStat = stats[index + 1];
+        const nextStat = normalizedStats[index + 1];
         
         // Look ahead for a receiver drop OR an assist
         if (nextStat && nextStat.game_name === stat.game_name && nextStat.point_number === stat.point_number && nextStat.stat_type === 'Drop') {
@@ -372,7 +393,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       twoGameTrend,
       isMultiGame
     };
-  }, [stats, selectedGames.length]);
+  }, [stats, selectedGames.length, players]);
 
   if (selectedGames.length === 0) {
     return (

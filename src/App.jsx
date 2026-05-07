@@ -399,6 +399,7 @@ function App() {
           currentTeam={effectiveTeamName}
           targetTeamId={targetTeamId}
           setCurrentTeam={setCurrentTeam}
+          players={players}
         />
       )}
 
