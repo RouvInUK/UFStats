@@ -833,7 +833,6 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                              </div>
                              <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white drop-shadow-md z-20 pointer-events-none">
                                 {p.systemImpact > 0 ? '+' : ''}{p.systemImpact}%
-                                {p.breaksWon > 2 && <span className="ml-0.5 drop-shadow-[0_0_5px_rgba(250,204,21,0.9)] text-amber-400 text-[11px]" title="Break Master">🔥</span>}
                              </span>
                           </div>
                         </td>
@@ -842,9 +841,6 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                         </td>
                         <td className="p-4 text-center font-mono font-bold text-emerald-300">
                           {p.ova.toFixed(1)}
-                          {totalTeamSecondaryAssists > 0 && (p.secondaryAssists / totalTeamSecondaryAssists) > 0.40 && (
-                            <span className="ml-1 text-[11px] drop-shadow-md" title="Hub Player: Contributes >40% of team Secondary Assists">🏗️</span>
-                          )}
                         </td>
                         <td className="p-4 text-right font-mono font-bold text-slate-300">
                           {p.usage}%
