@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { fetchGameStats, fetchAllGameNames, fetchAllTeamNames } from '../supabaseClient';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
 import { Lock, Zap, Target, AlertTriangle, Presentation, Users, ChevronDown, Check, Activity, TrendingUp, TrendingDown } from 'lucide-react';
@@ -14,6 +14,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
   const [sortField, setSortField] = useState('nis');
   const [sortDirection, setSortDirection] = useState('desc');
   const [highlightedPlayerName, setHighlightedPlayerName] = useState(null);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     fetchAllTeamNames().then(setAllTeams).catch(console.error);
@@ -26,6 +27,18 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       }
     });
   }, [targetTeamId, currentGame]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDropdownOpen]);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -423,7 +436,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
             </div>
           </div>
 
-          <div className="relative w-full">
+          <div className="relative w-full" ref={dropdownRef}>
             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">2. Select Matches to Analyze</label>
             <button 
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -491,7 +504,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       
       {/* Live Header / Selector Panel */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl relative z-50">
-        <div className="w-full sm:w-auto relative group">
+        <div className="w-full sm:w-auto relative group" ref={dropdownRef}>
           <button 
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="flex items-center gap-2 group-hover:opacity-80 transition-opacity"
