@@ -87,10 +87,10 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
   const handleStartPoint = async () => {
     // Only get active players that belong to the current team
     const activeLineupNames = filteredPlayers.filter(p => p.is_active).map(p => p.name);
-    const expectedCount = gameType === 'grass' ? 7 : 5;
+    const expectedCount = gameType === 'grass' ? 7 : (gameType === 'beach' || gameType === 'indoor' ? 5 : 0);
     
-    if (activeLineupNames.length !== expectedCount) {
-      if (!window.confirm(`You selected ${activeLineupNames.length} players, but a ${gameType} game usually expects ${expectedCount}. Start point anyway?`)) {
+    if (expectedCount > 0 && activeLineupNames.length !== expectedCount) {
+      if (!window.confirm(`You selected ${activeLineupNames.length} players, but a ${gameType} game usually expects ${expectedCount}. Start ${gameType === 'training' ? 'session' : 'point'} anyway?`)) {
         return;
       }
     }
@@ -98,8 +98,8 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     if (!currentGame) return alert("Enter a Match Name first.");
 
     if (currentPoint === 0) {
-      if (!opponentName) return alert("Enter an Opponent Name first.");
-      if (!initialPossession) return alert("Select Starting Possession (O or D).");
+      if (!opponentName) return alert(gameType === 'training' ? "Enter a Drill/Exercise Name first." : "Enter an Opponent Name first.");
+      if (gameType !== 'training' && !initialPossession) return alert("Select Starting Possession (O or D).");
     }
 
     setIsStartingPoint(true);
@@ -118,14 +118,16 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
               gameType: gameType,
               teamName: currentTeam
           }, targetTeamId);
-          await recordStatToDB({
-              player: 'System',
-              stat: initialPossession === 'O' ? 'Start Offense' : 'Start Defense',
-              pointNumber: nextPoint,
-              gameName: currentGame,
-              gameType: gameType,
-              teamName: currentTeam
-          }, targetTeamId);
+          if (gameType !== 'training') {
+            await recordStatToDB({
+                player: 'System',
+                stat: initialPossession === 'O' ? 'Start Offense' : 'Start Defense',
+                pointNumber: nextPoint,
+                gameName: currentGame,
+                gameType: gameType,
+                teamName: currentTeam
+            }, targetTeamId);
+          }
       }
 
       setCurrentPoint(nextPoint);
@@ -328,17 +330,20 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
                 </div>
                 <div>
                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">Game Format</label>
-                   <div className="flex flex-wrap sm:flex-nowrap bg-slate-950 border border-slate-700 rounded-xl overflow-hidden shadow-inner font-bold w-full text-sm">
-                      <button onClick={() => setGameType('grass')} className={`flex-1 min-w-[30%] py-3 px-2 transition-all ${gameType === 'grass' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Grass (7v7)</button>
-                      <button onClick={() => setGameType('beach')} className={`flex-1 min-w-[30%] py-3 px-2 transition-all ${gameType === 'beach' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Beach (5v5)</button>
-                      <button onClick={() => setGameType('indoor')} className={`flex-1 min-w-[30%] py-3 px-2 transition-all ${gameType === 'indoor' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Indoor (5v5)</button>
+                   <div className="flex flex-wrap bg-slate-950 border border-slate-700 rounded-xl overflow-hidden shadow-inner font-bold w-full text-sm">
+                      <button onClick={() => setGameType('grass')} className={`flex-1 min-w-[25%] py-3 px-2 transition-all ${gameType === 'grass' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Grass</button>
+                      <button onClick={() => setGameType('beach')} className={`flex-1 min-w-[25%] py-3 px-2 transition-all ${gameType === 'beach' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Beach</button>
+                      <button onClick={() => setGameType('indoor')} className={`flex-1 min-w-[25%] py-3 px-2 transition-all ${gameType === 'indoor' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Indoor</button>
+                      <button onClick={() => setGameType('training')} className={`flex-1 min-w-[25%] py-3 px-2 transition-all ${gameType === 'training' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Training</button>
                    </div>
                 </div>
                 <div>
-                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">Opponent Team Name</label>
-                   <input type="text" value={opponentName} onChange={e => setOpponentName(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner" placeholder="e.g. Darkstar" />
+                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">
+                     {gameType === 'training' ? 'Drill / Exercise Name' : 'Opponent Team Name'}
+                   </label>
+                   <input type="text" value={opponentName} onChange={e => setOpponentName(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner" placeholder={gameType === 'training' ? "e.g. 3-Man Weave" : "e.g. Darkstar"} />
                 </div>
-                <div>
+                <div className={gameType === 'training' ? 'opacity-30 pointer-events-none' : ''}>
                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">Starting Possession</label>
                    <div className="flex bg-slate-950 border border-slate-700 rounded-xl overflow-hidden shadow-inner font-bold w-full text-sm">
                       <button onClick={() => setInitialPossession('O')} className={`flex-1 py-3 px-2 transition-all ${initialPossession === 'O' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Receive (Offense)</button>
@@ -393,7 +398,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
         <div className="p-6 sm:p-8 border-t border-slate-700/50 bg-slate-900/30">
           <button
             onClick={handleStartPoint}
-            disabled={isStartingPoint || activeCount === 0 || !currentGame || (currentPoint === 0 && (!opponentName || !initialPossession))}
+            disabled={isStartingPoint || activeCount === 0 || !currentGame || (currentPoint === 0 && (!opponentName || (gameType !== 'training' && !initialPossession)))}
             className="w-full group relative flex items-center justify-center px-6 py-5 border border-emerald-500/50 text-xl font-black rounded-2xl text-white bg-emerald-500/20 hover:bg-emerald-500/40 backdrop-blur-md focus:outline-none focus:ring-4 focus:ring-emerald-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest"
           >
             {isStartingPoint ? (
@@ -401,7 +406,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
                  <div className="w-5 h-5 border-2 border-transparent border-t-white rounded-full animate-spin" />
                  Synchronizing...
                </span>
-            ) : "Start Point"}
+            ) : (gameType === 'training' ? "Start Session" : "Start Point")}
           </button>
           
           {currentPoint > 0 && (

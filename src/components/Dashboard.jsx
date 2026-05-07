@@ -624,7 +624,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                 className="w-full py-3.5 px-6 flex items-center justify-center gap-3 font-bold rounded-xl transition-all bg-transparent border border-white/20 backdrop-blur-sm text-slate-300 hover:bg-white/5 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ArrowLeftRight className="w-5 h-5" />
-                Substitution
+                {gameType === 'training' ? 'End Training' : 'Substitution'}
               </button>
             </div>
           )}
