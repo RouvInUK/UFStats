@@ -257,11 +257,38 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
 
     recognition.onresult = (event) => {
       // With continuous=true, we must look at the entire transcript since the last start
-      let fullTranscript = Array.from(event.results)
-        .map(result => result[0].transcript)
-        .join(' ')
-        .toLowerCase()
-        .trim();
+      // Safari/iOS has a bug where it duplicates words across result chunks. We deduplicate overlaps.
+      let chunks = Array.from(event.results).map(r => r[0].transcript.toLowerCase().trim());
+      let fullTranscript = '';
+      let prevChunk = '';
+      
+      for (let chunk of chunks) {
+         if (!chunk) continue;
+         let originalChunk = chunk;
+         
+         if (prevChunk) {
+            let wordsPrev = prevChunk.split(' ');
+            let wordsChunk = chunk.split(' ');
+            let overlapLen = 0;
+            
+            for (let k = 1; k <= Math.min(wordsPrev.length, wordsChunk.length); k++) {
+               if (wordsPrev.slice(-k).join(' ') === wordsChunk.slice(0, k).join(' ')) {
+                  overlapLen = k;
+               }
+            }
+            
+            if (overlapLen > 0) {
+               chunk = wordsChunk.slice(overlapLen).join(' ');
+            }
+         }
+         
+         if (chunk) {
+            fullTranscript += (fullTranscript ? ' ' : '') + chunk;
+         }
+         prevChunk = originalChunk;
+      }
+      
+      fullTranscript = fullTranscript.trim();
         
       // Show the user exactly what the mic is hearing in real-time
       setVoiceFeedback(`Hearing: "${fullTranscript}"...`);
