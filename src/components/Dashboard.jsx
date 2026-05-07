@@ -226,7 +226,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       'seven': '7', 'steven': '7', 'kevin': '7', 'heaven': '7', 'eleven': '7', 'leaven': '7', 'evan': '7', 'devon': '7', 'lemon': '7', 'melon': '7', 'felon': '7',
       'eight': '8', 'ate': '8', 'hate': '8', 'hey': '8', 'late': '8', 'great': '8', 'weight': '8', 'wait': '8', 'straight': '8', 'state': '8', 'rate': '8', 'mate': '8', 'gate': '8', 'date': '8', 'fate': '8', 'eat': '8', 'aid': '8', 'age': '8', 'ache': '8', 'eggs': '8',
       'nine': '9', 'nein': '9', 'line': '9', 'mine': '9', 'fine': '9', 'dine': '9', 'wine': '9', 'sign': '9', 'shine': '9', 'spine': '9', 'pine': '9', 'vine': '9', 'rhyme': '9', 'time': '9', 'dime': '9', 'chime': '9', 'climb': '9', 'crime': '9', 'prime': '9', 'slime': '9',
-      'ten': '10', 'tin': '10', 'pen': '10', 'then': '10', 'tan': '10', 'den': '10', 'ken': '10', 'men': '10', 'ben': '10', 'zen': '10', 'hen': '10', 'tent': '10', 'tenth': '10', 'can': '10', 'pan': '10', 'ran': '10', 'man': '10', 'fan': '10', 'van': '10',
+      'ten': '10', 'tin': '10', 'pen': '10', 'then': '10', 'tan': '10', 'den': '10', 'ken': '10', 'men': '10', 'ben': '10', 'zen': '10', 'hen': '10', 'tent': '10', 'tenth': '10', 'can': '10', 'pan': '10', 'ran': '10', 'man': '10', 'fan': '10', 'van': '10', 'tem': '10', 'tim': '10', 'them': '10', 'stem': '10', 'gem': '10', 'tend': '10', 'trend': '10', 'friend': '10', 'mend': '10', 'send': '10',
       'eleven': '11', 'leaven': '11', 'evan': '11', 'kevin': '11', 'heaven': '11', 'seven': '11', 'steven': '11', 'lemon': '11', 'melon': '11',
       'twelve': '12', 'twelf': '12', 'dwell': '12', 'delve': '12', 'tell': '12', 'bell': '12', 'fell': '12', 'sell': '12', 'well': '12', 'yell': '12', 'hell': '12', 'shell': '12', 'smell': '12', 'spell': '12', 'swell': '12',
       'thirteen': '13', 'thirty': '13', 'thirsting': '13', 'hurting': '13', 'certain': '13', 'curtain': '13', 'flirting': '13', 'skirting': '13', 'shirt in': '13', 'dirt in': '13',
@@ -252,7 +252,9 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       'incomplete': 'throwaway', 'away': 'throwaway', 'throw away': 'throwaway',
       'stall': 'stall out', 'stalled': 'stall out', 'out': 'stall out',
       'past': 'pass', 'paths': 'pass', 'path': 'pass', 'pats': 'pass', 'pad': 'pass', 'pads': 'pass',
-      'store': 'score', 'core': 'score', 'soar': 'score', 'shore': 'score'
+      'store': 'score', 'core': 'score', 'soar': 'score', 'shore': 'score',
+      'number': '', 'player': '',
+      'campus': '10 pass', 'compass': '10 pass', 'tempest': '10 pass', 'tempass': '10 pass', 'pamphlet': '10 pass'
     };
 
     recognition.onresult = (event) => {
