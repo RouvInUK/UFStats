@@ -65,6 +65,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
     setSelectedGames(prev => 
       prev.includes(game) ? prev.filter(g => g !== game) : [...prev, game]
     );
+    setIsDropdownOpen(false);
   };
 
   const { playerStats, timeline, score, teamSummary, connectionsMap, totalTeamSecondaryAssists, twoGameTrend, isMultiGame } = useMemo(() => {
@@ -449,8 +450,8 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
           {isDropdownOpen && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-2xl shadow-xl overflow-hidden z-50 max-h-64 flex flex-col">
               <div className="flex gap-2 p-3 border-b border-slate-700/50 shrink-0">
-                <button onClick={() => setSelectedGames(allGames)} className="flex-1 px-2 py-2 bg-slate-900 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors border border-slate-700">Select All</button>
-                <button onClick={() => setSelectedGames(allGames.slice(0, 3))} className="flex-1 px-2 py-2 bg-slate-900 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors border border-slate-700">Select Last 3</button>
+                <button onClick={() => { setSelectedGames(allGames); setIsDropdownOpen(false); }} className="flex-1 px-2 py-2 bg-slate-900 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors border border-slate-700">Select All</button>
+                <button onClick={() => { setSelectedGames(allGames.slice(0, 3)); setIsDropdownOpen(false); }} className="flex-1 px-2 py-2 bg-slate-900 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors border border-slate-700">Select Last 3</button>
               </div>
               <div className="overflow-y-auto">
                 {allGames.map(game => (
@@ -521,8 +522,8 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                 <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Select Matches</span>
               </div>
               <div className="flex gap-2 p-3 border-b border-slate-800 shrink-0">
-                <button onClick={() => setSelectedGames(allGames)} className="flex-1 px-2 py-1.5 bg-slate-800 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors">Select All</button>
-                <button onClick={() => setSelectedGames(allGames.slice(0, 3))} className="flex-1 px-2 py-1.5 bg-slate-800 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors">Last 3</button>
+                <button onClick={() => { setSelectedGames(allGames); setIsDropdownOpen(false); }} className="flex-1 px-2 py-1.5 bg-slate-800 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors">Select All</button>
+                <button onClick={() => { setSelectedGames(allGames.slice(0, 3)); setIsDropdownOpen(false); }} className="flex-1 px-2 py-1.5 bg-slate-800 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors">Last 3</button>
               </div>
               <div className="overflow-y-auto">
                 {allGames.map(game => (
