@@ -159,7 +159,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     if (!isVoiceEnabled || !isTrackingActive) {
       if (recognitionRef.current) {
         recognitionRef.current.onend = null;
-        try { recognitionRef.current.stop(); } catch(e) {}
+        try { recognitionRef.current.abort(); } catch(e) {}
         recognitionRef.current = null;
       }
       setVoiceFeedback('');
@@ -405,7 +405,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.onend = null;
-        recognitionRef.current.stop();
+        try { recognitionRef.current.abort(); } catch(e) {}
         recognitionRef.current = null;
       }
     };
