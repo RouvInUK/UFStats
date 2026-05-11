@@ -378,29 +378,55 @@ export const deleteStat = async (id) => {
 };
 
 export const deleteGame = async (gameName, teamId) => {
-  const { error } = await supabase
-    .from('stats')
-    .delete()
-    .eq('game_name', gameName)
-    .eq('team_id', teamId);
+  try {
+    const { keys, del } = await import('idb-keyval');
+    const allKeys = await keys();
+    for (const key of allKeys) {
+      if (typeof key === 'string' && key.startsWith(`point_${gameName}_`)) {
+        await del(key);
+      }
+    }
+  } catch (e) {
+    console.warn("Could not delete game locally", e);
+  }
 
-  if (error) {
-    console.error("Supabase Delete Game Error:", error);
-    throw error;
+  if (navigator.onLine) {
+    const { error } = await supabase
+      .from('stats')
+      .delete()
+      .eq('game_name', gameName)
+      .eq('team_id', teamId);
+
+    if (error) {
+      console.error("Supabase Delete Game Error:", error);
+      throw error;
+    }
   }
 };
 
 export const deletePoint = async (gameName, teamId, pointNumber) => {
-  const { error } = await supabase
-    .from('stats')
-    .delete()
-    .eq('game_name', gameName)
-    .eq('team_id', teamId)
-    .eq('point_number', pointNumber);
+  // Clear local queue first
+  try {
+    const { getPointKey } = await import('./SyncEngine');
+    const { del } = await import('idb-keyval');
+    const key = getPointKey(gameName, pointNumber);
+    await del(key);
+  } catch (e) {
+    console.warn("Could not delete point locally", e);
+  }
 
-  if (error) {
-    console.error("Supabase Delete Point Error:", error);
-    throw error;
+  if (navigator.onLine) {
+    const { error } = await supabase
+      .from('stats')
+      .delete()
+      .eq('game_name', gameName)
+      .eq('team_id', teamId)
+      .eq('point_number', pointNumber);
+
+    if (error) {
+      console.error("Supabase Delete Point Error:", error);
+      throw error;
+    }
   }
 };
 

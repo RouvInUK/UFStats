@@ -1,4 +1,4 @@
-import { togglePlayerActiveStatus, clearActiveLineup, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB, checkIfHalfTimeLogged, fetchActiveGames } from '../supabaseClient';
+import { togglePlayerActiveStatus, clearActiveLineup, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB, checkIfHalfTimeLogged, fetchActiveGames, deletePoint } from '../supabaseClient';
 import { useState, useEffect } from 'react';
 import { Undo2, Mic, MicOff } from 'lucide-react';
 import PullTracker from './PullTracker';
@@ -61,12 +61,17 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
   const handleUndoLastPoint = async () => {
     if (!lastAction || !lastAction.id) return;
     
-    if (window.confirm("Are you sure you want to undo this score? This will restore the previous lineup and return to tracking.")) {
+    if (window.confirm("Are you sure you want to undo this score? This will completely erase the point and restore the previous lineup.")) {
       setIsUndoing(true);
       try {
-        await deleteStat(lastAction.id);
+        // Find out what point number we are actually undoing (the one that just finished)
+        const pointToUndo = lastAction.point_number;
         
-        const restoredNames = await restoreLineupForPoint(currentGame, currentPoint, currentTeam);
+        // Delete all stats for that point
+        await deletePoint(currentGame, targetTeamId, pointToUndo);
+        
+        // Restore lineup for the point we are returning to
+        const restoredNames = await restoreLineupForPoint(currentGame, pointToUndo, currentTeam);
         
         const optimisticallyRestored = players.map(p => ({
           ...p,
@@ -74,8 +79,10 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
         }));
         
         setPlayers(optimisticallyRestored);
-        
+        setCurrentPoint(pointToUndo);
         setIsTrackingActive(true);
+        
+        // Return to tracking
         onNavigate('dashboard');
       } catch (err) {
         console.error("Failed to undo point", err);
