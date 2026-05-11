@@ -141,7 +141,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         setPossessionChain([]);
       } else if (statType === 'Defence') {
         statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
-        setPossessionChain([activePlayer]);
+        setPossessionChain([]);
       } else {
         statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
       }
