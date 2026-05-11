@@ -90,7 +90,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
 
     const ensurePlayer = (name) => {
       if (!playersMap[name]) {
-        playersMap[name] = { name, goals: 0, assists: 0, secondaryAssists: 0, blocks: 0, throwaways: 0, drops: 0, stalls: 0, touches: 0, passes: 0, passDropped: 0, usage: 0, pointsPlayedSet: new Set(), holdsPlayed: 0, holdsWon: 0, breaksPlayed: 0, breaksWon: 0, cleanHolds: 0, possessionsPlayed: 0, goalsOnPitch: 0 };
+        playersMap[name] = { name, goals: 0, assists: 0, secondaryAssists: 0, blocks: 0, throwaways: 0, drops: 0, stalls: 0, touches: 0, passes: 0, passDropped: 0, usage: 0, pointsPlayedSet: new Set(), holdsPlayed: 0, holdsWon: 0, breaksPlayed: 0, breaksWon: 0, cleanHolds: 0, possessionsPlayed: 0, goalsOnPitch: 0, pulls: 0, pullScoreTotal: 0 };
       }
       return playersMap[name];
     };
@@ -224,6 +224,11 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       } else if (stat.stat_type === 'Stall Out') {
         p.stalls += 1;
         pointTurnovers[pointKey] = (pointTurnovers[pointKey] || 0) + 1;
+      } else if (stat.stat_type === 'Pull') {
+        p.pulls += 1;
+        if (stat.details && stat.details.score !== undefined) {
+           p.pullScoreTotal += stat.details.score;
+        }
       }
     });
 
@@ -322,6 +327,8 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
         if (blocksPerPoint > 0.3) tags.push("The Lockdown");
         if (systemImpact > 0 && p.pointsPlayedSet.size > 0 && (p.breaksPlayed / p.pointsPlayedSet.size) > 0.70) tags.push("D-Line Specialist");
       }
+      const avgPullScoreRaw = p.pulls > 0 ? (p.pullScoreTotal / p.pulls) : 0;
+      const avgPullScore = parseFloat(avgPullScoreRaw.toFixed(2));
 
       return {
         ...p,
@@ -334,6 +341,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
         systemImpact,
         oce,
         ova,
+        avgPullScore,
         pointsPlayed: p.holdsPlayed + p.breaksPlayed,
         tags
       };
@@ -780,6 +788,9 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                     <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('ova')} title="Weighted offensive contribution (Assists + Hockey Assists + Clean Holds).">
                       OVA {sortField === 'ova' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
+                    <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('avgPullScore')} title="Average Pull Impact (0-5 scale based on field position and pressure)">
+                      Pull Impact {sortField === 'avgPullScore' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                    </th>
                     <th className="p-4 font-bold text-right hover:text-white transition-colors" onClick={() => handleSort('usage')} title="Share of Team Touches">
                       Usage {sortField === 'usage' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
@@ -855,6 +866,9 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                         </td>
                         <td className="p-4 text-center font-mono font-bold text-emerald-300">
                           {p.ova.toFixed(1)}
+                        </td>
+                        <td className="p-4 text-center font-mono font-bold text-amber-300">
+                          {p.pulls > 0 ? p.avgPullScore.toFixed(2) : '-'}
                         </td>
                         <td className="p-4 text-right font-mono font-bold text-slate-300">
                           {p.usage}%

@@ -6,7 +6,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export const recordStatToDB = async (statData, currentTeamId) => {
-  const { player, stat, pointNumber, gameName, gameType, teamName } = statData;
+  const { player, stat, pointNumber, gameName, gameType, teamName, details } = statData;
 
   const { data, error } = await supabase
     .from('stats')
@@ -18,7 +18,8 @@ export const recordStatToDB = async (statData, currentTeamId) => {
         game_name: gameName || 'Unnamed Game',
         game_type: gameType || 'grass',
         team_name: teamName || 'Default Team',
-        team_id: currentTeamId
+        team_id: currentTeamId,
+        details: details || null
       }
     ]);
 

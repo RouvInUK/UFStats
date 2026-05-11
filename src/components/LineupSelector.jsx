@@ -1,6 +1,7 @@
 import { togglePlayerActiveStatus, clearActiveLineup, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB, checkIfHalfTimeLogged, fetchActiveGames } from '../supabaseClient';
 import { useState, useEffect } from 'react';
 import { Undo2, Mic, MicOff } from 'lucide-react';
+import PullTracker from './PullTracker';
 
 const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavigate, currentGame, setCurrentGame, currentPoint, setCurrentPoint, gameType, setGameType, setIsTrackingActive, opponentName, setOpponentName, initialPossession, setInitialPossession, isVoiceEnabled, setIsVoiceEnabled }) => {
   const [processingId, setProcessingId] = useState(null);
@@ -8,6 +9,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
   const [isStartingPoint, setIsStartingPoint] = useState(false);
   const [lastAction, setLastAction] = useState(null);
   const [isUndoing, setIsUndoing] = useState(false);
+  const [showPullTracker, setShowPullTracker] = useState(false);
 
   const [hasHalfTime, setHasHalfTime] = useState(false);
   const [activeGames, setActiveGames] = useState([]);
@@ -132,7 +134,16 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
 
       setCurrentPoint(nextPoint);
       setIsTrackingActive(true);
-      onNavigate('dashboard');
+
+      const isDefence = nextPoint === 1 
+        ? initialPossession === 'D' 
+        : lastAction?.stat_type === 'Point'; // If we scored, we pull.
+
+      if (isDefence && gameType !== 'training') {
+        setShowPullTracker(true);
+      } else {
+        onNavigate('dashboard');
+      }
     } catch (err) {
       console.error(err);
       alert('Failed to start point.');
@@ -450,6 +461,21 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
         </div>
 
       </div>
+      
+      {showPullTracker && (
+        <PullTracker
+          activeLineup={filteredPlayers.filter(p => p.is_active).map(p => p.name)}
+          currentGame={currentGame}
+          currentPoint={currentPoint}
+          gameType={gameType}
+          currentTeam={currentTeam}
+          targetTeamId={targetTeamId}
+          onComplete={() => {
+            setShowPullTracker(false);
+            onNavigate('dashboard');
+          }}
+        />
+      )}
     </div>
   );
 };
