@@ -347,6 +347,7 @@ function App() {
         <div className="flex justify-between items-center w-full">
           <div className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-1.5 cursor-pointer" onClick={() => setCurrentView('dashboard')}>
             UF<span className="text-indigo-500 font-light">STATS</span>
+            <SyncIndicator />
           </div>
           <div className="flex items-center gap-1">
           {profile?.is_system_admin && (
