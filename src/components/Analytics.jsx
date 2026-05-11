@@ -109,6 +109,9 @@ const Analytics = ({ targetTeamId, players = [] }) => {
           p.assists += 1;
         }
 
+      } else if (stat.stat_type === 'Pass Attempt') {
+        p.passes += 1; // It's an attempted pass, but neither completed nor a throwaway
+
       } else if (['Throwaway', 'Drop', 'Stall Out'].includes(stat.stat_type)) {
         p.turnovers += 1;
         

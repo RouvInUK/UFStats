@@ -213,6 +213,8 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
         if (nextStat && nextStat.game_name === stat.game_name && nextStat.point_number === stat.point_number && nextStat.stat_type === 'Point') {
           p.assists += 1;
         }
+      } else if (stat.stat_type === 'Pass Attempt') {
+        p.passDropped += 1;
       } else if (stat.stat_type === 'Defence') {
         p.blocks += 1;
       } else if (stat.stat_type === 'Throwaway') {

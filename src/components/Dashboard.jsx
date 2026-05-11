@@ -147,7 +147,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       } else if (['Drop', 'Throwaway', 'Stall Out'].includes(statType)) {
         if (currentChain.length > 1 && statType === 'Drop') {
           const thrower = currentChain[currentChain.length - 2];
-          statsToSave.push({ ...baseStat, player: thrower, stat: 'Throwaway' });
+          statsToSave.push({ ...baseStat, player: thrower, stat: 'Pass Attempt' });
         } else if (currentChain.length > 1 && (statType === 'Throwaway' || statType === 'Stall Out')) {
           const pendingPasser = currentChain[currentChain.length - 2];
           statsToSave.push({ ...baseStat, player: pendingPasser, stat: 'Pass' });

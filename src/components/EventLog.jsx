@@ -3,7 +3,7 @@ import { fetchGameStats, updateStat, deleteStat, deleteGame, deletePoint, fetchA
 import { Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
-const STAT_TYPES = ['Point', 'Pass', 'Throwaway', 'Drop', 'Stall Out', 'Defence'];
+const STAT_TYPES = ['Point', 'Pass', 'Pass Attempt', 'Throwaway', 'Drop', 'Stall Out', 'Defence'];
 
 const EventLog = ({ currentGame, onNavigate, targetTeamId }) => {
   const { profile } = useAuth();
