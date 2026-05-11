@@ -214,12 +214,16 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     setProcessingId(player.id);
     
     try {
-      // Fire request to Supabase
-      await togglePlayerActiveStatus(player.id, targetTeamId, player.is_active);
+      if (navigator.onLine) {
+        // Fire request to Supabase
+        await togglePlayerActiveStatus(player.id, targetTeamId, player.is_active);
+      }
     } catch {
-      alert("Failed to update status in cloud.");
-      // Revert optimistic update on failure
-      setPlayers(players);
+      if (navigator.onLine) {
+        alert("Failed to update status in cloud.");
+        // Revert optimistic update on failure only if online
+        setPlayers(players);
+      }
     } finally {
       setProcessingId(null);
     }
@@ -231,10 +235,14 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     
     setIsClearing(true);
     try {
-      await clearActiveLineup(targetTeamId);
+      if (navigator.onLine) {
+        await clearActiveLineup(targetTeamId);
+      }
     } catch {
-      alert("Failed to clear lineup in cloud.");
-      setPlayers(players); // revert
+      if (navigator.onLine) {
+        alert("Failed to clear lineup in cloud.");
+        setPlayers(players); // revert
+      }
     } finally {
       setIsClearing(false);
     }
