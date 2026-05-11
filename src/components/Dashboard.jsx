@@ -79,12 +79,9 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     fetchActiveGames(targetTeamId).then(setActiveGames).catch(console.error);
   }, [targetTeamId]);
 
-  useEffect(() => {
-    const matchedGame = activeGames.find(g => g.name === currentGame);
-    if (matchedGame && matchedGame.maxPoint) {
-      setCurrentPoint(matchedGame.maxPoint);
-    }
-  }, [currentGame, activeGames, setCurrentPoint]);
+  // Removed the useEffect that overrode currentPoint based on activeGames.
+  // The server maxPoint will lag behind the local state (especially offline),
+  // causing the client to silently revert to the previous point and write stats to the wrong point.
 
   useEffect(() => {
     if (activeLineup.length === 0) {
