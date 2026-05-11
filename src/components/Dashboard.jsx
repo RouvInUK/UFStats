@@ -92,20 +92,31 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     }
   }, [activeLineup]);
 
-  const handlePlayerSelect = async (playerName) => {
+  const handlePlayerSelect = (playerName) => {
     if (!isTrackingActive) return alert("Start tracking first!");
-    if (possessionChain.length > 0 && possessionChain[possessionChain.length - 1] === playerName) return;
-
-    if (possessionChain.length >= 2) {
-      const playerNMinus2 = possessionChain[possessionChain.length - 2];
-      await handleStatRecord('Pass', playerNMinus2);
-    }
     
-    setPossessionChain(prev => [...prev, playerName]);
+    // We update possessionChain immediately for instant UI feedback
+    setPossessionChain(prev => {
+      if (prev.length > 0 && prev[prev.length - 1] === playerName) return prev;
+      
+      const newChain = [...prev, playerName];
+      
+      if (prev.length >= 2) {
+        const playerNMinus2 = prev[prev.length - 2];
+        // Fire and forget the pass log so the UI doesn't freeze
+        handleStatRecord('Pass', playerNMinus2, prev);
+      }
+      
+      return newChain;
+    });
   };
 
-  const handleStatRecord = async (statType, overridePlayer = null) => {
-    const activePlayer = overridePlayer || possessionChain[possessionChain.length - 1];
+  const handleStatRecord = async (statType, overridePlayer = null, overrideChain = null) => {
+    // Use overrideChain if provided, otherwise fallback to the current state.
+    // Note: fallback to current state is still susceptible to race conditions for rapid sequential calls,
+    // but we use overrideChain from handlePlayerSelect to fix the critical path.
+    const currentChain = overrideChain || possessionChain;
+    const activePlayer = overridePlayer || currentChain[currentChain.length - 1];
     if (statType !== 'Opponent Point' && !activePlayer) return alert("Select a player first!");
     
     setIsSaving(true);
@@ -126,8 +137,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       } else if (statType === 'Point') {
         let pendingPasser = null;
         
-        if (activePlayer === possessionChain[possessionChain.length - 1]) {
-           pendingPasser = possessionChain[possessionChain.length - 2];
+        if (activePlayer === currentChain[currentChain.length - 1]) {
+           pendingPasser = currentChain[currentChain.length - 2];
         }
 
         if (pendingPasser) statsToSave.push({ ...baseStat, player: pendingPasser, stat: 'Pass' });
@@ -137,12 +148,11 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       } else if (statType === 'Pass') {
         statsToSave.push({ ...baseStat, player: activePlayer, stat: 'Pass' });
       } else if (['Drop', 'Throwaway', 'Stall Out'].includes(statType)) {
-        if (possessionChain.length > 1 && statType === 'Drop') {
-          const thrower = possessionChain[possessionChain.length - 2];
+        if (currentChain.length > 1 && statType === 'Drop') {
+          const thrower = currentChain[currentChain.length - 2];
           statsToSave.push({ ...baseStat, player: thrower, stat: 'Throwaway' });
-        } else if (possessionChain.length > 1 && (statType === 'Throwaway' || statType === 'Stall Out')) {
-          // The player successfully caught the disc before throwing it away or stalling out, so the previous pass must be completed
-          const pendingPasser = possessionChain[possessionChain.length - 2];
+        } else if (currentChain.length > 1 && (statType === 'Throwaway' || statType === 'Stall Out')) {
+          const pendingPasser = currentChain[currentChain.length - 2];
           statsToSave.push({ ...baseStat, player: pendingPasser, stat: 'Pass' });
         }
         statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
