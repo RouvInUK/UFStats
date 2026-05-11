@@ -137,6 +137,14 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       } else if (statType === 'Pass') {
         statsToSave.push({ ...baseStat, player: activePlayer, stat: 'Pass' });
       } else if (['Drop', 'Throwaway', 'Stall Out'].includes(statType)) {
+        if (possessionChain.length > 1 && statType === 'Drop') {
+          const thrower = possessionChain[possessionChain.length - 2];
+          statsToSave.push({ ...baseStat, player: thrower, stat: 'Throwaway' });
+        } else if (possessionChain.length > 1 && (statType === 'Throwaway' || statType === 'Stall Out')) {
+          // The player successfully caught the disc before throwing it away or stalling out, so the previous pass must be completed
+          const pendingPasser = possessionChain[possessionChain.length - 2];
+          statsToSave.push({ ...baseStat, player: pendingPasser, stat: 'Pass' });
+        }
         statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
         setPossessionChain([]);
       } else if (statType === 'Defence') {
