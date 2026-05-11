@@ -5,14 +5,12 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-import { getLocalPoint, savePointLocally, generateUUID, attemptSync } from './SyncEngine';
+import { getLocalPoint, savePointLocally, addStatToLocalPoint, generateUUID, attemptSync } from './SyncEngine';
 
 export const recordStatToDB = async (statData, currentTeamId) => {
   const { player, stat, pointNumber, gameName, gameType, teamName, details } = statData;
 
   const newStat = {
-    id: generateUUID(),
-    created_at: new Date().toISOString(),
     player: player,
     stat_type: stat,
     point_number: pointNumber,
@@ -23,17 +21,8 @@ export const recordStatToDB = async (statData, currentTeamId) => {
     details: details || null
   };
 
-  // 1. Fetch current local point queue
-  let pointData = await getLocalPoint(newStat.game_name, pointNumber);
-  let statsArray = pointData ? pointData.stats : [];
-  
-  // 2. Append new stat
-  statsArray.push(newStat);
-  
-  // 3. Save locally and trigger sync
-  await savePointLocally(newStat.game_name, pointNumber, statsArray);
-
-  return newStat;
+  const enrichedStat = await addStatToLocalPoint(newStat.game_name, pointNumber, newStat);
+  return enrichedStat;
 };
 
 
@@ -284,33 +273,74 @@ export const fetchGameStats = async (gameNames, teamIdentifier) => {
   const isArray = Array.isArray(gameNames);
   if (isArray && gameNames.length === 0) return [];
 
-  let query = supabase
-    .from('stats')
-    .select('*')
-    .limit(100000)
-    .order('created_at', { ascending: false });
+  let serverData = [];
+  if (navigator.onLine) {
+    let query = supabase
+      .from('stats')
+      .select('*')
+      .limit(100000)
+      .order('created_at', { ascending: false });
 
-  if (isArray) {
-    query = query.in('game_name', gameNames);
-  } else {
-    query = query.eq('game_name', gameNames);
-  }
-
-  if (teamIdentifier) {
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamIdentifier);
-    if (isUUID) {
-      query = query.eq('team_id', teamIdentifier);
-    } else if (teamIdentifier === 'Default Team' || teamIdentifier === 'Default Team (Migrated)') {
-      query = query.or(`team_name.eq.${teamIdentifier},team_name.is.null`);
+    if (isArray) {
+      query = query.in('game_name', gameNames);
     } else {
-      query = query.eq('team_name', teamIdentifier);
+      query = query.eq('game_name', gameNames);
     }
+
+    if (teamIdentifier) {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamIdentifier);
+      if (isUUID) {
+        query = query.eq('team_id', teamIdentifier);
+      } else if (teamIdentifier === 'Default Team' || teamIdentifier === 'Default Team (Migrated)') {
+        query = query.or(`team_name.eq.${teamIdentifier},team_name.is.null`);
+      } else {
+        query = query.eq('team_name', teamIdentifier);
+      }
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    serverData = data || [];
   }
 
-  const { data, error } = await query;
+  // Merge with local unsynced stats
+  try {
+    const { keys, get } = await import('idb-keyval');
+    const allKeys = await keys();
+    const gameNameArray = isArray ? gameNames : [gameNames];
+    
+    let localStats = [];
+    for (const key of allKeys) {
+      if (typeof key === 'string' && key.startsWith('point_')) {
+        const pointData = await get(key);
+        if (pointData && pointData.stats && !pointData.synced && gameNameArray.includes(pointData.gameName)) {
+           // Ensure it belongs to this team
+           const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamIdentifier);
+           const filteredStats = pointData.stats.filter(s => {
+             if (isUUID) return s.team_id === teamIdentifier;
+             return s.team_name === teamIdentifier || s.team_name === 'Default Team' || !s.team_name;
+           });
+           localStats.push(...filteredStats);
+        }
+      }
+    }
 
-  if (error) throw error;
-  return data || [];
+    // Merge logic: Add local stats that are not in serverData
+    const serverIds = new Set(serverData.map(s => s.id));
+    for (const ls of localStats) {
+      if (!serverIds.has(ls.id)) {
+        serverData.push(ls);
+      }
+    }
+    
+    // Re-sort descending
+    serverData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  } catch (e) {
+    console.warn("Could not merge local stats", e);
+  }
+
+  return serverData;
 };
 
 export const updateStat = async (id, newStatType) => {

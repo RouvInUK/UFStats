@@ -11,39 +11,86 @@ export const generateUUID = () => {
 
 export const getPointKey = (gameName, pointNumber) => `point_${gameName}_${pointNumber}`;
 
-// Save a point locally
+// Simple JS lock to prevent concurrent mutation of the same point array
+const pointLocks = {};
+
+export const addStatToLocalPoint = async (gameName, pointNumber, newStat) => {
+  const key = getPointKey(gameName, pointNumber);
+  
+  // Wait for existing lock
+  while (pointLocks[key]) {
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  pointLocks[key] = true;
+
+  try {
+    let pointData = await get(key);
+    let statsArray = pointData ? pointData.stats : [];
+    
+    const enrichedStat = {
+      ...newStat,
+      id: newStat.id || generateUUID(),
+      created_at: newStat.created_at || new Date().toISOString()
+    };
+    
+    statsArray.push(enrichedStat);
+    
+    const newPointData = {
+      gameName,
+      pointNumber,
+      stats: statsArray,
+      last_modified: Date.now(),
+      synced: false
+    };
+
+    await set(key, newPointData);
+
+    const isPointOver = statsArray.some(s => s.stat_type === 'Point' || s.stat_type === 'Opponent Point' || s.stat_type === 'Game Completed');
+    if (isPointOver && navigator.onLine) {
+      attemptSync();
+    }
+    
+    return enrichedStat;
+  } finally {
+    delete pointLocks[key];
+  }
+};
+
+// Legacy savePointLocally for Lineup which saves an array
 export const savePointLocally = async (gameName, pointNumber, statsArray) => {
   const key = getPointKey(gameName, pointNumber);
   
-  // Ensure every stat has an id and created_at
-  const enrichedStats = statsArray.map(stat => ({
-    ...stat,
-    id: stat.id || generateUUID(),
-    created_at: stat.created_at || new Date().toISOString()
-  }));
+  while (pointLocks[key]) await new Promise(r => setTimeout(r, 10));
+  pointLocks[key] = true;
 
-  const pointData = {
-    gameName,
-    pointNumber,
-    stats: enrichedStats,
-    last_modified: Date.now(),
-    synced: false
-  };
+  try {
+    const enrichedStats = statsArray.map(stat => ({
+      ...stat,
+      id: stat.id || generateUUID(),
+      created_at: stat.created_at || new Date().toISOString()
+    }));
 
-  await set(key, pointData);
-  
-  // Check if this point is completed
-  const isPointOver = enrichedStats.some(s => s.stat_type === 'Point' || s.stat_type === 'Opponent Point' || s.stat_type === 'Game Completed');
+    const pointData = {
+      gameName,
+      pointNumber,
+      stats: enrichedStats,
+      last_modified: Date.now(),
+      synced: false
+    };
 
-  // Trigger a sync attempt only if the point is over
-  if (isPointOver && navigator.onLine) {
-    attemptSync();
+    await set(key, pointData);
+    
+    const isPointOver = enrichedStats.some(s => s.stat_type === 'Point' || s.stat_type === 'Opponent Point' || s.stat_type === 'Game Completed');
+    if (isPointOver && navigator.onLine) {
+      attemptSync();
+    }
+    
+    return enrichedStats;
+  } finally {
+    delete pointLocks[key];
   }
-  
-  return enrichedStats; // Return so the caller knows the assigned IDs
 };
 
-// Fetch point from local DB
 export const getLocalPoint = async (gameName, pointNumber) => {
   const key = getPointKey(gameName, pointNumber);
   return await get(key);
