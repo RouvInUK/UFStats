@@ -148,9 +148,30 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
       setCurrentPoint(nextPoint);
       setIsTrackingActive(true);
 
-      const isDefence = nextPoint === 1 
-        ? initialPossession === 'D' 
-        : lastAction?.stat_type === 'Point'; // If we scored, we pull.
+      // Robustly calculate the exact possession state using all historical stats
+      let calculatedOD = initialPossession || 'O';
+      let gameStartOD = initialPossession || null;
+      
+      if (allGameStats && allGameStats.length > 0) {
+        const chronStats = [...allGameStats].reverse();
+        chronStats.forEach(stat => {
+            if (stat.stat_type === 'Start Offense') {
+                calculatedOD = 'O';
+                if (!gameStartOD) gameStartOD = 'O';
+            }
+            if (stat.stat_type === 'Start Defense') {
+                calculatedOD = 'D';
+                if (!gameStartOD) gameStartOD = 'D';
+            }
+            if (stat.stat_type === 'Half Time') {
+                calculatedOD = gameStartOD === 'O' ? 'D' : 'O';
+            }
+            if (stat.stat_type === 'Point') { calculatedOD = 'D'; }
+            if (stat.stat_type === 'Opponent Point') { calculatedOD = 'O'; }
+        });
+      }
+
+      const isDefence = calculatedOD === 'D';
 
       if (isDefence && gameType !== 'training') {
         setShowPullTracker(true);
@@ -170,6 +191,15 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     if (window.confirm("Are you sure you want to log Half Time?")) {
       setIsStartingPoint(true);
       try {
+        const halfTimeStat = {
+          player: 'System',
+          stat_type: 'Half Time',
+          point_number: currentPoint,
+          game_name: currentGame,
+          game_type: gameType,
+          team_name: currentTeam,
+          created_at: new Date().toISOString()
+        };
         await recordStatToDB({
           player: 'System',
           stat: 'Half Time',
@@ -178,6 +208,9 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
           gameType: gameType,
           teamName: currentTeam
         }, targetTeamId);
+        
+        // Append to local state so immediate possession calculations are accurate
+        setAllGameStats(prev => [halfTimeStat, ...prev]);
         setHasHalfTime(true);
         alert('Half Time logged successfully.');
       } catch (err) {
