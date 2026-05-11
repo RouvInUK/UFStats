@@ -54,12 +54,15 @@ const Analytics = ({ targetTeamId, players = [] }) => {
       // Group legacy stats where the user manually typed "Name 10" or "Name #10" before the shirt_number field existed
       if (players && players.length > 0) {
         const match = players.find(p => {
-          if (p.name === stat.player) return true;
+          const statP = stat.player.trim().toLowerCase().replace(/\s+/g, ' ');
+          const pName = p.name.trim().toLowerCase().replace(/\s+/g, ' ');
+          if (pName === statP) return true;
+          
           if (p.shirt_number) {
-             const numStr = String(p.shirt_number);
-             if (stat.player === `${p.name} ${numStr}`) return true;
-             if (stat.player === `${p.name} #${numStr}`) return true;
-             if (stat.player === `${numStr} ${p.name}`) return true;
+             const numStr = String(p.shirt_number).trim().toLowerCase();
+             if (statP === `${pName} ${numStr}`) return true;
+             if (statP === `${pName} #${numStr}`) return true;
+             if (statP === `${numStr} ${pName}`) return true;
           }
           return false;
         });

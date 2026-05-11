@@ -5,7 +5,7 @@ import Fuse from 'fuse.js';
 import { playChime, playClick, playBuzz } from '../utils/audioFeedback';
 
 const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, gameType, currentTeam, targetTeamId, opponentName, initialPossession, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers, isVoiceEnabled, setIsVoiceEnabled }) => {
-  const [selectedPlayer, setSelectedPlayer] = useState('');
+  const [possessionChain, setPossessionChain] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [activeGames, setActiveGames] = useState([]);
@@ -87,39 +87,77 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   }, [currentGame, activeGames, setCurrentPoint]);
 
   useEffect(() => {
-    if (activeLineup.length > 0 && !activeLineup.includes(selectedPlayer)) {
-      setSelectedPlayer(activeLineup[0]);
-    } else if (activeLineup.length === 0) {
-      setSelectedPlayer('');
+    if (activeLineup.length === 0) {
+      setPossessionChain([]);
     }
-  }, [activeLineup, selectedPlayer]);
+  }, [activeLineup]);
+
+  const handlePlayerSelect = async (playerName) => {
+    if (!isTrackingActive) return alert("Start tracking first!");
+    if (possessionChain.length > 0 && possessionChain[possessionChain.length - 1] === playerName) return;
+
+    if (possessionChain.length >= 2) {
+      const playerNMinus2 = possessionChain[possessionChain.length - 2];
+      await handleStatRecord('Pass', playerNMinus2);
+    }
+    
+    setPossessionChain(prev => [...prev, playerName]);
+  };
 
   const handleStatRecord = async (statType, overridePlayer = null) => {
-    const activePlayer = overridePlayer || selectedPlayer;
+    const activePlayer = overridePlayer || possessionChain[possessionChain.length - 1];
     if (statType !== 'Opponent Point' && !activePlayer) return alert("Select a player first!");
     
     setIsSaving(true);
     setLastSaved(null);
     try {
-      const statData = {
-        player: statType === 'Opponent Point' ? 'Opponent' : activePlayer,
-        stat: statType,
+      const statsToSave = [];
+      const baseStat = {
         timestamp: new Date().toLocaleString(),
         pointNumber: currentPoint,
         gameName: currentGame,
         gameType: gameType,
         teamName: currentTeam,
       };
-      
-      console.log(`[Dashboard] Attempting to save stat:`, statData);
-      const dbResponse = await recordStatToDB(statData, targetTeamId);
-      console.log(`[Dashboard] Save successful. DB Response:`, dbResponse);
+
+      if (statType === 'Opponent Point') {
+        statsToSave.push({ ...baseStat, player: 'Opponent', stat: 'Opponent Point' });
+        setPossessionChain([]);
+      } else if (statType === 'Point') {
+        let pendingPasser = null;
+        let secAssistPlayer = null;
+        
+        if (activePlayer === possessionChain[possessionChain.length - 1]) {
+           pendingPasser = possessionChain[possessionChain.length - 2];
+           secAssistPlayer = possessionChain[possessionChain.length - 3];
+        }
+
+        statsToSave.push({ ...baseStat, player: activePlayer, stat: 'Point' });
+        if (pendingPasser) statsToSave.push({ ...baseStat, player: pendingPasser, stat: 'Assist' });
+        if (secAssistPlayer) statsToSave.push({ ...baseStat, player: secAssistPlayer, stat: 'Secondary Assist' });
+        
+        setPossessionChain([]);
+      } else if (statType === 'Pass') {
+        statsToSave.push({ ...baseStat, player: activePlayer, stat: 'Pass' });
+      } else if (['Drop', 'Throwaway', 'Stall Out'].includes(statType)) {
+        statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
+        setPossessionChain([]);
+      } else if (statType === 'Defence') {
+        statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
+        setPossessionChain([activePlayer]);
+      } else {
+        statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
+      }
+
+      for (const st of statsToSave) {
+        console.log(`[Dashboard] Attempting to save stat:`, st);
+        await recordStatToDB(st, targetTeamId);
+      }
       
       setLastSaved(statType === 'Opponent Point' ? `Saved Opponent Point` : `Saved ${statType} for ${activePlayer}`);
       
       if (statType === 'Point' || statType === 'Opponent Point') {
-        // Show success state on the tracking UI for 1.5 seconds before kicking out
-        setIsSaving(true); // Locks all buttons
+        setIsSaving(true);
         triggerFeedback(statType === 'Point' ? 'success' : 'error');
         setVoiceFeedback(statType === 'Opponent Point' ? 'Opponent Scored!' : `Point Scored by ${activePlayer}!`);
         
@@ -132,13 +170,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
              }
              onNavigate('lineup');
            } else {
-             // In training mode, a score doesn't end the session. Just reset state.
              setIsSaving(false);
-             setSelectedPlayer('');
+             setPossessionChain([]);
              setVoiceFeedback('');
            }
         }, 1500);
-        return; // Skip the standard feedback and finally block
+        return;
       }
 
       if (statType === 'Point') {
@@ -416,7 +453,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         recognitionRef.current = null;
       }
     };
-  }, [isVoiceEnabled, isTrackingActive, activeLineup, selectedPlayer]);
+  }, [isVoiceEnabled, isTrackingActive, activeLineup, possessionChain]);
 
   const handleUndo = async () => {
     if (!currentGame) return;
@@ -451,7 +488,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   };
 
   const getPlayerClass = (player) => {
-    const isSelected = selectedPlayer === player;
+    const isCurrentHolder = possessionChain.length > 0 && possessionChain[possessionChain.length - 1] === player;
+    const isPendingPasser = possessionChain.length > 1 && possessionChain[possessionChain.length - 2] === player;
     const isVoiceGlow = voiceRecognizedPlayer === player;
     
     if (isVoiceGlow) {
@@ -460,8 +498,13 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     if (isVoiceEnabled) {
       return 'bg-slate-900 text-slate-500 border border-slate-800 opacity-50 cursor-not-allowed transition-all';
     }
-    if (isSelected) {
-      return 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)] ring-2 ring-indigo-400 scale-105 z-10 transition-all';
+    if (isCurrentHolder) {
+      // Current holder glow (Disc Icon effect)
+      return 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.7)] ring-4 ring-indigo-400 scale-105 z-20 transition-all relative after:content-["🥏"] after:absolute after:-top-3 after:-right-3 after:text-2xl after:animate-bounce';
+    }
+    if (isPendingPasser) {
+      // Subtle active state for pending passer
+      return 'bg-indigo-900/80 text-indigo-200 border border-indigo-500/50 scale-100 z-10 transition-all shadow-[0_0_10px_rgba(79,70,229,0.2)]';
     }
     return 'bg-slate-900 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105';
   };
@@ -541,7 +584,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                 {activeLineup.map((player) => (
                   <button
                     key={player}
-                    onClick={() => setSelectedPlayer(player)}
+                    onClick={() => handlePlayerSelect(player)}
                     disabled={isSaving || isVoiceEnabled}
                     className={`px-3 py-3 text-sm font-bold rounded-xl ${getPlayerClass(player)}`}
                   >
@@ -596,23 +639,13 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
 
            {/* Action Buttons */}
           <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-700/50">
-            <div className="col-span-2 grid grid-cols-2 gap-4">
               <button
                 onClick={() => handleStatRecord('Point')}
-                disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer || isVoiceEnabled}
-                className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-emerald-500 hover:bg-emerald-400 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Point')}
+                disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
+                className={getActionClass("col-span-2 relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-emerald-500 hover:bg-emerald-400 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Point')}
               >
-                Score
+                WE SCORED
               </button>
-              <button
-                onClick={() => handleStatRecord('Pass')}
-                disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer || isVoiceEnabled}
-                className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-cyan-500 hover:bg-cyan-400 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(6,182,212,0.2)] hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Pass')}
-              >
-                Pass
-              </button>
-            </div>
-            
             <button
               onClick={() => handleStatRecord('Opponent Point')}
               disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || isVoiceEnabled}
@@ -622,28 +655,28 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
             </button>
             <button
               onClick={() => handleStatRecord('Throwaway')}
-              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer || isVoiceEnabled}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
               className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-500 hover:bg-rose-400 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(244,63,94,0.2)] hover:shadow-[0_0_30px_rgba(244,63,94,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Throwaway')}
             >
               Incomplete
             </button>
             <button
               onClick={() => handleStatRecord('Drop')}
-              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer || isVoiceEnabled}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
               className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-rose-600 hover:bg-rose-500 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(225,29,72,0.2)] hover:shadow-[0_0_30px_rgba(225,29,72,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Drop')}
             >
               Drop
             </button>
             <button
               onClick={() => handleStatRecord('Stall Out')}
-              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer || isVoiceEnabled}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
               className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-violet-600 hover:bg-violet-500 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(124,58,237,0.2)] hover:shadow-[0_0_30px_rgba(124,58,237,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Stall Out')}
             >
               Stall Out
             </button>
             <button
               onClick={() => handleStatRecord('Defence')}
-              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || !selectedPlayer || isVoiceEnabled}
+              disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
               className={getActionClass("group relative flex items-center justify-center px-6 py-4 border border-transparent text-lg font-bold rounded-xl text-white bg-orange-500 hover:bg-orange-400 focus:outline-none active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_30px_rgba(249,115,22,0.3)] disabled:opacity-50 disabled:cursor-not-allowed", 'Defence')}
             >
               Defence
