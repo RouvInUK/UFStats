@@ -26,7 +26,8 @@ export const savePointLocally = async (gameName, pointNumber, statsArray) => {
     gameName,
     pointNumber,
     stats: enrichedStats,
-    last_modified: Date.now()
+    last_modified: Date.now(),
+    synced: false
   };
 
   await set(key, pointData);
@@ -79,7 +80,7 @@ export const attemptSync = async () => {
 
     for (const key of pointKeys) {
       const pointData = await get(key);
-      if (!pointData) continue;
+      if (!pointData || pointData.synced) continue;
 
       // "Client-Wins" Logic:
       // First, get the server's current stats for this game/point to delete any that were undone/removed locally
@@ -111,7 +112,8 @@ export const attemptSync = async () => {
       }
 
       // If we made it here without throwing, the sync for this point was successful
-      await del(key);
+      pointData.synced = true;
+      await set(key, pointData);
     }
     
     window.dispatchEvent(new CustomEvent('sync-status', { detail: 'synced' }));
@@ -126,7 +128,13 @@ export const attemptSync = async () => {
 
 export const getPendingSyncCount = async () => {
   const allKeys = await keys();
-  return allKeys.filter(k => typeof k === 'string' && k.startsWith('point_')).length;
+  const pointKeys = allKeys.filter(k => typeof k === 'string' && k.startsWith('point_'));
+  let count = 0;
+  for (const key of pointKeys) {
+    const pointData = await get(key);
+    if (pointData && !pointData.synced) count++;
+  }
+  return count;
 };
 
 export const removeStatLocally = async (id) => {
@@ -146,6 +154,7 @@ export const removeStatLocally = async (id) => {
         await del(key);
       } else {
         pointData.last_modified = Date.now();
+        pointData.synced = false;
         await set(key, pointData);
       }
       return true; // found and removed
