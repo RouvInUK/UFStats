@@ -107,7 +107,13 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     setIsStartingPoint(true);
     try {
       const nextPoint = currentPoint + 1;
-      await clearActiveLineup(targetTeamId);
+      if (navigator.onLine) {
+        try {
+          await clearActiveLineup(targetTeamId);
+        } catch(e) {
+          console.warn("Offline or failed to clear lineup", e);
+        }
+      }
       await recordLineup(activeLineupNames, nextPoint, currentGame, gameType, currentTeam, targetTeamId);
 
       if (currentPoint === 0) {
