@@ -32,8 +32,11 @@ export const savePointLocally = async (gameName, pointNumber, statsArray) => {
 
   await set(key, pointData);
   
-  // Trigger a sync attempt
-  if (navigator.onLine) {
+  // Check if this point is completed
+  const isPointOver = enrichedStats.some(s => s.stat_type === 'Point' || s.stat_type === 'Opponent Point' || s.stat_type === 'Game Completed');
+
+  // Trigger a sync attempt only if the point is over
+  if (isPointOver && navigator.onLine) {
     attemptSync();
   }
   
@@ -182,7 +185,12 @@ export const getLastLocalStat = async (gameName) => {
   return allStats[0];
 };
 
-// Setup online listener
+// Setup online listener and initial sync
 if (typeof window !== 'undefined') {
   window.addEventListener('online', attemptSync);
+  
+  // Try to sync on startup just in case there are queued items
+  if (navigator.onLine) {
+    setTimeout(attemptSync, 1000);
+  }
 }
