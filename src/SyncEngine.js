@@ -161,9 +161,27 @@ export const attemptSync = async () => {
         }
       }
 
-      // If we made it here without throwing, the sync for this point was successful
-      pointData.synced = true;
-      await set(key, pointData);
+      // Re-fetch with lock to ensure we don't overwrite stats added during the network request
+      while (pointLocks[key]) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+      pointLocks[key] = true;
+      try {
+        const latestPointData = await get(key);
+        if (latestPointData) {
+          if (latestPointData.stats.length === pointData.stats.length) {
+            // Nothing changed locally during upload
+            latestPointData.synced = true;
+            await set(key, latestPointData);
+          } else {
+            // New stats were added locally while we were uploading!
+            // Leave synced as false so the new stats get synced next time.
+            console.log(`[SyncEngine] Stats appended during upload for ${key}. Leaving synced=false.`);
+          }
+        }
+      } finally {
+        delete pointLocks[key];
+      }
     }
     
     window.dispatchEvent(new CustomEvent('sync-status', { detail: 'synced' }));
