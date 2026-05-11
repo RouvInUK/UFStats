@@ -125,16 +125,13 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         setPossessionChain([]);
       } else if (statType === 'Point') {
         let pendingPasser = null;
-        let secAssistPlayer = null;
         
         if (activePlayer === possessionChain[possessionChain.length - 1]) {
            pendingPasser = possessionChain[possessionChain.length - 2];
-           secAssistPlayer = possessionChain[possessionChain.length - 3];
         }
 
+        if (pendingPasser) statsToSave.push({ ...baseStat, player: pendingPasser, stat: 'Pass' });
         statsToSave.push({ ...baseStat, player: activePlayer, stat: 'Point' });
-        if (pendingPasser) statsToSave.push({ ...baseStat, player: pendingPasser, stat: 'Assist' });
-        if (secAssistPlayer) statsToSave.push({ ...baseStat, player: secAssistPlayer, stat: 'Secondary Assist' });
         
         setPossessionChain([]);
       } else if (statType === 'Pass') {
