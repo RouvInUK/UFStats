@@ -16,6 +16,7 @@
     "express": "^5.2.1",
     "fuse.js": "^7.3.0",
     "google-auth-library": "^10.6.2",
+    "idb-keyval": "^6.2.1",
     "google-spreadsheet": "^5.2.0",
     "lucide-react": "^0.468.0",
     "react": "^19.2.4",

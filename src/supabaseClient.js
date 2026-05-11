@@ -5,34 +5,44 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
+import { getLocalPoint, savePointLocally, generateUUID, attemptSync } from './SyncEngine';
+
 export const recordStatToDB = async (statData, currentTeamId) => {
   const { player, stat, pointNumber, gameName, gameType, teamName, details } = statData;
 
-  const { data, error } = await supabase
-    .from('stats')
-    .insert([
-      {
-        player: player,
-        stat_type: stat,
-        point_number: pointNumber,
-        game_name: gameName || 'Unnamed Game',
-        game_type: gameType || 'grass',
-        team_name: teamName || 'Default Team',
-        team_id: currentTeamId,
-        details: details || null
-      }
-    ]);
+  const newStat = {
+    id: generateUUID(),
+    created_at: new Date().toISOString(),
+    player: player,
+    stat_type: stat,
+    point_number: pointNumber,
+    game_name: gameName || 'Unnamed Game',
+    game_type: gameType || 'grass',
+    team_name: teamName || 'Default Team',
+    team_id: currentTeamId,
+    details: details || null
+  };
 
-  if (error) {
-    throw error;
-  }
-  return data;
+  // 1. Fetch current local point queue
+  let pointData = await getLocalPoint(newStat.game_name, pointNumber);
+  let statsArray = pointData ? pointData.stats : [];
+  
+  // 2. Append new stat
+  statsArray.push(newStat);
+  
+  // 3. Save locally and trigger sync
+  await savePointLocally(newStat.game_name, pointNumber, statsArray);
+
+  return newStat;
 };
+
 
 export const recordLineup = async (players, pointNumber, gameName, gameType, teamName, currentTeamId) => {
   if (!players || players.length === 0) return;
   
   const insertData = players.map(player => ({
+    id: generateUUID(),
+    created_at: new Date().toISOString(),
     player: player,
     stat_type: 'Lineup',
     point_number: pointNumber,
@@ -42,14 +52,14 @@ export const recordLineup = async (players, pointNumber, gameName, gameType, tea
     team_id: currentTeamId
   }));
 
-  const { data, error } = await supabase
-    .from('stats')
-    .insert(insertData);
+  // Queue locally
+  let pointData = await getLocalPoint(gameName || 'Unnamed Game', pointNumber);
+  let statsArray = pointData ? pointData.stats : [];
+  
+  statsArray.push(...insertData);
+  await savePointLocally(gameName || 'Unnamed Game', pointNumber, statsArray);
 
-  if (error) {
-    throw error;
-  }
-  return data;
+  return insertData;
 };
 
 // --- Roster & Lineup API Helpers ---
@@ -315,14 +325,25 @@ export const updateStat = async (id, newStatType) => {
 };
 
 export const deleteStat = async (id) => {
-  const { error } = await supabase
-    .from('stats')
-    .delete()
-    .eq('id', id);
+  // Try removing locally first
+  import('./SyncEngine').then(({ removeStatLocally, attemptSync }) => {
+    removeStatLocally(id).then((removed) => {
+       if (removed && navigator.onLine) {
+         attemptSync();
+       }
+    });
+  });
 
-  if (error) {
-    console.error("Supabase Delete Error:", error);
-    throw error;
+  if (navigator.onLine) {
+    const { error } = await supabase
+      .from('stats')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error("Supabase Delete Error:", error);
+      throw error;
+    }
   }
 };
 
@@ -489,6 +510,17 @@ export const fetchActionsPerDay = async () => {
 
 export const fetchLastStatForGame = async (gameName, teamName) => {
   if (!teamName) return null;
+  
+  try {
+    const { getLastLocalStat } = await import('./SyncEngine');
+    const localStat = await getLastLocalStat(gameName);
+    if (localStat) return localStat;
+  } catch (e) {
+    console.warn("Could not fetch local stat:", e);
+  }
+
+  if (!navigator.onLine) return null;
+
   let query = supabase
     .from('stats')
     .select('*')
@@ -527,6 +559,22 @@ export const checkIfHalfTimeLogged = async (gameName) => {
 
 export const restoreLineupForPoint = async (gameName, pointNumber, teamName) => {
   if (!teamName) return [];
+  
+  try {
+    const { getLocalPoint } = await import('./SyncEngine');
+    const localPoint = await getLocalPoint(gameName, pointNumber);
+    if (localPoint && localPoint.stats) {
+      const lineupStats = localPoint.stats.filter(s => s.stat_type === 'Lineup');
+      if (lineupStats.length > 0) {
+        return lineupStats.map(s => s.player);
+      }
+    }
+  } catch (e) {
+    console.warn("Could not fetch local lineup:", e);
+  }
+
+  if (!navigator.onLine) return [];
+
   let query = supabase
     .from('stats')
     .select('player')

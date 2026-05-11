@@ -11,7 +11,60 @@ import AdminDashboard from './components/AdminDashboard';
 import TeamSelectionScreen from './components/TeamSelectionScreen';
 import { fetchPlayers } from './supabaseClient';
 import { useAuth } from './contexts/AuthContext';
-import { ShieldCheck, Star, LogOut } from 'lucide-react';
+import { ShieldCheck, Star, LogOut, Cloud, CloudOff, CloudUpload } from 'lucide-react';
+import { getPendingSyncCount } from './SyncEngine';
+
+const SyncIndicator = () => {
+  const [status, setStatus] = useState('synced');
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    const updateCount = async () => {
+      const count = await getPendingSyncCount();
+      setPendingCount(count);
+      if (status === 'offline' && count === 0) setStatus('synced');
+    };
+
+    const handleSyncStatus = (e) => {
+      setStatus(e.detail);
+      updateCount();
+    };
+
+    window.addEventListener('sync-status', handleSyncStatus);
+    
+    // Initial check
+    updateCount();
+    const interval = setInterval(updateCount, 2000);
+
+    return () => {
+      window.removeEventListener('sync-status', handleSyncStatus);
+      clearInterval(interval);
+    };
+  }, [status]);
+
+  if (status === 'synced' && pendingCount === 0) {
+    return (
+      <div className="flex items-center gap-1.5 text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full text-xs font-bold" title="All data synced to cloud">
+        <Cloud className="w-3.5 h-3.5" />
+      </div>
+    );
+  }
+
+  if (status === 'syncing') {
+    return (
+      <div className="flex items-center gap-1.5 text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-full text-xs font-bold" title="Syncing data to cloud...">
+        <CloudUpload className="w-3.5 h-3.5 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full text-xs font-bold animate-pulse" title={`${pendingCount} points waiting for connection`}>
+      <CloudOff className="w-3.5 h-3.5" />
+      <span>{pendingCount}</span>
+    </div>
+  );
+};
 
 function App() {
   const { user, profile, loading: authLoading, authError, signOut } = useAuth();
@@ -259,6 +312,7 @@ function App() {
                {effectiveTeamName}
              </div>
           )}
+          <SyncIndicator />
         </div>
         <div className="flex items-center gap-4">
           {profile?.is_system_admin && (
