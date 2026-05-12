@@ -31,3 +31,5 @@ credentials.json
 # Local Bug Ledger
 DEFECTS.md
 FEATURES.md
+.vercel
+.env*.local

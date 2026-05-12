@@ -180,7 +180,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
       }
     } catch (err) {
       console.error(err);
-      alert('Failed to start point.');
+      alert('Failed to start point. Error: ' + err.message + '\nStack: ' + err.stack);
     } finally {
       setIsStartingPoint(false);
     }
