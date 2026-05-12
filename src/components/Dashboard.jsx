@@ -536,33 +536,86 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       <div className="flex flex-col w-full h-[100dvh] overflow-hidden bg-slate-900 fixed inset-0">
         <div className="flex flex-col flex-1 w-full max-w-xl mx-auto bg-slate-800 shadow-2xl relative h-full">
         
-        {/* Thin Scoreboard Header Section */}
-        <div className="px-3 py-2 bg-slate-950 flex items-center justify-between border-b border-slate-800 shrink-0">
-            {/* Left Column: Us */}
-            <div className="flex flex-col items-start min-w-[80px]">
-               <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest truncate max-w-[100px]">{currentTeam}</span>
-               <div className={`text-2xl sm:text-3xl font-black font-mono leading-none ${score.us > score.them ? 'text-indigo-400 drop-shadow-[0_0_10px_rgba(129,140,248,0.5)]' : 'text-slate-300'}`}>{score.us}</div>
-            </div>
-            
-            {/* Center Column: Point & O/D */}
-            <div className="flex flex-col items-center justify-center min-w-[60px]">
-               <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-black shadow-lg ${currentOD === 'O' ? 'bg-indigo-600 text-white' : 'bg-rose-600 text-white'}`}>
-                 {currentOD}
-               </div>
-               <div className="mt-0.5 text-slate-400 text-[9px] font-bold uppercase tracking-widest whitespace-nowrap">Point {currentPoint}</div>
-            </div>
+        {/* Scoreboard Header Section (Original Full-Size Layout) */}
+        <div className="p-4 sm:p-6 bg-slate-900 border-b border-slate-700/50 shrink-0">
+          <div className="flex items-center justify-between bg-slate-950/50 rounded-2xl border border-white/5 shadow-inner p-4">
+             {/* Left Column: Us */}
+             <div className="flex flex-col items-start w-1/3">
+                <span className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest truncate w-full">{currentTeam}</span>
+                <div className={`text-4xl sm:text-5xl font-black font-mono tracking-tighter ${score.us > score.them ? 'text-indigo-400 drop-shadow-[0_0_15px_rgba(129,140,248,0.5)]' : 'text-slate-300'}`}>{score.us}</div>
+             </div>
 
-            {/* Right Column: Them */}
-            <div className="flex flex-col items-end min-w-[80px] text-right">
-               <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest truncate max-w-[100px]">{liveOpponentName}</span>
-               <div className={`text-2xl sm:text-3xl font-black font-mono leading-none ${score.them > score.us ? 'text-rose-400 drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]' : 'text-slate-300'}`}>{score.them}</div>
+             {/* Center Column: Point & O/D */}
+             <div className="flex flex-col items-center justify-center w-1/3 px-2">
+                <div className="flex items-center justify-center gap-3">
+                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm sm:text-base font-black shadow-lg ${currentOD === 'O' ? 'bg-indigo-600 text-white ring-2 ring-indigo-400/50' : 'bg-rose-600 text-white ring-2 ring-rose-400/50'}`}>
+                    {currentOD}
+                  </div>
+                </div>
+                <div className="mt-2 text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Point {currentPoint}</div>
+             </div>
+
+             {/* Right Column: Them */}
+             <div className="flex flex-col items-end w-1/3 text-right">
+                <span className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest truncate w-full text-right">{liveOpponentName}</span>
+                <div className={`text-4xl sm:text-5xl font-black font-mono tracking-tighter ${score.them > score.us ? 'text-rose-400 drop-shadow-[0_0_15px_rgba(244,63,94,0.5)]' : 'text-slate-300'}`}>{score.them}</div>
+             </div>
+          </div>
+        </div>
+
+        {/* On-Pitch Player Section */}
+        <div className="flex-1 flex flex-col p-3 min-h-0 overflow-y-auto relative bg-slate-800">
+           <div className="flex justify-between items-center px-1 mb-3 shrink-0">
+              <span className="text-xs sm:text-sm uppercase font-bold text-slate-400 tracking-wider">On Pitch ({activeLineup.length})</span>
+           </div>
+           
+           <div className="flex-1 w-full">
+            {activeLineup.length === 0 ? (
+              <div className="bg-slate-900/50 border border-slate-700 p-6 rounded-2xl text-center mt-4">
+                <p className="text-slate-400 font-medium mb-4">No active players on the pitch.</p>
+                <button 
+                  onClick={() => onNavigate('lineup')}
+                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all text-sm"
+                >
+                  Select Lineup
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 h-full content-start pb-2">
+                {activeLineup.map((player, index) => (
+                  <button
+                    key={player}
+                    onClick={() => handlePlayerSelect(player)}
+                    disabled={isSaving || isVoiceEnabled}
+                    className={`flex flex-col items-center justify-center rounded-xl p-1 sm:p-2 aspect-square sm:aspect-auto sm:h-24 ${getPlayerClass(player)} ${index === 6 && activeLineup.length === 7 ? 'col-start-2 sm:col-start-auto' : ''}`}
+                  >
+                     {players?.find(p => p.name === player)?.shirt_number ? (
+                        <>
+                          <span className="text-4xl sm:text-5xl font-black mb-1">{players.find(p => p.name === player).shirt_number}</span>
+                          <span className="text-[10px] sm:text-xs font-bold uppercase truncate w-full px-1 leading-tight">{player}</span>
+                        </>
+                     ) : (
+                        <span className="text-lg sm:text-xl font-bold px-1 text-center truncate w-full leading-tight">{player}</span>
+                     )}
+                  </button>
+                ))}
+              </div>
+            )}
+           </div>
+
+          {isVoiceEnabled && (
+            <div className="absolute top-2 right-2 text-right bg-slate-900/90 rounded border border-slate-700 px-2 py-1 z-50 pointer-events-none">
+               <p className={`text-[10px] font-mono tracking-widest uppercase transition-all duration-300 ${voiceFeedback.includes('✓') ? 'text-emerald-400 font-bold scale-105' : 'text-slate-500'}`}>
+                  {voiceFeedback || 'Mic Active...'}
+               </p>
             </div>
+          )}
         </div>
 
         {/* Scoring Actions Section */}
-        <div className="px-2 pt-2 shrink-0 border-b border-slate-700/50 pb-2 bg-slate-800/80">
+        <div className="px-3 pt-3 shrink-0 border-t border-slate-700/50 pb-3 bg-slate-900">
            {/* Primary Scores */}
-           <div className="grid grid-cols-2 gap-2 mb-2">
+           <div className="grid grid-cols-2 gap-3 mb-3">
               <button
                 onClick={() => handleStatRecord('Point')}
                 disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
@@ -619,57 +672,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
            </div>
         </div>
 
-        {/* On-Pitch Player Section */}
-        <div className="flex-1 flex flex-col p-2 min-h-0 overflow-hidden relative">
-           <div className="flex justify-between items-center px-1 mb-2 shrink-0">
-              <span className="text-[10px] sm:text-xs uppercase font-bold text-slate-400">On Pitch ({activeLineup.length})</span>
-           </div>
-           
-           <div className="flex-1 overflow-y-auto w-full">
-            {activeLineup.length === 0 ? (
-              <div className="bg-slate-900/50 border border-slate-700 p-6 rounded-2xl text-center mt-4">
-                <p className="text-slate-400 font-medium mb-4">No active players on the pitch.</p>
-                <button 
-                  onClick={() => onNavigate('lineup')}
-                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all text-sm"
-                >
-                  Select Lineup
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 h-full content-start pb-4">
-                {activeLineup.map((player, index) => (
-                  <button
-                    key={player}
-                    onClick={() => handlePlayerSelect(player)}
-                    disabled={isSaving || isVoiceEnabled}
-                    className={`flex flex-col items-center justify-center rounded-xl p-1 sm:p-2 aspect-square sm:aspect-auto sm:h-24 ${getPlayerClass(player)} ${index === 6 && activeLineup.length === 7 ? 'col-start-2 sm:col-start-auto' : ''}`}
-                  >
-                     {players?.find(p => p.name === player)?.shirt_number ? (
-                        <>
-                          <span className="text-4xl sm:text-5xl font-black mb-1">{players.find(p => p.name === player).shirt_number}</span>
-                          <span className="text-[10px] sm:text-xs font-bold uppercase truncate w-full px-1 leading-tight">{player}</span>
-                        </>
-                     ) : (
-                        <span className="text-lg sm:text-xl font-bold px-1 text-center truncate w-full leading-tight">{player}</span>
-                     )}
-                  </button>
-                ))}
-              </div>
-            )}
-           </div>
-
-          {isVoiceEnabled && (
-            <div className="absolute top-2 right-2 text-right bg-slate-900/90 rounded border border-slate-700 px-2 py-1 z-50 pointer-events-none">
-               <p className={`text-[10px] font-mono tracking-widest uppercase transition-all duration-300 ${voiceFeedback.includes('✓') ? 'text-emerald-400 font-bold scale-105' : 'text-slate-500'}`}>
-                  {voiceFeedback || 'Mic Active...'}
-               </p>
-            </div>
-          )}
-        </div>
-
         {/* Footer Actions */}
-        <div className="shrink-0 p-2 border-t border-slate-800 bg-slate-900 grid grid-cols-3 gap-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="shrink-0 p-2 border-t border-slate-800 bg-slate-950 grid grid-cols-3 gap-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
             <button
               onClick={() => {
                 if (!isVoiceEnabled) {
@@ -688,7 +692,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               }`}
             >
               {isVoiceEnabled ? <Mic className="w-5 h-5 mb-0.5" /> : <MicOff className="w-5 h-5 mb-0.5" />}
-              <span className="text-[10px] font-bold uppercase tracking-widest">Voice</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest">Voice Pro</span>
             </button>
             <button
               onClick={handleUndo}
@@ -696,7 +700,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               className="flex flex-col items-center justify-center py-3 sm:py-4 rounded-xl transition-all bg-slate-800 text-slate-400 hover:text-white border border-slate-700/50 disabled:opacity-50"
             >
               <Undo2 className="w-5 h-5 mb-0.5" />
-              <span className="text-[10px] font-bold uppercase tracking-widest">Undo</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest">Undo Action</span>
             </button>
             <button
               onClick={() => onNavigate('lineup')}
@@ -704,7 +708,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               className="flex flex-col items-center justify-center py-3 sm:py-4 rounded-xl transition-all bg-slate-800 text-slate-400 hover:text-white border border-slate-700/50 disabled:opacity-50"
             >
               <ArrowLeftRight className="w-5 h-5 mb-0.5" />
-              <span className="text-[10px] font-bold uppercase tracking-widest">{gameType === 'training' ? 'End' : 'Sub'}</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest">{gameType === 'training' ? 'End' : 'Substitute'}</span>
             </button>
         </div>
 
