@@ -1,4 +1,4 @@
-import { togglePlayerActiveStatus, clearActiveLineup, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB, checkIfHalfTimeLogged, fetchActiveGames, deletePoint } from '../supabaseClient';
+import { togglePlayerActiveStatus, clearActiveLineup, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB, checkIfHalfTimeLogged, fetchActiveGames, deletePoint, fetchGameStats } from '../supabaseClient';
 import { useState, useEffect } from 'react';
 import { Undo2, Mic, MicOff } from 'lucide-react';
 import PullTracker from './PullTracker';
@@ -13,6 +13,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
 
   const [hasHalfTime, setHasHalfTime] = useState(false);
   const [activeGames, setActiveGames] = useState([]);
+  const [allGameStats, setAllGameStats] = useState([]);
 
   const filteredPlayers = players;
 
@@ -54,6 +55,10 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
         
       checkIfHalfTimeLogged(currentGame)
         .then(setHasHalfTime)
+        .catch(console.error);
+        
+      fetchGameStats(currentGame, targetTeamId)
+        .then(setAllGameStats)
         .catch(console.error);
     }
   }, [currentGame, targetTeamId, setGameType, currentPoint, setCurrentGame, setCurrentPoint, setOpponentName, setInitialPossession, setIsTrackingActive]);
