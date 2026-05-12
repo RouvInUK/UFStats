@@ -870,7 +870,11 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                           {p.ova.toFixed(1)}
                         </td>
                         <td className="p-4 text-center font-mono font-bold text-amber-300">
-                          {p.pulls > 0 ? p.avgPullScore.toFixed(2) : '-'}
+                          {p.pulls > 0 ? (
+                            <>
+                              {p.avgPullScore.toFixed(2)} <span className="text-xs text-slate-500 font-medium ml-1">({p.pulls})</span>
+                            </>
+                          ) : '-'}
                         </td>
                         <td className="p-4 text-right font-mono font-bold text-slate-300">
                           {p.usage}%

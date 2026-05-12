@@ -21,7 +21,8 @@ const PullTracker = ({
     { id: 'Endzone', label: 'Endzone', modifier: 1 },
     { id: 'Field', label: 'Field (Past Brick)', modifier: 0 },
     { id: 'Short', label: 'Short (Before Brick)', modifier: -1 },
-    { id: 'Out-of-Bounds', label: 'Out-of-Bounds', modifier: 0 }
+    { id: 'OB-Brick', label: 'Out-of-Bounds (Brick)', modifier: 0 },
+    { id: 'OB-Other', label: 'Out-of-Bounds (Other)', modifier: 0 }
   ];
 
   const results = [
@@ -33,8 +34,11 @@ const PullTracker = ({
 
   const handleLocationSelect = (loc) => {
     setLocation(loc);
-    if (loc.id === 'Out-of-Bounds') {
-      setResult({ id: 'Out-of-Bounds', base: 0 }); // Auto-set result and skip step 3
+    if (loc.id === 'OB-Brick') {
+      setResult({ id: 'OB-Brick', base: 2 }); // Auto-set result and skip step 3
+      setStep(3); // Go directly to save
+    } else if (loc.id === 'OB-Other') {
+      setResult({ id: 'OB-Other', base: 0 }); // Auto-set result and skip step 3
       setStep(3); // Go directly to save
     } else {
       setStep(3);
@@ -43,7 +47,8 @@ const PullTracker = ({
 
   const calculateScore = () => {
     if (!location || !result) return 0;
-    if (location.id === 'Out-of-Bounds') return 0;
+    if (location.id === 'OB-Brick') return 2;
+    if (location.id === 'OB-Other') return 0;
     
     let score = result.base + location.modifier;
     // ensure score doesn't go below 0 logically
@@ -155,7 +160,7 @@ const PullTracker = ({
 
         {step === 3 && (
           <div className="space-y-4 animate-in fade-in slide-in-from-right-4 flex flex-col h-full">
-            {location?.id !== 'Out-of-Bounds' && (
+            {!location?.id?.startsWith('OB-') && (
               <>
                 <h3 className="text-lg font-semibold flex items-center gap-2 text-amber-400">
                   <Activity className="w-5 h-5" />
@@ -180,12 +185,12 @@ const PullTracker = ({
               </>
             )}
 
-            {(result || location?.id === 'Out-of-Bounds') && (
+            {(result || location?.id?.startsWith('OB-')) && (
               <div className="mt-8 pt-6 border-t border-slate-800 space-y-4">
                 <div className="bg-slate-900 rounded-xl p-4 border border-emerald-900/50">
                   <p className="text-slate-400 text-sm mb-1">Summary</p>
                   <p className="text-lg font-semibold">
-                    {puller} • {location.label} {location.id !== 'Out-of-Bounds' && `• ${result.label}`}
+                    {puller} • {location.label} {!location.id?.startsWith('OB-') && `• ${result.label}`}
                   </p>
                   <div className="mt-3 flex items-center justify-between">
                     <span className="text-slate-400">Calculated Score</span>
@@ -204,7 +209,7 @@ const PullTracker = ({
             )}
             <button 
               onClick={() => {
-                if (location?.id === 'Out-of-Bounds') setStep(2);
+                if (location?.id?.startsWith('OB-')) setStep(2);
                 else setResult(null);
               }}
               className="mt-6 text-sm text-slate-400 underline text-center"
