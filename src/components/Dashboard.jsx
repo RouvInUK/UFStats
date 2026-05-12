@@ -533,8 +533,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         }`}
       />
       
-      <div className="flex flex-col w-full h-[100dvh] overflow-hidden bg-slate-900 fixed inset-0">
-        <div className="flex flex-col flex-1 w-full max-w-xl mx-auto bg-slate-800 shadow-2xl relative h-full">
+      <div className="flex flex-col items-center px-2 pt-2 h-[calc(100dvh-130px)] sm:h-[calc(100dvh-90px)] overflow-hidden">
+        <div className="flex flex-col flex-1 w-full max-w-xl mx-auto bg-slate-800/80 backdrop-blur-xl rounded-2xl border border-slate-700 shadow-2xl overflow-hidden relative">
         
         {/* Scoreboard Header Section (Original Full-Size Layout) */}
         <div className="p-4 sm:p-6 bg-slate-900 border-b border-slate-700/50 shrink-0">
@@ -673,7 +673,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         </div>
 
         {/* Footer Actions */}
-        <div className="shrink-0 p-2 border-t border-slate-800 bg-slate-950 grid grid-cols-3 gap-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="shrink-0 p-2 border-t border-slate-800 bg-slate-950 grid grid-cols-3 gap-2">
             <button
               onClick={() => {
                 if (!isVoiceEnabled) {
