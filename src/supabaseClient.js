@@ -43,7 +43,10 @@ export const recordLineup = async (players, pointNumber, gameName, gameType, tea
 
   // Queue locally
   let pointData = await getLocalPoint(gameName || 'Unnamed Game', pointNumber);
-  let statsArray = pointData ? pointData.stats : [];
+  let statsArray = [];
+  if (pointData) {
+      statsArray = Array.isArray(pointData) ? pointData : (pointData.stats || []);
+  }
   
   statsArray.push(...insertData);
   await savePointLocally(gameName || 'Unnamed Game', pointNumber, statsArray);

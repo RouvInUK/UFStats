@@ -25,7 +25,10 @@ export const addStatToLocalPoint = async (gameName, pointNumber, newStat) => {
 
   try {
     let pointData = await get(key);
-    let statsArray = pointData ? pointData.stats : [];
+    let statsArray = [];
+    if (pointData) {
+      statsArray = Array.isArray(pointData) ? pointData : (pointData.stats || []);
+    }
     
     const enrichedStat = {
       ...newStat,
