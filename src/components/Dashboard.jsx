@@ -533,7 +533,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         }`}
       />
       
-      <div className="flex flex-col items-center px-2 pt-2 h-[calc(100dvh-130px)] sm:h-[calc(100dvh-90px)] overflow-hidden">
+      <div className="flex flex-col items-center px-2 pt-2 h-[calc(100dvh-140px)] sm:h-[calc(100dvh-95px)] overflow-hidden">
         <div className="flex flex-col flex-1 w-full max-w-xl mx-auto bg-slate-800/80 backdrop-blur-xl rounded-2xl border border-slate-700 shadow-2xl overflow-hidden relative">
         
         {/* Scoreboard Header Section (Original Full-Size Layout) */}
@@ -613,7 +613,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         </div>
 
         {/* Scoring Actions Section */}
-        <div className="px-3 pt-3 shrink-0 border-t border-slate-700/50 pb-3 bg-slate-900">
+        <div className="px-3 pt-3 shrink-0 border-t border-slate-700/50 pb-1 bg-slate-900 relative">
            {/* Primary Scores */}
            <div className="grid grid-cols-2 gap-3 mb-3">
               <button
@@ -664,10 +664,10 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               </button>
            </div>
            
-           <div className="flex justify-between items-center mt-1 h-4 px-1">
+           <div className="absolute bottom-0 left-3 right-3 flex justify-between items-center pointer-events-none pb-1">
               <div className="flex-1">
-                  {isSaving && <p className="text-amber-400 text-[10px] font-bold animate-pulse text-left">Synchronizing...</p>}
-                  {lastSaved && !isSaving && <p className="text-emerald-400 text-[10px] font-bold text-left truncate">✓ {lastSaved}</p>}
+                  {isSaving && <p className="text-amber-400 text-[9px] font-bold animate-pulse text-left drop-shadow-md">Synchronizing...</p>}
+                  {lastSaved && !isSaving && <p className="text-emerald-400 text-[9px] font-bold text-left truncate drop-shadow-md">✓ {lastSaved}</p>}
               </div>
            </div>
         </div>
