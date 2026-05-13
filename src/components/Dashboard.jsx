@@ -565,8 +565,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
 
         {/* On-Pitch Player Section */}
         <div className="flex flex-col p-2 min-h-0 overflow-y-auto relative bg-slate-800">
-           <div className="flex justify-between items-center px-1 mb-1 shrink-0">
-              <span className="text-[11px] sm:text-xs uppercase font-bold text-slate-400 tracking-wider">On Pitch ({activeLineup.length})</span>
+           <div className="flex items-center px-1 mb-1 shrink-0 gap-3">
+              <span className="text-[11px] sm:text-xs uppercase font-bold text-slate-400 tracking-wider whitespace-nowrap">On Pitch ({activeLineup.length})</span>
+              <div className="flex-1 overflow-hidden">
+                  {isSaving && <span className="text-amber-400 text-[10px] font-bold animate-pulse truncate block text-left">Synchronizing...</span>}
+                  {lastSaved && !isSaving && <span className="text-emerald-400 text-[10px] font-bold truncate block text-left">✓ {lastSaved}</span>}
+              </div>
            </div>
            
            <div className="w-full">
@@ -662,13 +666,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               >
                 Defence
               </button>
-           </div>
-           
-           <div className="absolute bottom-0 left-3 right-3 flex justify-between items-center pointer-events-none pb-1">
-              <div className="flex-1">
-                  {isSaving && <p className="text-amber-400 text-[9px] font-bold animate-pulse text-left drop-shadow-md">Synchronizing...</p>}
-                  {lastSaved && !isSaving && <p className="text-emerald-400 text-[9px] font-bold text-left truncate drop-shadow-md">✓ {lastSaved}</p>}
-              </div>
            </div>
         </div>
 
