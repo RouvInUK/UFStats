@@ -591,15 +591,15 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                     key={player}
                     onClick={() => handlePlayerSelect(player)}
                     disabled={isSaving || isVoiceEnabled}
-                    className={`flex flex-col items-center justify-center rounded-xl p-1 sm:p-2 aspect-square sm:aspect-auto sm:h-24 ${getPlayerClass(player)} ${index === 6 && activeLineup.length === 7 ? 'col-start-2 sm:col-start-auto' : ''}`}
+                    className={`flex flex-col items-center justify-center rounded-xl p-1 sm:p-2 aspect-square sm:aspect-auto sm:h-24 overflow-hidden min-w-0 ${getPlayerClass(player)} ${index === 6 && activeLineup.length === 7 ? 'col-start-2 sm:col-start-auto' : ''}`}
                   >
                      {players?.find(p => p.name === player)?.shirt_number ? (
                         <>
-                          <span className="text-4xl sm:text-5xl font-black mb-1">{players.find(p => p.name === player).shirt_number}</span>
-                          <span className="text-[10px] sm:text-xs font-bold uppercase truncate w-full px-1 leading-tight">{player}</span>
+                          <span className="text-4xl sm:text-5xl font-black mb-1 shrink-0">{players.find(p => p.name === player).shirt_number}</span>
+                          <span className="text-xs sm:text-sm font-bold uppercase truncate w-full px-1 leading-tight">{player}</span>
                         </>
                      ) : (
-                        <span className="text-lg sm:text-xl font-bold px-1 text-center truncate w-full leading-tight">{player}</span>
+                        <span className="text-xl sm:text-2xl font-bold px-1 text-center truncate w-full leading-tight">{player}</span>
                      )}
                   </button>
                 ))}
