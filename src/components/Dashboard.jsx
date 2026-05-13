@@ -533,12 +533,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         }`}
       />
       
-      <div className="flex flex-col items-center px-2 pt-2 h-[calc(100dvh-140px)] sm:h-[calc(100dvh-95px)] overflow-hidden">
+      <div className="flex flex-col items-center px-1 pt-1 h-[calc(100dvh-150px)] sm:h-[calc(100dvh-100px)] overflow-hidden">
         <div className="flex flex-col flex-1 w-full max-w-xl mx-auto bg-slate-800/80 backdrop-blur-xl rounded-2xl border border-slate-700 shadow-2xl overflow-hidden relative">
         
         {/* Scoreboard Header Section (Original Full-Size Layout) */}
-        <div className="p-4 sm:p-6 bg-slate-900 border-b border-slate-700/50 shrink-0">
-          <div className="flex items-center justify-between bg-slate-950/50 rounded-2xl border border-white/5 shadow-inner p-4">
+        <div className="p-2 sm:p-4 bg-slate-900 border-b border-slate-700/50 shrink-0">
+          <div className="flex items-center justify-between bg-slate-950/50 rounded-xl border border-white/5 shadow-inner p-2 sm:p-4">
              {/* Left Column: Us */}
              <div className="flex flex-col items-start w-1/3">
                 <span className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest truncate w-full">{currentTeam}</span>
@@ -564,9 +564,9 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         </div>
 
         {/* On-Pitch Player Section */}
-        <div className="flex-1 flex flex-col p-3 min-h-0 overflow-y-auto relative bg-slate-800">
-           <div className="flex justify-between items-center px-1 mb-3 shrink-0">
-              <span className="text-xs sm:text-sm uppercase font-bold text-slate-400 tracking-wider">On Pitch ({activeLineup.length})</span>
+        <div className="flex-1 flex flex-col p-2 min-h-0 overflow-y-auto relative bg-slate-800">
+           <div className="flex justify-between items-center px-1 mb-1 shrink-0">
+              <span className="text-[11px] sm:text-xs uppercase font-bold text-slate-400 tracking-wider">On Pitch ({activeLineup.length})</span>
            </div>
            
            <div className="flex-1 w-full">
