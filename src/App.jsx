@@ -150,6 +150,13 @@ function App() {
     localStorage.setItem('ufstats_voice_enabled', isVoiceEnabled);
   }, [isVoiceEnabled]);
 
+  useEffect(() => {
+    // If the profile loads and the user is NOT on the PRO tier, but voice is enabled from local storage, force it off.
+    if (profile && profile.tier !== 'PRO' && isVoiceEnabled) {
+      setIsVoiceEnabled(false);
+    }
+  }, [profile, isVoiceEnabled]);
+
   const targetTeamId = shadowTeam?.id
     ? shadowTeam.id
     : typeof currentTeam === 'object' && currentTeam?.id
@@ -324,7 +331,13 @@ function App() {
              </button>
           )}
           <button 
-            onClick={() => setCurrentView('coach')}
+            onClick={() => {
+              if (profile?.tier !== 'PRO') {
+                alert("Coach Pro is exclusively available on the Coach Pro Tier. Please upgrade to access advanced analytics and data.");
+                return;
+              }
+              setCurrentView('coach');
+            }}
             className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-extrabold rounded-xl shadow-[0_0_25px_rgba(245,158,11,0.2)] hover:shadow-[0_0_35px_rgba(245,158,11,0.4)] transition-all flex items-center gap-2 uppercase tracking-wide text-sm scale-100 hover:scale-[1.02]"
           >
             Coach Pro ★
@@ -360,7 +373,13 @@ function App() {
              </button>
           )}
           <button 
-            onClick={() => setCurrentView('coach')}
+            onClick={() => {
+              if (profile?.tier !== 'PRO') {
+                alert("Coach Pro is exclusively available on the Coach Pro Tier.");
+                return;
+              }
+              setCurrentView('coach');
+            }}
             className={`p-2 rounded-lg transition-all ${currentView === 'coach' ? 'text-amber-400 bg-amber-500/10' : 'text-slate-400 hover:text-amber-400'}`}
             title="Coach Pro"
           >
