@@ -11,6 +11,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
   const [isUndoing, setIsUndoing] = useState(false);
   const [showPullTracker, setShowPullTracker] = useState(false);
 
+  const [isStatsLoaded, setIsStatsLoaded] = useState(false);
   const [hasHalfTime, setHasHalfTime] = useState(false);
   const [activeGames, setActiveGames] = useState([]);
   const [allGameStats, setAllGameStats] = useState([]);
@@ -31,36 +32,38 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
   }, [targetTeamId]);
 
   useEffect(() => {
+    let mounted = true;
     if (currentGame) {
-      fetchLastStatForGame(currentGame, targetTeamId)
-        .then(lastStat => {
-          if (!lastStat && currentPoint > 0) {
-            // If we are ostensibly in the middle of a point, but NO stats exist in the DB, 
-            // it means the game was deleted from another device. Auto-heal the local state.
-            console.log("Game deleted remotely, clearing local state.");
-            setCurrentGame('');
-            setCurrentPoint(0);
-            setOpponentName('');
-            setInitialPossession('');
-            setIsTrackingActive(false);
-            return;
-          }
+      setIsStatsLoaded(false);
+      Promise.all([
+        fetchLastStatForGame(currentGame, targetTeamId)
+          .then(lastStat => {
+            if (!mounted) return;
+            if (!lastStat && currentPoint > 0) {
+              console.log("Game deleted remotely, clearing local state.");
+              setCurrentGame('');
+              setCurrentPoint(0);
+              setOpponentName('');
+              setInitialPossession('');
+              setIsTrackingActive(false);
+              return;
+            }
 
-          if (lastStat && lastStat.game_type) {
-            setGameType(lastStat.game_type);
-          }
-          setLastAction(lastStat);
-        })
-        .catch(console.error);
-        
-      checkIfHalfTimeLogged(currentGame)
-        .then(setHasHalfTime)
-        .catch(console.error);
-        
-      fetchGameStats(currentGame, targetTeamId)
-        .then(setAllGameStats)
-        .catch(console.error);
+            if (lastStat && lastStat.game_type) {
+              setGameType(lastStat.game_type);
+            }
+            setLastAction(lastStat);
+          }),
+        checkIfHalfTimeLogged(currentGame)
+          .then(val => { if (mounted) setHasHalfTime(val); }),
+        fetchGameStats(currentGame, targetTeamId)
+          .then(stats => { if (mounted) setAllGameStats(stats); })
+      ]).catch(console.error)
+        .finally(() => { if (mounted) setIsStatsLoaded(true); });
+    } else {
+      setIsStatsLoaded(true);
     }
+    return () => { mounted = false; };
   }, [currentGame, targetTeamId, setGameType, currentPoint, setCurrentGame, setCurrentPoint, setOpponentName, setInitialPossession, setIsTrackingActive]);
 
   const handleUndoLastPoint = async () => {
@@ -69,13 +72,10 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     if (window.confirm("Are you sure you want to undo this score? This will completely erase the point and restore the previous lineup.")) {
       setIsUndoing(true);
       try {
-        // Find out what point number we are actually undoing (the one that just finished)
         const pointToUndo = lastAction.point_number;
         
-        // Delete all stats for that point
         await deletePoint(currentGame, targetTeamId, pointToUndo);
         
-        // Restore lineup for the point we are returning to
         const restoredNames = await restoreLineupForPoint(currentGame, pointToUndo, currentTeam);
         
         const optimisticallyRestored = players.map(p => ({
@@ -87,7 +87,6 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
         setCurrentPoint(pointToUndo);
         setIsTrackingActive(true);
         
-        // Return to tracking
         onNavigate('dashboard');
       } catch (err) {
         console.error("Failed to undo point", err);
@@ -99,7 +98,6 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
   };
 
   const handleStartPoint = async () => {
-    // Only get active players that belong to the current team
     const activeLineupNames = filteredPlayers.filter(p => p.is_active).map(p => p.name);
     const expectedCount = gameType === 'grass' ? 7 : (gameType === 'beach' || gameType === 'indoor' ? 5 : 0);
     
@@ -129,7 +127,6 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
       await recordLineup(activeLineupNames, nextPoint, currentGame, gameType, currentTeam, targetTeamId);
 
       if (currentPoint === 0) {
-          // Log Structural Events for first point
           await recordStatToDB({
               player: opponentName,
               stat: 'Match Metadata',
@@ -153,7 +150,6 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
       setCurrentPoint(nextPoint);
       setIsTrackingActive(true);
 
-      // Robustly calculate the exact possession state using all historical stats
       let calculatedOD = initialPossession || 'O';
       let gameStartOD = initialPossession || null;
       
@@ -214,7 +210,6 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
           teamName: currentTeam
         }, targetTeamId);
         
-        // Append to local state so immediate possession calculations are accurate
         setAllGameStats(prev => [halfTimeStat, ...prev]);
         setHasHalfTime(true);
         alert('Half Time logged successfully.');
@@ -256,7 +251,6 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
   };
 
   const togglePlayer = async (player) => {
-    // Optimistically update UI locally
     const optimisticPlayers = players.map(p => 
       p.id === player.id ? { ...p, is_active: !p.is_active } : p
     );
@@ -266,13 +260,11 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     
     try {
       if (navigator.onLine) {
-        // Fire request to Supabase
         await togglePlayerActiveStatus(player.id, targetTeamId, player.is_active);
       }
     } catch {
       if (navigator.onLine) {
         alert("Failed to update status in cloud.");
-        // Revert optimistic update on failure only if online
         setPlayers(players);
       }
     } finally {
@@ -292,14 +284,12 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     } catch {
       if (navigator.onLine) {
         alert("Failed to clear lineup in cloud.");
-        setPlayers(players); // revert
+        setPlayers(players);
       }
     } finally {
       setIsClearing(false);
     }
   };
-
-
 
   const activeCount = filteredPlayers.filter(p => p.is_active).length;
 
@@ -464,19 +454,20 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
           )}
         </div>
 
-        {/* Start Point Footer logic block */}
         <div className="p-6 sm:p-8 border-t border-slate-700/50 bg-slate-900/30">
           <button
             onClick={handleStartPoint}
-            disabled={isStartingPoint || activeCount === 0 || !currentGame || (currentPoint === 0 && (!opponentName || (gameType !== 'training' && !initialPossession)))}
-            className="w-full group relative flex items-center justify-center px-6 py-5 border border-emerald-500/50 text-xl font-black rounded-2xl text-white bg-emerald-500/20 hover:bg-emerald-500/40 backdrop-blur-md focus:outline-none focus:ring-4 focus:ring-emerald-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest"
+            disabled={isStartingPoint || !isStatsLoaded || activeCount === 0 || !currentGame || (currentPoint === 0 && (!opponentName || (gameType !== 'training' && !initialPossession)))}
+            className={`w-full group relative flex items-center justify-center px-6 py-5 border border-emerald-500/50 text-xl font-black rounded-2xl text-white backdrop-blur-md focus:outline-none focus:ring-4 focus:ring-emerald-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest ${
+              isStartingPoint || !isStatsLoaded ? 'bg-slate-700/50 border-slate-600' : 'bg-emerald-500/20 hover:bg-emerald-500/40'
+            }`}
           >
             {isStartingPoint ? (
                <span className="flex items-center gap-3">
                  <div className="w-5 h-5 border-2 border-transparent border-t-white rounded-full animate-spin" />
                  Synchronizing...
                </span>
-            ) : (gameType === 'training' ? "Start Session" : "Start Point")}
+            ) : (!isStatsLoaded ? 'Loading...' : (gameType === 'training' ? "Start Session" : "Start Point"))}
           </button>
           
           {currentPoint > 0 && (
