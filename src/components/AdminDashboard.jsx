@@ -112,7 +112,8 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
       await updateUserTier(userId, tier);
       setUsers(users.map(u => u.id === userId ? { ...u, tier } : u));
     } catch (err) {
-      alert("Failed to update tier.");
+      console.error(err);
+      alert(`Failed to update tier: ${err.message}`);
     }
   };
 

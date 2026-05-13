@@ -407,6 +407,7 @@ function App() {
           setPlayers={setPlayers}
           isVoiceEnabled={isVoiceEnabled}
           setIsVoiceEnabled={setIsVoiceEnabled}
+          isPro={profile?.tier === 'PRO'}
         />
       )}
 

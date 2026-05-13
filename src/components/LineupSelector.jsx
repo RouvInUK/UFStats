@@ -18,15 +18,6 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
 
   const filteredPlayers = players;
 
-  const handleVoiceToggle = () => {
-    if (!isVoiceEnabled) {
-      const missingNumbers = filteredPlayers.filter(p => p.shirt_number == null || p.shirt_number === '');
-      if (missingNumbers.length > 0) {
-        return alert(`Voice tracking requires every player to have a shirt number. Please add numbers for: ${missingNumbers.map(p => p.name).join(', ')}`);
-      }
-    }
-    setIsVoiceEnabled(!isVoiceEnabled);
-  };
   useEffect(() => {
     fetchActiveGames(targetTeamId).then(setActiveGames).catch(console.error);
   }, [targetTeamId]);

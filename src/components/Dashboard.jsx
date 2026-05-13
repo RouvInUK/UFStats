@@ -4,7 +4,7 @@ import { Undo2, ArrowLeftRight, Mic, MicOff } from 'lucide-react';
 import Fuse from 'fuse.js';
 import { playChime, playClick, playBuzz } from '../utils/audioFeedback';
 
-const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, gameType, currentTeam, targetTeamId, opponentName, initialPossession, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers, isVoiceEnabled, setIsVoiceEnabled }) => {
+const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, gameType, currentTeam, targetTeamId, opponentName, initialPossession, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers, isVoiceEnabled, setIsVoiceEnabled, isPro }) => {
   const [possessionChain, setPossessionChain] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -674,8 +674,11 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
             <button
               onClick={() => {
                 if (!isVoiceEnabled) {
-                  const activeObjects = activeLineup.map(name => players?.find(p => p.name === name)).filter(Boolean);
-                  const missingNumbers = activeObjects.filter(p => p.shirt_number == null || p.shirt_number === '');
+                  if (!isPro) {
+                    return alert("Voice Pro is exclusively available on the Coach Pro Tier.");
+                  }
+                  // Only check for shirt numbers if turning ON
+                  const missingNumbers = players.filter(p => activeLineup.includes(p.name) && !p.shirt_number);
                   if (missingNumbers.length > 0) {
                     return alert(`Voice tracking requires every active player to have a shirt number. Please add numbers for: ${missingNumbers.map(p => p.name).join(', ')}`);
                   }

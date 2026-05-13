@@ -441,6 +441,9 @@ export const updateUserTier = async (userId, tier) => {
     .select();
 
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error("Update failed. You may lack permission (check Supabase RLS policies).");
+  }
   return data[0];
 };
 
