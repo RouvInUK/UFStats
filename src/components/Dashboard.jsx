@@ -533,8 +533,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         }`}
       />
       
-      <div className="flex flex-col items-center px-1 pt-1 h-[calc(100dvh-150px)] sm:h-[calc(100dvh-100px)] overflow-hidden">
-        <div className="flex flex-col flex-1 w-full max-w-xl mx-auto bg-slate-800/80 backdrop-blur-xl rounded-2xl border border-slate-700 shadow-2xl overflow-hidden relative">
+      <div className="flex flex-col items-center px-1 pt-1 w-full max-h-[calc(100dvh-140px)] sm:max-h-[calc(100dvh-95px)]">
+        <div className="flex flex-col w-full max-w-xl mx-auto bg-slate-800/80 backdrop-blur-xl rounded-2xl border border-slate-700 shadow-2xl overflow-hidden relative max-h-full">
         
         {/* Scoreboard Header Section (Original Full-Size Layout) */}
         <div className="p-2 sm:p-4 bg-slate-900 border-b border-slate-700/50 shrink-0">
@@ -564,12 +564,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         </div>
 
         {/* On-Pitch Player Section */}
-        <div className="flex-1 flex flex-col p-2 min-h-0 overflow-y-auto relative bg-slate-800">
+        <div className="flex flex-col p-2 min-h-0 overflow-y-auto relative bg-slate-800">
            <div className="flex justify-between items-center px-1 mb-1 shrink-0">
               <span className="text-[11px] sm:text-xs uppercase font-bold text-slate-400 tracking-wider">On Pitch ({activeLineup.length})</span>
            </div>
            
-           <div className="flex-1 w-full">
+           <div className="w-full">
             {activeLineup.length === 0 ? (
               <div className="bg-slate-900/50 border border-slate-700 p-6 rounded-2xl text-center mt-4">
                 <p className="text-slate-400 font-medium mb-4">No active players on the pitch.</p>
