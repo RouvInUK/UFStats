@@ -511,8 +511,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       return 'bg-slate-900 text-slate-500 border border-slate-800 opacity-50 cursor-not-allowed transition-all';
     }
     if (isCurrentHolder) {
-      // Current holder glow (Disc Icon effect)
-      return 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.7)] ring-4 ring-indigo-400 scale-105 z-20 transition-all relative after:content-["🥏"] after:absolute after:-top-3 after:-right-3 after:text-2xl after:animate-bounce';
+      // Current holder glow
+      return 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.7)] ring-4 ring-indigo-400 scale-105 z-20 transition-all relative';
     }
     if (isPendingPasser) {
       // Subtle active state for pending passer
@@ -586,23 +586,34 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               </div>
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 h-full content-start pb-2">
-                {activeLineup.map((player, index) => (
+                {activeLineup.map((player, index) => {
+                  const isHolder = possessionChain.length > 0 && possessionChain[possessionChain.length - 1] === player;
+                  return (
                   <button
                     key={player}
                     onClick={() => handlePlayerSelect(player)}
                     disabled={isSaving || isVoiceEnabled}
-                    className={`flex flex-col items-center justify-center rounded-xl p-1 sm:p-2 aspect-square sm:aspect-auto sm:h-24 overflow-hidden min-w-0 ${getPlayerClass(player)} ${index === 6 && activeLineup.length === 7 ? 'col-start-2 sm:col-start-auto' : ''}`}
+                    className={`flex flex-col items-center justify-center rounded-xl p-1 sm:p-2 aspect-square sm:aspect-auto sm:h-24 min-w-0 ${getPlayerClass(player)} ${index === 6 && activeLineup.length === 7 ? 'col-start-2 sm:col-start-auto' : ''}`}
                   >
                      {players?.find(p => p.name === player)?.shirt_number ? (
-                        <>
-                          <span className="text-4xl sm:text-5xl font-black mb-1 shrink-0">{players.find(p => p.name === player).shirt_number}</span>
-                          <span className="text-xs sm:text-sm font-bold uppercase truncate w-full px-1 leading-tight">{player}</span>
-                        </>
+                        <div className="relative flex flex-col items-center justify-center w-full">
+                          <span className="text-4xl sm:text-5xl font-black mb-1 shrink-0 relative">
+                            {players.find(p => p.name === player).shirt_number}
+                            {isHolder && <span className="absolute -top-3 -right-6 sm:-right-8 text-xl sm:text-2xl animate-bounce drop-shadow-md z-30">🥏</span>}
+                          </span>
+                          <span className="text-xs sm:text-sm font-bold uppercase truncate w-full px-1 leading-tight text-center">{player}</span>
+                        </div>
                      ) : (
-                        <span className="text-xl sm:text-2xl font-bold px-1 text-center truncate w-full leading-tight">{player}</span>
+                        <div className="relative flex flex-col items-center justify-center w-full">
+                           <span className="text-xl sm:text-2xl font-bold px-1 text-center truncate w-full leading-tight relative">
+                             {player}
+                             {isHolder && <span className="absolute -top-4 -right-4 sm:-right-6 text-lg sm:text-xl animate-bounce drop-shadow-md z-30">🥏</span>}
+                           </span>
+                        </div>
                      )}
                   </button>
-                ))}
+                  );
+                })}
               </div>
             )}
            </div>
