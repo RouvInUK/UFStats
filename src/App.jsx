@@ -126,6 +126,22 @@ function App() {
     }
   }, [currentTeam]);
 
+  // Prevent Cross-Team State Leakage
+  const [previousTeamId, setPreviousTeamId] = useState(null);
+  useEffect(() => {
+    if (currentTeam?.id) {
+      if (previousTeamId !== null && previousTeamId !== currentTeam.id) {
+        setCurrentGame('');
+        setCurrentPoint(0);
+        setIsTrackingActive(false);
+        setOpponentName('');
+        setGameType('game');
+        setActiveLineup([]);
+      }
+      setPreviousTeamId(currentTeam.id);
+    }
+  }, [currentTeam?.id]);
+
   const [opponentName, setOpponentName] = useState(() => {
     return localStorage.getItem('ufstats_opponent') || '';
   });

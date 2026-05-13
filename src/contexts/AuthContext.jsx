@@ -183,13 +183,10 @@ export const AuthProvider = ({ children }) => {
 
     // Instantly force clear any Supabase session keys from local storage
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('sb-')) {
+      if (key.startsWith('sb-') || key.startsWith('ufstats_')) {
         localStorage.removeItem(key);
       }
     });
-    localStorage.removeItem('ufstats_last_activity');
-    localStorage.removeItem('ufstats_cached_profile');
-    localStorage.removeItem('ufstats_team');
     
     // Hard reload the browser to purge all React state and reset immediately
     window.location.reload();
