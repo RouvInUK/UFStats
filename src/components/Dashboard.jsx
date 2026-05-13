@@ -688,7 +688,9 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               className={`flex flex-col items-center justify-center py-3 sm:py-4 rounded-xl transition-all ${
                 isVoiceEnabled
                   ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-[0_0_10px_rgba(245,158,11,0.4)]'
-                  : 'bg-slate-800 text-slate-400 hover:text-amber-400 border border-slate-700/50'
+                  : !isPro 
+                    ? 'bg-slate-800 text-slate-600 border border-slate-700/30 cursor-not-allowed opacity-50'
+                    : 'bg-slate-800 text-slate-400 hover:text-amber-400 border border-slate-700/50'
               }`}
             >
               {isVoiceEnabled ? <Mic className="w-5 h-5 mb-0.5" /> : <MicOff className="w-5 h-5 mb-0.5" />}

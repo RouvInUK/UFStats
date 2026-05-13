@@ -11,7 +11,7 @@ import AdminDashboard from './components/AdminDashboard';
 import TeamSelectionScreen from './components/TeamSelectionScreen';
 import { fetchPlayers } from './supabaseClient';
 import { useAuth } from './contexts/AuthContext';
-import { ShieldCheck, Star, LogOut, Cloud, CloudOff, CloudUpload } from 'lucide-react';
+import { ShieldCheck, Star, LogOut, Cloud, CloudOff, CloudUpload, Crown } from 'lucide-react';
 import { getPendingSyncCount } from './SyncEngine';
 
 const SyncIndicator = () => {
@@ -313,6 +313,11 @@ function App() {
           <div className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView('dashboard')}>
             UF<span className="text-indigo-500 font-light">STATS</span>
             <BetaBadge />
+            {profile?.tier === 'PRO' ? (
+              <span className="text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-md flex items-center gap-1"><Crown className="w-3 h-3" /> PRO</span>
+            ) : (
+              <span className="text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">FREE</span>
+            )}
           </div>
           {effectiveTeamName && (
              <div className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-widest flex items-center gap-2">
@@ -338,7 +343,7 @@ function App() {
               }
               setCurrentView('coach');
             }}
-            className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-extrabold rounded-xl shadow-[0_0_25px_rgba(245,158,11,0.2)] hover:shadow-[0_0_35px_rgba(245,158,11,0.4)] transition-all flex items-center gap-2 uppercase tracking-wide text-sm scale-100 hover:scale-[1.02]"
+            className={`px-6 py-2.5 font-extrabold rounded-xl transition-all flex items-center gap-2 uppercase tracking-wide text-sm ${profile?.tier === 'PRO' ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-[0_0_25px_rgba(245,158,11,0.2)] hover:shadow-[0_0_35px_rgba(245,158,11,0.4)] scale-100 hover:scale-[1.02]' : 'bg-slate-800 text-slate-600 border border-slate-700/50 cursor-not-allowed opacity-75'}`}
           >
             Coach Pro ★
           </button>
@@ -360,6 +365,11 @@ function App() {
         <div className="flex justify-between items-center w-full">
           <div className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-1.5 cursor-pointer" onClick={() => setCurrentView('dashboard')}>
             UF<span className="text-indigo-500 font-light">STATS</span>
+            {profile?.tier === 'PRO' ? (
+              <span className="text-[9px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-md"><Crown className="w-3 h-3 inline-block mr-0.5" /> PRO</span>
+            ) : (
+              <span className="text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded-md">FREE</span>
+            )}
             <SyncIndicator />
           </div>
           <div className="flex items-center gap-1">
@@ -380,7 +390,7 @@ function App() {
               }
               setCurrentView('coach');
             }}
-            className={`p-2 rounded-lg transition-all ${currentView === 'coach' ? 'text-amber-400 bg-amber-500/10' : 'text-slate-400 hover:text-amber-400'}`}
+            className={`p-2 rounded-lg transition-all ${currentView === 'coach' ? 'text-amber-400 bg-amber-500/10' : profile?.tier === 'PRO' ? 'text-slate-400 hover:text-amber-400' : 'text-slate-600 cursor-not-allowed opacity-50'}`}
             title="Coach Pro"
           >
             <Star className="w-5 h-5" />
