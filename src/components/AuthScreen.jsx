@@ -44,10 +44,14 @@ const AuthScreen = () => {
 
       if (!isLogin && authData?.user) {
         // Mark Beta Key as used
-        await supabase
+        const { error: updateError } = await supabase
           .from('beta_keys')
           .update({ is_used: true, used_by: authData.user.id })
           .eq('key', betaKey);
+          
+        if (updateError) {
+          console.error("Failed to mark beta key as used:", updateError);
+        }
           
         alert('Signup successful! Check your email if email confirmation is enabled, otherwise you should be logged in automatically.');
       }
