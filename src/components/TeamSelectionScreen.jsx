@@ -141,6 +141,7 @@ const TeamSelectionScreen = ({ onSelectTeam, onNavigateToAdmin, allowAutoSelect 
                 placeholder="Enter Club Name (e.g. Deep Space)"
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-4 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner text-center text-lg font-bold"
                 required
+                autoComplete="off"
               />
               <button 
                 type="submit"
@@ -189,6 +190,7 @@ const TeamSelectionScreen = ({ onSelectTeam, onNavigateToAdmin, allowAutoSelect 
                           placeholder="Team Name"
                           className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 outline-none focus:border-indigo-500 text-sm"
                           autoFocus
+                          autoComplete="off"
                         />
                         <button type="submit" className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-sm transition-all">
                           Add
@@ -228,6 +230,7 @@ const TeamSelectionScreen = ({ onSelectTeam, onNavigateToAdmin, allowAutoSelect 
                     placeholder="Club Name"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500 text-sm text-center"
                     autoFocus
+                    autoComplete="off"
                   />
                   <div className="flex gap-2">
                     <button type="submit" className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm transition-all">
