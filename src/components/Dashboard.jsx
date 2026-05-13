@@ -623,14 +623,14 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               <button
                 onClick={() => handleStatRecord('Point')}
                 disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
-                className={getActionClass("flex items-center justify-center py-4 rounded-xl font-black text-xl sm:text-2xl text-white bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] transition-all shadow-md disabled:opacity-50 tracking-tight", 'Point')}
+                className={getActionClass("flex items-center justify-center h-14 sm:h-16 rounded-xl font-black text-xl sm:text-2xl text-white bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] transition-all shadow-md disabled:opacity-50 tracking-tight", 'Point')}
               >
                 WE SCORED
               </button>
               <button
                 onClick={() => handleStatRecord('Opponent Point')}
                 disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || isVoiceEnabled}
-                className={getActionClass("flex items-center justify-center py-4 rounded-xl font-black text-xl sm:text-2xl text-white bg-rose-700 hover:bg-rose-600 active:scale-[0.98] transition-all shadow-md disabled:opacity-50 tracking-tight", 'Opponent Point')}
+                className={getActionClass("flex items-center justify-center h-14 sm:h-16 rounded-xl font-black text-xl sm:text-2xl text-white bg-rose-700 hover:bg-rose-600 active:scale-[0.98] transition-all shadow-md disabled:opacity-50 tracking-tight", 'Opponent Point')}
               >
                 THEY SCORED
               </button>
@@ -641,28 +641,28 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               <button
                 onClick={() => handleStatRecord('Drop')}
                 disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
-                className={getActionClass("py-3 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Drop')}
+                className={getActionClass("h-14 sm:h-16 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Drop')}
               >
                 Drop
               </button>
               <button
                 onClick={() => handleStatRecord('Throwaway')}
                 disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
-                className={getActionClass("py-3 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Throwaway')}
+                className={getActionClass("h-14 sm:h-16 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Throwaway')}
               >
                 Incomplete
               </button>
               <button
                 onClick={() => handleStatRecord('Stall Out')}
                 disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
-                className={getActionClass("py-3 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Stall Out')}
+                className={getActionClass("h-14 sm:h-16 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Stall Out')}
               >
                 Stall Out
               </button>
               <button
                 onClick={() => handleStatRecord('Defence')}
                 disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
-                className={getActionClass("py-3 bg-orange-600 hover:bg-orange-500 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Defence')}
+                className={getActionClass("h-14 sm:h-16 bg-orange-600 hover:bg-orange-500 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Defence')}
               >
                 Defence
               </button>
@@ -685,7 +685,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                 }
                 setIsVoiceEnabled(!isVoiceEnabled);
               }}
-              className={`flex flex-col items-center justify-center py-3 sm:py-4 rounded-xl transition-all ${
+              className={`flex flex-col items-center justify-center py-2 rounded-xl transition-all ${
                 isVoiceEnabled
                   ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-[0_0_10px_rgba(245,158,11,0.4)]'
                   : !isPro 
@@ -693,24 +693,24 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                     : 'bg-slate-800 text-slate-400 hover:text-amber-400 border border-slate-700/50'
               }`}
             >
-              {isVoiceEnabled ? <Mic className="w-5 h-5 mb-0.5" /> : <MicOff className="w-5 h-5 mb-0.5" />}
-              <span className="text-[10px] font-bold uppercase tracking-widest">Voice Pro</span>
+              {isVoiceEnabled ? <Mic className="w-4 h-4 mb-0.5" /> : <MicOff className="w-4 h-4 mb-0.5" />}
+              <span className="text-[9px] font-bold uppercase tracking-widest">Voice Pro</span>
             </button>
             <button
               onClick={handleUndo}
               disabled={isSaving || !currentGame}
-              className="flex flex-col items-center justify-center py-3 sm:py-4 rounded-xl transition-all bg-slate-800 text-slate-400 hover:text-white border border-slate-700/50 disabled:opacity-50"
+              className="flex flex-col items-center justify-center py-2 rounded-xl transition-all bg-slate-800 text-slate-400 hover:text-white border border-slate-700/50 disabled:opacity-50"
             >
-              <Undo2 className="w-5 h-5 mb-0.5" />
-              <span className="text-[10px] font-bold uppercase tracking-widest">Undo Action</span>
+              <Undo2 className="w-4 h-4 mb-0.5" />
+              <span className="text-[9px] font-bold uppercase tracking-widest">Undo Action</span>
             </button>
             <button
               onClick={() => onNavigate('lineup')}
               disabled={isSaving || !currentGame || !isTrackingActive}
-              className="flex flex-col items-center justify-center py-3 sm:py-4 rounded-xl transition-all bg-slate-800 text-slate-400 hover:text-white border border-slate-700/50 disabled:opacity-50"
+              className="flex flex-col items-center justify-center py-2 rounded-xl transition-all bg-slate-800 text-slate-400 hover:text-white border border-slate-700/50 disabled:opacity-50"
             >
-              <ArrowLeftRight className="w-5 h-5 mb-0.5" />
-              <span className="text-[10px] font-bold uppercase tracking-widest">{gameType === 'training' ? 'End' : 'Substitute'}</span>
+              <ArrowLeftRight className="w-4 h-4 mb-0.5" />
+              <span className="text-[9px] font-bold uppercase tracking-widest">{gameType === 'training' ? 'End' : 'Substitute'}</span>
             </button>
         </div>
 
