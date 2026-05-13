@@ -166,7 +166,13 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signUp = async (email, password) => {
-    return supabase.auth.signUp({ email, password });
+    return supabase.auth.signUp({ 
+      email, 
+      password,
+      options: {
+        emailRedirectTo: window.location.origin
+      }
+    });
   };
 
   const signOut = async () => {
