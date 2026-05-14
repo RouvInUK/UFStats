@@ -143,6 +143,11 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       if (isLineupOrScore && !pointODState[pointKey]) {
           pointODState[pointKey] = currentLineStatePerGame[stat.game_name];
       }
+      
+      if (stat.stat_type === 'Pull') {
+          pointODState[pointKey] = 'D';
+          currentLineStatePerGame[stat.game_name] = 'D';
+      }
 
       // Track points and timeline
       if (stat.stat_type === 'Point') {
