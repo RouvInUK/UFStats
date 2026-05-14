@@ -21,7 +21,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('is_system_admin, tier')
+        .select('is_system_admin, tier, beta_voice_pro')
         .eq('id', userId)
         .single();
         

@@ -171,11 +171,11 @@ function App() {
   }, [isVoiceEnabled]);
 
   useEffect(() => {
-    // Voice Pro is temporarily disabled for iOS compatibility updates
-    if (isVoiceEnabled) {
+    // Voice Pro is temporarily disabled for iOS compatibility updates, unless specifically granted beta access
+    if (isVoiceEnabled && !profile?.beta_voice_pro) {
       setIsVoiceEnabled(false);
     }
-  }, [isVoiceEnabled]);
+  }, [isVoiceEnabled, profile]);
 
   // Screen Wake Lock API (keeps mobile screens from dimming/locking)
   useEffect(() => {
@@ -492,6 +492,7 @@ function App() {
           isVoiceEnabled={isVoiceEnabled}
           setIsVoiceEnabled={setIsVoiceEnabled}
           isPro={profile?.tier === 'PRO'}
+          isVoiceBeta={profile?.beta_voice_pro}
         />
       )}
 

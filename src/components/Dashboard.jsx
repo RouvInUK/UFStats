@@ -4,7 +4,7 @@ import { Undo2, ArrowLeftRight, Mic, MicOff } from 'lucide-react';
 import Fuse from 'fuse.js';
 import { playChime, playClick, playBuzz } from '../utils/audioFeedback';
 
-const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, gameType, currentTeam, targetTeamId, opponentName, initialPossession, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers, isVoiceEnabled, setIsVoiceEnabled, isPro }) => {
+const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, gameType, currentTeam, targetTeamId, opponentName, initialPossession, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers, isVoiceEnabled, setIsVoiceEnabled, isPro, isVoiceBeta }) => {
   const [possessionChain, setPossessionChain] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -703,11 +703,30 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         <div className="shrink-0 p-2 border-t border-slate-800 bg-slate-950 grid grid-cols-3 gap-2">
             <button
               onClick={() => {
-                alert("Voice Pro is temporarily disabled for iOS compatibility updates.");
+                if (!isVoiceBeta) {
+                  return alert("Voice Pro is temporarily disabled for iOS compatibility updates. Beta access required.");
+                }
+                if (!isVoiceEnabled) {
+                  if (!isPro) {
+                    return alert("Voice Pro is exclusively available on the Coach Pro Tier.");
+                  }
+                  // Only check for shirt numbers if turning ON
+                  const missingNumbers = players.filter(p => activeLineup.includes(p.name) && !p.shirt_number);
+                  if (missingNumbers.length > 0) {
+                    return alert(`Voice tracking requires every active player to have a shirt number. Please add numbers for: ${missingNumbers.map(p => p.name).join(', ')}`);
+                  }
+                }
+                setIsVoiceEnabled(!isVoiceEnabled);
               }}
-              className="flex flex-col items-center justify-center py-2 rounded-xl transition-all bg-slate-800 text-slate-600 border border-slate-700/30 cursor-not-allowed opacity-50"
+              className={`flex flex-col items-center justify-center py-2 rounded-xl transition-all ${
+                isVoiceEnabled
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-[0_0_10px_rgba(245,158,11,0.4)]'
+                  : (!isPro || !isVoiceBeta)
+                    ? 'bg-slate-800 text-slate-600 border border-slate-700/30 cursor-not-allowed opacity-50'
+                    : 'bg-slate-800 text-slate-400 hover:text-amber-400 border border-slate-700/50'
+              }`}
             >
-              <MicOff className="w-4 h-4 mb-0.5" />
+              {isVoiceEnabled ? <Mic className="w-4 h-4 mb-0.5" /> : <MicOff className="w-4 h-4 mb-0.5" />}
               <span className="text-[9px] font-bold uppercase tracking-widest">Voice Pro</span>
             </button>
             <button

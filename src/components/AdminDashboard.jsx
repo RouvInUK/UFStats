@@ -117,6 +117,17 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
     }
   };
 
+  const handleUpdateBetaVoicePro = async (userId, beta_voice_pro) => {
+    try {
+      const { updateUserBetaVoicePro } = await import('../supabaseClient');
+      await updateUserBetaVoicePro(userId, beta_voice_pro);
+      setUsers(users.map(u => u.id === userId ? { ...u, beta_voice_pro } : u));
+    } catch (err) {
+      console.error(err);
+      alert(`Failed to update voice beta: ${err.message}`);
+    }
+  };
+
   const handlePruneGames = async () => {
     if (!window.confirm("Are you sure you want to PRUNE all incomplete games older than 48 hours? This deletes dead data directly from the database.")) return;
     setActionLoading(true);
@@ -247,6 +258,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                         <th className="p-4 font-bold text-center">Clubs / Teams</th>
                         <th className="p-4 font-bold text-center">Games</th>
                         <th className="p-4 font-bold text-center">Tier</th>
+                        <th className="p-4 font-bold text-center">Voice Beta</th>
                         <th className="p-4 font-bold text-right">View Data</th>
                       </tr>
                     </thead>
@@ -273,6 +285,14 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                                 <option value="FREE">FREE</option>
                                 <option value="PRO">PRO</option>
                               </select>
+                            </td>
+                            <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+                              <input 
+                                type="checkbox"
+                                checked={user.beta_voice_pro || false}
+                                onChange={(e) => handleUpdateBetaVoicePro(user.id, e.target.checked)}
+                                className="w-4 h-4 text-indigo-600 rounded bg-slate-900 border-slate-700 focus:ring-indigo-500 cursor-pointer"
+                              />
                             </td>
                             <td className="p-4 text-right">
                               <span className="text-xs text-indigo-400 font-bold">

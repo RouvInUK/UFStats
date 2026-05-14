@@ -447,6 +447,17 @@ export const updateUserTier = async (userId, tier) => {
   return data[0];
 };
 
+export const updateUserBetaVoicePro = async (userId, beta_voice_pro) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ beta_voice_pro })
+    .eq('id', userId)
+    .select();
+
+  if (error) throw error;
+  return data ? data[0] : null;
+};
+
 export const fetchUserHierarchy = async (userId) => {
   if (!userId) return { clubs: [], teams: [] };
   
