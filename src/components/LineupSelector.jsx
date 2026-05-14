@@ -67,6 +67,17 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
         
         await deleteStat(lastAction.id);
         
+        // Cascade delete the Pass or Pass Attempt that was logged alongside the Point/Opponent Point
+        if (['Point', 'Opponent Point'].includes(lastAction.stat_type)) {
+          const { fetchLastStatForGame } = await import('../supabaseClient');
+          const nextLast = await fetchLastStatForGame(currentGame, targetTeamId);
+          if (nextLast && (nextLast.stat_type === 'Pass' || nextLast.stat_type === 'Pass Attempt')) {
+            if (nextLast.point_number === lastAction.point_number) {
+              await deleteStat(nextLast.id);
+            }
+          }
+        }
+        
         const restoredNames = await restoreLineupForPoint(currentGame, pointToUndo, currentTeam);
         
         const optimisticallyRestored = players.map(p => ({

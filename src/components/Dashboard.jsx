@@ -6,6 +6,7 @@ import { playChime, playClick, playBuzz } from '../utils/audioFeedback';
 
 const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, gameType, currentTeam, targetTeamId, opponentName, initialPossession, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers, isVoiceEnabled, setIsVoiceEnabled, isPro, isVoiceBeta }) => {
   const [possessionChain, setPossessionChain] = useState([]);
+  const [previousChain, setPreviousChain] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [activeGames, setActiveGames] = useState([]);
@@ -496,12 +497,31 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       const isPoint = lastStat.stat_type === 'Point' || lastStat.stat_type === 'Opponent Point';
       if (isPoint) {
         if (!window.confirm(`Are you sure you want to undo this ${lastStat.stat_type}?`)) return;
-        await deleteStat(lastStat.id);
-        setLastSaved('Point Undone');
-      } else {
-        await deleteStat(lastStat.id);
-        setLastSaved('Action Undone');
       }
+      
+      await deleteStat(lastStat.id);
+      
+      // If we just undid a turnover, opponent point, or point, the system likely logged a "Pass" or "Pass Attempt" 
+      // immediately before it for the previous player. We need to delete that too to fully revert the action.
+      if (['Drop', 'Throwaway', 'Stall Out', 'Opponent Point', 'Point'].includes(lastStat.stat_type)) {
+        const nextLast = await fetchLastStatForGame(currentGame, targetTeamId);
+        if (nextLast && (nextLast.stat_type === 'Pass Attempt' || nextLast.stat_type === 'Pass')) {
+           // Ensure it has the same point number to be safe
+           if (nextLast.point_number === lastStat.point_number) {
+             await deleteStat(nextLast.id);
+           }
+        }
+      }
+      
+      if (lastStat.stat_type === 'Pass') {
+         setPossessionChain(prev => prev.slice(0, -1));
+      } else if (['Drop', 'Throwaway', 'Stall Out', 'Opponent Point', 'Point', 'Defence'].includes(lastStat.stat_type)) {
+         if (previousChain.length > 0) {
+           setPossessionChain(previousChain);
+         }
+      }
+      
+      setLastSaved(isPoint ? 'Point Undone' : 'Action Undone');
     } catch (error) {
       console.error('Undo failed:', error);
       alert('Failed to undo action.');
