@@ -593,7 +593,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                     key={player}
                     onClick={() => handlePlayerSelect(player)}
                     disabled={isSaving || isVoiceEnabled}
-                    className={`flex flex-col items-center justify-center rounded-xl p-1 sm:p-2 aspect-square sm:aspect-auto sm:h-24 min-w-0 ${getPlayerClass(player)} ${index === 6 && activeLineup.length === 7 ? 'col-start-2 sm:col-start-auto' : ''}`}
+                    className={`flex flex-col items-center justify-center rounded-xl p-1 sm:p-2 h-[95px] sm:h-24 min-w-0 ${getPlayerClass(player)} ${index === 6 && activeLineup.length === 7 ? 'col-start-2 sm:col-start-auto' : ''}`}
                   >
                      {players?.find(p => p.name === player)?.shirt_number ? (
                         <div className="relative flex flex-col items-center justify-center w-full">
