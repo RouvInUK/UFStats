@@ -57,15 +57,15 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     return () => { mounted = false; };
   }, [currentGame, targetTeamId, setGameType, currentPoint, setCurrentGame, setCurrentPoint, setOpponentName, setInitialPossession, setIsTrackingActive]);
 
-  const handleUndoLastPoint = async () => {
+  const handleUndoLastAction = async () => {
     if (!lastAction || !lastAction.id) return;
     
-    if (window.confirm("Are you sure you want to undo this score? This will completely erase the point and restore the previous lineup.")) {
+    if (window.confirm(`Are you sure you want to undo this ${lastAction.stat_type}? This will resume tracking for the point.`)) {
       setIsUndoing(true);
       try {
         const pointToUndo = lastAction.point_number;
         
-        await deletePoint(currentGame, targetTeamId, pointToUndo);
+        await deleteStat(lastAction.id);
         
         const restoredNames = await restoreLineupForPoint(currentGame, pointToUndo, currentTeam);
         
@@ -487,7 +487,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
           
           {lastAction && (lastAction.stat_type === 'Point' || lastAction.stat_type === 'Opponent Point') && (
             <button
-              onClick={handleUndoLastPoint}
+              onClick={handleUndoLastAction}
               disabled={isUndoing}
               className="w-full mt-4 flex items-center justify-center gap-2 px-6 py-4 border border-slate-700/50 text-sm font-bold rounded-2xl text-slate-400 bg-slate-900/50 hover:bg-slate-800 hover:text-white transition-all shadow-md focus:outline-none focus:ring-4 focus:ring-slate-800 disabled:opacity-50"
             >
