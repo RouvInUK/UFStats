@@ -66,8 +66,9 @@ const AuthScreen = () => {
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 pb-32">
       <div className="w-full max-w-md bg-slate-900/50 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl">
         <div className="flex flex-col items-center mb-8">
-          <div className="text-3xl font-black text-white uppercase tracking-widest flex items-center gap-2 mb-2">
-            UF<span className="text-indigo-500 font-light">STATS</span>
+          <div className="text-3xl font-black text-white lowercase tracking-widest flex items-center gap-3 mb-2">
+            <img src="/logo.png" alt="ustats.pro logo" className="w-10 h-10 rounded-full" />
+            ustats<span className="text-indigo-500 font-light">.pro</span>
           </div>
           <p className="text-slate-400 text-sm font-medium tracking-wide">
             {isLogin ? 'Welcome back, Coach.' : 'Create your Team Workspace.'}
