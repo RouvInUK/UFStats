@@ -1,6 +1,6 @@
 {
-  "name": "UFStats",
-  "short_name": "UFStats",
+  "name": "ustats.pro",
+  "short_name": "ustats.pro",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",

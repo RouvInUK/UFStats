@@ -129,7 +129,7 @@ const TeamSelectionScreen = ({ onSelectTeam, onNavigateToAdmin, allowAutoSelect 
 
         {noClubs ? (
           <div className="bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-slate-700 p-8 sm:p-12 text-center">
-            <h2 className="text-2xl font-bold text-white mb-4">Welcome to UFStats!</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">Welcome to ustats.pro!</h2>
             <p className="text-slate-400 mb-8 max-w-lg mx-auto">
               To get started, create your first Club. You can then add multiple teams (e.g. Open, Women's, Mixed) under this club.
             </p>

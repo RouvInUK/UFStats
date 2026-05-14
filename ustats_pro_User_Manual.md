@@ -1,14 +1,14 @@
-# Ultimate Frisbee Stats Tracker (UFStats)
+# ustats.pro
 ## User Manual & Getting Started Guide
 
 <div align="center">
-  <img src="public/logo.png" width="300" alt="UFStats Logo" />
+  <img src="public/logo.png" width="300" alt="ustats.pro Logo" />
 </div>
 
 ---
 
 ## 1. Introduction
-Welcome to UFStats! UFStats is a specialized, mobile-optimized Progressive Web App (PWA) designed for tracking Ultimate Frisbee games in real-time, directly from the sideline. Built to operate under harsh field conditions (glare, rain, poor network connectivity), it provides deep analytical insights for coaches and team captains.
+Welcome to ustats.pro! ustats.pro is a specialized, mobile-optimized Progressive Web App (PWA) designed for tracking Ultimate Frisbee games in real-time, directly from the sideline. Built to operate under harsh field conditions (glare, rain, poor network connectivity), it provides deep analytical insights for coaches and team captains.
 
 ---
 

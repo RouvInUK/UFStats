@@ -326,8 +326,9 @@ function App() {
       {/* Premium Desktop Header */}
       <div className="hidden sm:flex justify-between items-center px-8 py-4 bg-slate-950/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 shadow-xl">
         <div className="flex items-center gap-6">
-          <div className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView('dashboard')}>
-            UF<span className="text-indigo-500 font-light">STATS</span>
+          <div className="text-xl font-black text-white lowercase tracking-widest flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView('dashboard')}>
+            <img src="/logo.png" alt="ustats.pro logo" className="w-8 h-8 rounded-full" />
+            ustats<span className="text-indigo-500 font-light">.pro</span>
             <BetaBadge />
             {profile?.tier === 'PRO' ? (
               <span className="text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-md flex items-center gap-1"><Crown className="w-3 h-3" /> PRO</span>
@@ -379,8 +380,9 @@ function App() {
       {/* Mobile Header */}
       <div className="sm:hidden flex flex-col px-4 py-3 bg-slate-950/90 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 shadow-md gap-2">
         <div className="flex justify-between items-center w-full">
-          <div className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-1.5 cursor-pointer" onClick={() => setCurrentView('dashboard')}>
-            UF<span className="text-indigo-500 font-light">STATS</span>
+          <div className="text-lg font-black text-white lowercase tracking-widest flex items-center gap-1.5 cursor-pointer" onClick={() => setCurrentView('dashboard')}>
+            <img src="/logo.png" alt="ustats.pro logo" className="w-6 h-6 rounded-full" />
+            ustats<span className="text-indigo-500 font-light">.pro</span>
             {profile?.tier === 'PRO' ? (
               <span className="text-[9px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-md"><Crown className="w-3 h-3 inline-block mr-0.5" /> PRO</span>
             ) : (
