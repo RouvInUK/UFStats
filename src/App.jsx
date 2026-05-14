@@ -328,7 +328,7 @@ function App() {
         <div className="flex items-center gap-6">
           <div className="text-xl font-black text-white lowercase tracking-widest flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView('dashboard')}>
             <img src="/logo.png" alt="ustats.pro logo" className="w-8 h-8 rounded-full" />
-            ustats<span className="text-indigo-500 font-light">.pro</span>
+            <span>ustats<span className="text-indigo-500 font-light">.pro</span></span>
             <BetaBadge />
             {profile?.tier === 'PRO' ? (
               <span className="text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-md flex items-center gap-1"><Crown className="w-3 h-3" /> PRO</span>
@@ -382,7 +382,7 @@ function App() {
         <div className="flex justify-between items-center w-full">
           <div className="text-lg font-black text-white lowercase tracking-widest flex items-center gap-1.5 cursor-pointer" onClick={() => setCurrentView('dashboard')}>
             <img src="/logo.png" alt="ustats.pro logo" className="w-6 h-6 rounded-full" />
-            ustats<span className="text-indigo-500 font-light">.pro</span>
+            <span>ustats<span className="text-indigo-500 font-light">.pro</span></span>
             {profile?.tier === 'PRO' ? (
               <span className="text-[9px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-md"><Crown className="w-3 h-3 inline-block mr-0.5" /> PRO</span>
             ) : (
