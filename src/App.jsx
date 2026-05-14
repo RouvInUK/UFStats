@@ -167,11 +167,11 @@ function App() {
   }, [isVoiceEnabled]);
 
   useEffect(() => {
-    // If the profile loads and the user is NOT on the PRO tier, but voice is enabled from local storage, force it off.
-    if (profile && profile.tier !== 'PRO' && isVoiceEnabled) {
+    // Voice Pro is temporarily disabled for iOS compatibility updates
+    if (isVoiceEnabled) {
       setIsVoiceEnabled(false);
     }
-  }, [profile, isVoiceEnabled]);
+  }, [isVoiceEnabled]);
 
   // Screen Wake Lock API (keeps mobile screens from dimming/locking)
   useEffect(() => {
