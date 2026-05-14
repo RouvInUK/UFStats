@@ -385,7 +385,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
                       <button onClick={() => setGameType('grass')} className={`flex-1 min-w-[25%] py-3 px-2 transition-all ${gameType === 'grass' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Grass</button>
                       <button onClick={() => setGameType('beach')} className={`flex-1 min-w-[25%] py-3 px-2 transition-all ${gameType === 'beach' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Beach</button>
                       <button onClick={() => setGameType('indoor')} className={`flex-1 min-w-[25%] py-3 px-2 transition-all ${gameType === 'indoor' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Indoor</button>
-                      <button onClick={() => setGameType('training')} className={`flex-1 min-w-[25%] py-3 px-2 transition-all ${gameType === 'training' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Training</button>
+                      <button onClick={() => alert("Training mode is temporarily disabled.")} className="flex-1 min-w-[25%] py-3 px-2 transition-all bg-slate-900 text-slate-700 cursor-not-allowed opacity-50">Training</button>
                    </div>
                 </div>
                 <div>

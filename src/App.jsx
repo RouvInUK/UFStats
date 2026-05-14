@@ -93,7 +93,11 @@ function App() {
   });
 
   useEffect(() => {
-    localStorage.setItem('ufstats_game_type', gameType);
+    if (gameType === 'training') {
+      setGameType('grass');
+    } else {
+      localStorage.setItem('ufstats_game_type', gameType);
+    }
   }, [gameType]);
 
   const [currentTeam, setCurrentTeam] = useState(() => {
