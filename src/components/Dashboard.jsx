@@ -83,9 +83,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   // The server maxPoint will lag behind the local state (especially offline),
   // causing the client to silently revert to the previous point and write stats to the wrong point.
 
+  const [callahanModeFor, setCallahanModeFor] = useState(null);
+
   useEffect(() => {
     if (activeLineup.length === 0) {
       setPossessionChain([]);
+      setCallahanModeFor(null);
     }
   }, [activeLineup]);
 
@@ -94,8 +97,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     
     // We update possessionChain immediately for instant UI feedback
     setPossessionChain(prev => {
-      if (prev.length > 0 && prev[prev.length - 1] === playerName) return prev;
+      if (prev.length > 0 && prev[prev.length - 1] === playerName) {
+        setCallahanModeFor(c => c === playerName ? null : playerName);
+        return prev;
+      }
       
+      setCallahanModeFor(null);
       const newChain = [...prev, playerName];
       
       if (prev.length >= 2) {
@@ -129,8 +136,14 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       };
 
       if (statType === 'Opponent Point') {
-        statsToSave.push({ ...baseStat, player: 'Opponent', stat: 'Opponent Point' });
+        if (callahanModeFor) {
+          statsToSave.push({ ...baseStat, player: callahanModeFor, stat: 'Pass Attempt' });
+          statsToSave.push({ ...baseStat, player: 'Opponent', stat: 'Opponent Point', details: { isCallahan: true } });
+        } else {
+          statsToSave.push({ ...baseStat, player: 'Opponent', stat: 'Opponent Point' });
+        }
         setPossessionChain([]);
+        setCallahanModeFor(null);
       } else if (statType === 'Point') {
         let pendingPasser = null;
         
@@ -142,6 +155,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         statsToSave.push({ ...baseStat, player: activePlayer, stat: 'Point' });
         
         setPossessionChain([]);
+        setCallahanModeFor(null);
       } else if (statType === 'Pass') {
         statsToSave.push({ ...baseStat, player: activePlayer, stat: 'Pass' });
       } else if (['Drop', 'Throwaway', 'Stall Out'].includes(statType)) {
@@ -154,9 +168,11 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         }
         statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
         setPossessionChain([]);
+        setCallahanModeFor(null);
       } else if (statType === 'Defence') {
         statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
         setPossessionChain([]);
+        setCallahanModeFor(null);
       } else {
         statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
       }
@@ -510,6 +526,9 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     if (isVoiceEnabled) {
       return 'bg-slate-900 text-slate-500 border border-slate-800 opacity-50 cursor-not-allowed transition-all';
     }
+    if (callahanModeFor === player) {
+      return 'bg-gradient-to-br from-indigo-600 to-rose-600 text-white shadow-[0_0_25px_rgba(225,29,72,0.7)] ring-4 ring-rose-500 scale-105 z-30 transition-all relative animate-pulse';
+    }
     if (isCurrentHolder) {
       // Current holder glow
       return 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.7)] ring-4 ring-indigo-400 scale-105 z-20 transition-all relative';
@@ -640,7 +659,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               </button>
               <button
                 onClick={() => handleStatRecord('Opponent Point')}
-                disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || isVoiceEnabled}
+                disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || isVoiceEnabled || (possessionChain.length > 0 && callahanModeFor === null)}
                 className={getActionClass("flex items-center justify-center h-14 sm:h-16 rounded-xl font-black text-xl sm:text-2xl text-white bg-rose-700 hover:bg-rose-600 active:scale-[0.98] transition-all shadow-md disabled:opacity-50 tracking-tight", 'Opponent Point')}
               >
                 THEY SCORED
