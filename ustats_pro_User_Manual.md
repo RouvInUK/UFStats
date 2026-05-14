@@ -60,7 +60,8 @@ UFStats works flawlessly without an internet connection.
 - The app automatically syncs all pending data to the cloud as soon as your device regains cellular or Wi-Fi connectivity.
 - A "Synchronizing..." and "✓ Saved..." indicator will appear at the top of the On-Pitch section to confirm that data is safely stored.
 
-### 4.2 Voice Pro Mode (Pro)
+### 4.2 Voice Pro Mode (Pro) - [Temporarily Disabled]
+*(Note: This feature is currently disabled while we roll out iOS compatibility updates).*
 For completely hands-free operation, tap the **Microphone** icon at the bottom of the Dashboard to activate Voice Pro.
 - Uses natural language processing to listen to the play-by-play.
 - Example: *"John caught it, passed to Sarah, she dropped it."* 
@@ -103,7 +104,7 @@ Everything you need to track a team for a season.
 Built for club directors, university programs, and power users.
 - **Unlimited Clubs.**
 - **Unlimited Teams.**
-- **Voice Pro:** Hands-free AI voice tracking.
+- **Voice Pro:** Hands-free AI voice tracking *(Temporarily Disabled)*.
 - Advanced export capabilities and priority support.
 
 ---
