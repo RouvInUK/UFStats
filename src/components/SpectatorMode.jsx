@@ -124,6 +124,16 @@ const SpectatorMode = ({ spectatorGameId }) => {
      // Sort ascending for sequential calculation
      const chronological = [...allStats].sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
 
+     const pointsEvents = {};
+     chronological.forEach(stat => {
+        if (!pointsEvents[stat.point_number]) pointsEvents[stat.point_number] = [];
+        if (['Pass', 'Drop', 'Throwaway', 'Stall Out', 'Defence', 'Pull'].includes(stat.stat_type)) {
+           let str = stat.stat_type;
+           if (stat.stat_type === 'Defence') str = 'Block';
+           pointsEvents[stat.point_number].push(`${str} (${stat.player})`);
+        }
+     });
+
      chronological.forEach((stat, i) => {
         if (stat.stat_type === 'Match Metadata') {
            tThem = stat.player;
@@ -137,11 +147,13 @@ const SpectatorMode = ({ spectatorGameId }) => {
            if (prevStat && prevStat.stat_type === 'Pass' && prevStat.point_number === stat.point_number) {
               assist = prevStat.player;
            }
-           history.unshift({ us, them, scorer: stat.player, assist, type: 'us', number: us + them });
+           const evs = pointsEvents[stat.point_number] || [];
+           history.unshift({ us, them, scorer: stat.player, assist, type: 'us', number: us + them, events: evs });
            latestGoal = { type: 'us', scorer: stat.player, assist };
         } else if (stat.stat_type === 'Opponent Point') {
            them++;
-           history.unshift({ us, them, scorer: 'Opponent', assist: null, type: 'them', number: us + them });
+           const evs = pointsEvents[stat.point_number] || [];
+           history.unshift({ us, them, scorer: 'Opponent', assist: null, type: 'them', number: us + them, events: evs });
            latestGoal = { type: 'them', scorer: 'Opponent' };
         }
      });
@@ -225,8 +237,8 @@ const SpectatorMode = ({ spectatorGameId }) => {
          
          <div className="flex flex-col gap-4">
             {pointHistory.map((pt, i) => (
-               <div key={i} className="flex justify-between items-center bg-white/5 p-4 border border-white/10 rounded-lg">
-                  <div className="flex flex-col">
+               <div key={i} className="flex justify-between items-start bg-white/5 p-4 border border-white/10 rounded-lg">
+                  <div className="flex flex-col flex-1 pr-4">
                      <span className="text-[10px] font-bold tracking-wider text-white/40 mb-1 uppercase">Point {pt.number}</span>
                      <span className="font-bold text-sm sm:text-base">
                        {pt.type === 'us' ? (
@@ -235,8 +247,18 @@ const SpectatorMode = ({ spectatorGameId }) => {
                          <span className="text-white/60">Opponent Goal</span>
                        )}
                      </span>
+                     {pt.events && pt.events.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                           {pt.events.map((ev, idx) => (
+                              <span key={idx} className="flex items-center">
+                                 <span className="bg-white/5 text-[10px] text-white/60 font-mono px-1.5 py-0.5 rounded border border-white/10 whitespace-nowrap">{ev}</span>
+                                 {idx < pt.events.length - 1 && <span className="mx-1 text-[10px] text-white/20">→</span>}
+                              </span>
+                           ))}
+                        </div>
+                     )}
                   </div>
-                  <div className="text-xl font-black tracking-tighter shrink-0 bg-white/10 px-3 py-1 rounded">
+                  <div className="text-xl font-black tracking-tighter shrink-0 bg-white/10 px-3 py-1 rounded mt-1">
                      {pt.us} - {pt.them}
                   </div>
                </div>
