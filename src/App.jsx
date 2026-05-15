@@ -10,6 +10,7 @@ import AuthScreen from './components/AuthScreen';
 import AdminDashboard from './components/AdminDashboard';
 import TeamSelectionScreen from './components/TeamSelectionScreen';
 import SpectatorMode from './components/SpectatorMode';
+import LandingPage from './components/LandingPage';
 import { fetchPlayers } from './supabaseClient';
 import { useAuth } from './contexts/AuthContext';
 import { ShieldCheck, Star, LogOut, Cloud, CloudOff, CloudUpload, Crown } from 'lucide-react';
@@ -83,6 +84,7 @@ function App() {
 
   const { user, profile, loading: authLoading, authError, signOut } = useAuth();
   const [currentView, setCurrentView] = useState('dashboard');
+  const [showAuthScreen, setShowAuthScreen] = useState(false);
   
   // Database State
   const [players, setPlayers] = useState([]);
@@ -322,7 +324,15 @@ function App() {
   }
 
   if (!user) {
-    return <AuthScreen />;
+    if (showAuthScreen) {
+      return <AuthScreen onBack={() => setShowAuthScreen(false)} />;
+    }
+    return (
+      <LandingPage 
+        onLogin={() => setShowAuthScreen(true)} 
+        onDemo={() => window.location.href = '/live/demo'}
+      />
+    );
   }
 
   if ((authError && !profile) || (user && !profile && !authLoading)) {

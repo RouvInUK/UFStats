@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../supabaseClient';
-import { Target, AlertTriangle } from 'lucide-react';
+import { Target, AlertTriangle, ArrowLeft } from 'lucide-react';
 
-const AuthScreen = () => {
+const AuthScreen = ({ onBack }) => {
   const { signIn, signUp } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -64,6 +64,12 @@ const AuthScreen = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 pb-32">
+      {onBack && (
+        <button onClick={onBack} className="mb-6 flex items-center gap-2 text-slate-500 hover:text-indigo-400 text-sm font-bold transition-colors self-center">
+          <ArrowLeft className="w-4 h-4" />
+          Back to Home
+        </button>
+      )}
       <div className="w-full max-w-md bg-slate-900/50 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl">
         <div className="flex flex-col items-center mb-8">
           <div className="text-3xl font-black text-white lowercase tracking-widest flex items-center gap-3 mb-2">
