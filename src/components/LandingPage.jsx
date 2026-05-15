@@ -302,68 +302,9 @@ const LandingPage = ({ onLogin, onDemo }) => {
             />
             <ComingSoonCard
               icon={<Dumbbell className="w-7 h-7" />}
-              title="Advanced Training Mode Pro"
-              description="Deep-dive drill analytics including rep-speed tracking, heat maps, and historical training efficiency trends to bridge the gap between practice and gameday."
+              title="Training Mode Pro"
+              description="Switch from game-day to practice-mode and coach every rep. Track individual drills, manage rotations, and measure training efficiency across your entire club hierarchy — with deep-dive analytics including rep-speed tracking, heat maps, and season-long trends to bridge the gap between practice and gameday."
             />
-          </div>
-        </div>
-      </section>
-
-      {/* ========== TRAINING MODE ========== */}
-      <section id="training" className="relative py-24 sm:py-32 px-4 sm:px-8">
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-indigo-950/20 to-slate-950 pointer-events-none"></div>
-        
-        <div className="relative z-10 max-w-5xl mx-auto">
-          <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/40 border border-white/10 rounded-3xl p-8 sm:p-12 lg:p-16 backdrop-blur-sm shadow-2xl">
-            <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
-              {/* Left: Content */}
-              <div className="flex-1">
-                <div className="flex flex-wrap items-center gap-3 mb-5">
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-                    <Dumbbell className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-xs font-bold text-emerald-300 tracking-widest uppercase">Training Mode</span>
-                  </div>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-full">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-                    <span className="text-xs font-black text-amber-400 tracking-widest uppercase">Coming Soon</span>
-                  </div>
-                </div>
-                
-                <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight mb-5 leading-tight">
-                  Coach Every Rep.
-                </h2>
-                
-                <p className="text-slate-400 text-lg leading-relaxed mb-8">
-                  Switch from game-day to practice-mode. Track individual drills, manage rotations, and measure training efficiency across your entire club hierarchy.
-                </p>
-
-                <div className="space-y-4">
-                  <TrainingBullet text="Individual drill tracking with per-rep metrics" />
-                  <TrainingBullet text="Rotation management across multiple squads" />
-                  <TrainingBullet text="Club hierarchy: manage Juniors → Development → First Team" />
-                  <TrainingBullet text="Compare training stats against game-day performance" />
-                </div>
-              </div>
-
-              {/* Right: Visual */}
-              <div className="flex-shrink-0 w-full lg:w-72">
-                <div className="bg-slate-950/60 border border-white/10 rounded-2xl p-6 space-y-4">
-                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest">Practice Session</div>
-                  <div className="space-y-3">
-                    <StatBar label="Completion %" value={87} color="bg-emerald-500" />
-                    <StatBar label="Huck Accuracy" value={64} color="bg-violet-500" />
-                    <StatBar label="Break Throws" value={42} color="bg-amber-500" />
-                    <StatBar label="Reset Rate" value={91} color="bg-indigo-500" />
-                  </div>
-                  <div className="pt-3 border-t border-white/5 flex items-center justify-between">
-                    <span className="text-xs text-slate-500 font-semibold">12 Athletes</span>
-                    <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
-                      <Users className="w-3 h-3" /> Active
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
