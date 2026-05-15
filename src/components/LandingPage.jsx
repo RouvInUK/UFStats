@@ -23,7 +23,7 @@ const LandingPage = ({ onLogin, onDemo }) => {
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-slate-950/95 backdrop-blur-xl border-b border-white/5 shadow-2xl' : 'bg-transparent'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <img src="/logo_scientific.png" alt="ustats.pro" className="w-9 h-9 rounded-xl shadow-lg shadow-indigo-500/20" />
+            <img src="/logo.png" alt="ustats.pro" className="w-9 h-9 rounded-xl shadow-lg shadow-indigo-500/20" />
             <span className="text-xl font-black text-white lowercase tracking-widest">
               ustats<span className="text-indigo-400 font-light">.pro</span>
             </span>
@@ -81,7 +81,7 @@ const LandingPage = ({ onLogin, onDemo }) => {
           {/* Logo */}
           <div className="mb-8 flex justify-center">
             <div className="relative">
-              <img src="/logo_scientific.png" alt="ustats.pro Scientific Logo" className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl shadow-2xl shadow-indigo-500/30" />
+              <img src="/logo.png" alt="ustats.pro Scientific Logo" className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl shadow-2xl shadow-indigo-500/30" />
               <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-indigo-500/20 to-transparent pointer-events-none"></div>
             </div>
           </div>
@@ -337,7 +337,7 @@ const LandingPage = ({ onLogin, onDemo }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <img src="/logo_scientific.png" alt="ustats.pro" className="w-8 h-8 rounded-lg opacity-60" />
+              <img src="/logo.png" alt="ustats.pro" className="w-8 h-8 rounded-lg opacity-60" />
               <span className="text-sm font-bold text-slate-500 lowercase tracking-widest">
                 ustats<span className="text-slate-600">.pro</span>
               </span>
