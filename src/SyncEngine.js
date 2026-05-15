@@ -48,7 +48,7 @@ export const addStatToLocalPoint = async (gameName, pointNumber, newStat) => {
 
     await set(key, newPointData);
 
-    const isPointOver = statsArray.some(s => s.stat_type === 'Point' || s.stat_type === 'Opponent Point' || s.stat_type === 'Game Completed');
+    const isPointOver = statsArray.some(s => s.stat_type === 'Point' || s.stat_type === 'Opponent Point' || s.stat_type === 'Game Completed' || s.stat_type === 'Match Metadata');
     if (isPointOver && navigator.onLine) {
       attemptSync();
     }
@@ -83,7 +83,7 @@ export const savePointLocally = async (gameName, pointNumber, statsArray) => {
 
     await set(key, pointData);
     
-    const isPointOver = enrichedStats.some(s => s.stat_type === 'Point' || s.stat_type === 'Opponent Point' || s.stat_type === 'Game Completed');
+    const isPointOver = enrichedStats.some(s => s.stat_type === 'Point' || s.stat_type === 'Opponent Point' || s.stat_type === 'Game Completed' || s.stat_type === 'Match Metadata');
     if (isPointOver && navigator.onLine) {
       attemptSync();
     }

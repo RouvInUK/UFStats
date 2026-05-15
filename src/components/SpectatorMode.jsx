@@ -187,7 +187,7 @@ const SpectatorMode = ({ spectatorGameId }) => {
         <div className="flex justify-between items-center w-full max-w-md px-2 mt-4">
            <div className="flex flex-col items-center flex-1 w-1/3">
              <div className="h-12 flex items-end justify-center mb-2">
-                <span className="text-sm sm:text-lg text-white/80 tracking-widest uppercase font-extrabold break-words text-center line-clamp-2">{teamNames.us}</span>
+                <span className="text-sm sm:text-lg text-white/80 tracking-widest uppercase font-extrabold break-words text-center line-clamp-2">{teamNames.us || 'Us'}</span>
              </div>
              <span className={`text-7xl sm:text-9xl font-black tracking-tighter ${pulse && lastAction?.type === 'us' ? 'animate-bounce text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]' : 'text-white'}`}>{score.us}</span>
            </div>
@@ -198,7 +198,7 @@ const SpectatorMode = ({ spectatorGameId }) => {
 
            <div className="flex flex-col items-center flex-1 w-1/3">
              <div className="h-12 flex items-end justify-center mb-2">
-                <span className="text-sm sm:text-lg text-white/80 tracking-widest uppercase font-extrabold break-words text-center line-clamp-2">{teamNames.them}</span>
+                <span className="text-sm sm:text-lg text-white/80 tracking-widest uppercase font-extrabold break-words text-center line-clamp-2">{teamNames.them || 'Them'}</span>
              </div>
              <span className={`text-7xl sm:text-9xl font-black tracking-tighter ${pulse && lastAction?.type === 'them' ? 'animate-bounce text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]' : 'text-white/80'}`}>{score.them}</span>
            </div>

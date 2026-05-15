@@ -3,7 +3,8 @@
 -- =======================================================================================
 
 -- Enable realtime for the stats table
-BEGIN;
+DO $$
+BEGIN
   IF NOT EXISTS (
     SELECT 1 
     FROM pg_publication_tables 
@@ -13,4 +14,4 @@ BEGIN;
   ) THEN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.stats;
   END IF;
-COMMIT;
+END $$;
