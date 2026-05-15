@@ -1,6 +1,6 @@
 import { togglePlayerActiveStatus, clearActiveLineup, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB, checkIfHalfTimeLogged, fetchActiveGames, deletePoint, fetchGameStats } from '../supabaseClient';
 import { useState, useEffect } from 'react';
-import { Undo2, Mic, MicOff } from 'lucide-react';
+import { Undo2, Mic, MicOff, Share2 } from 'lucide-react';
 import PullTracker from './PullTracker';
 
 const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavigate, currentGame, setCurrentGame, currentPoint, setCurrentPoint, gameType, setGameType, setIsTrackingActive, opponentName, setOpponentName, initialPossession, setInitialPossession, isVoiceEnabled, setIsVoiceEnabled }) => {
@@ -300,9 +300,39 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
       <div className="w-full max-w-xl bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-slate-700 pb-6">
         
         <div className="p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-800 border-b border-slate-700/50">
-          <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Active Lineup</h1>
-            <p className="text-slate-400 text-sm font-medium">{activeCount} Players on Pitch</p>
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-2xl font-extrabold text-white tracking-tight">Active Lineup</h1>
+              <p className="text-slate-400 text-sm font-medium">{activeCount} Players on Pitch</p>
+            </div>
+            {currentGame && (
+               <button 
+                  onClick={async () => {
+                     const rawStr = `${targetTeamId}|${currentGame}`;
+                     const slug = btoa(unescape(encodeURIComponent(rawStr)));
+                     const url = `https://ustats.pro/live/${slug}`;
+                     if (navigator.share) {
+                        try {
+                           await navigator.share({
+                              title: 'Live Ultimate Score',
+                              text: `Follow our game live on ustats.pro:`,
+                              url: url
+                           });
+                        } catch (err) {
+                           console.warn("Share failed or cancelled", err);
+                        }
+                     } else {
+                        navigator.clipboard.writeText(url);
+                        alert("Live link copied to clipboard!");
+                     }
+                  }}
+                  className="px-3 py-1 font-bold text-xs uppercase tracking-widest rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center gap-1.5 hover:bg-indigo-500/30 transition-colors shrink-0"
+                  title="Share Live Spectator Link"
+               >
+                  <Share2 className="w-3 h-3" />
+                  Live Link
+               </button>
+            )}
           </div>
           <div className="flex gap-3 w-full sm:w-auto">
             <button 
