@@ -93,9 +93,25 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     }
   }, [activeLineup]);
 
-  const handlePlayerSelect = (playerName) => {
+  const handlePlayerSelect = async (playerName) => {
     if (!isTrackingActive) return alert("Start tracking first!");
     
+    if (possessionChain.length === 0) {
+      // We are picking up the disc. Did the opponent have it?
+      const lastStat = await fetchLastStatForGame(currentGame, targetTeamId);
+      if (lastStat) {
+        // Only consider it an opponent turnover if we were in the middle of a point
+        // and the last action was us losing it OR us starting on defense/pulling.
+        const opponentTurnoverTriggers = ['Drop', 'Throwaway', 'Stall Out', 'Pull', 'Start Defense'];
+        
+        // If the last action was one of the triggers, AND it's not a brand new point where we haven't done anything yet
+        if (opponentTurnoverTriggers.includes(lastStat.stat_type)) {
+           // Auto-log the opponent turnover before starting our possession
+           await handleStatRecord('Opponent Turnover', 'Opponent', []);
+        }
+      }
+    }
+
     // We update possessionChain immediately for instant UI feedback
     setPossessionChain(prev => {
       if (prev.length > 0 && prev[prev.length - 1] === playerName) {
@@ -170,6 +186,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
         setPossessionChain([]);
         setCallahanModeFor(null);
+      } else if (statType === 'Opponent Turnover') {
+        statsToSave.push({ ...baseStat, player: 'Opponent', stat: 'Opponent Turnover' });
       } else if (statType === 'Defence') {
         statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
         setPossessionChain([]);
@@ -516,9 +534,11 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       if (lastStat.stat_type === 'Pass') {
          setPossessionChain(prev => prev.slice(0, -1));
       } else if (['Drop', 'Throwaway', 'Stall Out', 'Opponent Point', 'Point', 'Defence'].includes(lastStat.stat_type)) {
-         if (previousChain.length > 0) {
+         if (previousChain && previousChain.length > 0) {
            setPossessionChain(previousChain);
          }
+      } else if (lastStat.stat_type === 'Opponent Turnover') {
+         setPossessionChain([]);
       }
       
       setLastSaved(isPoint ? 'Point Undone' : 'Action Undone');

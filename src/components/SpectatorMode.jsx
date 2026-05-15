@@ -127,9 +127,10 @@ const SpectatorMode = ({ spectatorGameId }) => {
      const pointsEvents = {};
      chronological.forEach(stat => {
         if (!pointsEvents[stat.point_number]) pointsEvents[stat.point_number] = [];
-        if (['Pass', 'Drop', 'Throwaway', 'Stall Out', 'Defence', 'Pull'].includes(stat.stat_type)) {
+        if (['Pass', 'Drop', 'Throwaway', 'Stall Out', 'Defence', 'Pull', 'Opponent Turnover'].includes(stat.stat_type)) {
            let str = stat.stat_type;
            if (stat.stat_type === 'Defence') str = 'Block';
+           if (stat.stat_type === 'Opponent Turnover') str = 'Opp Turnover';
            pointsEvents[stat.point_number].push(`${str} (${stat.player})`);
         }
      });
