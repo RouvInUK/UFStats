@@ -11,6 +11,7 @@ import AdminDashboard from './components/AdminDashboard';
 import TeamSelectionScreen from './components/TeamSelectionScreen';
 import SpectatorMode from './components/SpectatorMode';
 import LandingPage from './components/LandingPage';
+import DemoFramework from './components/DemoFramework';
 import { fetchPlayers } from './supabaseClient';
 import { useAuth } from './contexts/AuthContext';
 import { ShieldCheck, Star, LogOut, Cloud, CloudOff, CloudUpload, Crown } from 'lucide-react';
@@ -77,6 +78,12 @@ function App() {
      }
      return null;
   });
+
+  const [isDemoMode] = useState(() => window.location.pathname === '/demo');
+
+  if (isDemoMode) {
+     return <DemoFramework />;
+  }
 
   if (spectatorGameId) {
      return <SpectatorMode spectatorGameId={spectatorGameId} />;
@@ -330,7 +337,7 @@ function App() {
     return (
       <LandingPage 
         onLogin={() => setShowAuthScreen(true)} 
-        onDemo={() => window.location.href = '/live/demo'}
+        onDemo={() => window.location.href = '/demo'}
       />
     );
   }
