@@ -116,12 +116,14 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     setPossessionChain(prev => {
       if (prev.length > 0 && prev[prev.length - 1] === playerName) {
         setCallahanModeFor(c => c === playerName ? null : playerName);
+        playClick();
         return prev;
       }
       
       setCallahanModeFor(null);
       const newChain = [...prev, playerName];
       
+      playClick();
       if (prev.length >= 2) {
         const playerNMinus2 = prev[prev.length - 2];
         // Fire and forget the pass log so the UI doesn't freeze
@@ -161,6 +163,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         }
         setPossessionChain([]);
         setCallahanModeFor(null);
+        playBuzz();
       } else if (statType === 'Point') {
         let pendingPasser = null;
         
@@ -173,8 +176,10 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         
         setPossessionChain([]);
         setCallahanModeFor(null);
+        playChime();
       } else if (statType === 'Pass') {
         statsToSave.push({ ...baseStat, player: activePlayer, stat: 'Pass' });
+        playClick();
       } else if (['Drop', 'Throwaway', 'Stall Out'].includes(statType)) {
         if (currentChain.length > 1 && statType === 'Drop') {
           const thrower = currentChain[currentChain.length - 2];
@@ -186,14 +191,17 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
         setPossessionChain([]);
         setCallahanModeFor(null);
+        playBuzz();
       } else if (statType === 'Opponent Turnover') {
         statsToSave.push({ ...baseStat, player: 'Opponent', stat: 'Opponent Turnover' });
+        // Handled silently
       } else if (statType === 'Defence') {
         statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
-        setPossessionChain([]);
-        setCallahanModeFor(null);
+        setPossessionChain([activePlayer]);
+        playChime();
       } else {
         statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
+        playClick();
       }
 
       for (const st of statsToSave) {
@@ -444,15 +452,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
          setVoiceFeedback(`Heard: "${cmd.text}" ✓`);
          setVoiceRecognizedAction(cmd.action);
          setVoiceRecognizedPlayer(cmd.player);
-         
-         if (['Point', 'Defence'].includes(cmd.action)) {
-            playChime();
-         } else if (cmd.action === 'PlayerSelect') {
-            playClick();
-         } else {
-            playBuzz();
-         }
-
          if (cmd.action === 'Opponent Point') {
              handleStatRecord('Opponent Point');
          } else if (cmd.action === 'PlayerSelect') {
