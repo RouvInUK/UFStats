@@ -1,11 +1,13 @@
-const AudioContext = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
 
 const initAudio = () => {
   if (!audioCtx) {
-    audioCtx = new AudioContext();
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtx = new AudioContextClass();
+    }
   }
-  if (audioCtx.state === 'suspended') {
+  if (audioCtx && audioCtx.state === 'suspended') {
     audioCtx.resume();
   }
 };
@@ -13,6 +15,7 @@ const initAudio = () => {
 export const playChime = () => {
   try {
     initAudio();
+    if (!audioCtx) return;
     const osc = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
     
@@ -37,6 +40,7 @@ export const playChime = () => {
 export const playClick = () => {
   try {
     initAudio();
+    if (!audioCtx) return;
     const osc = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
     
@@ -59,6 +63,7 @@ export const playClick = () => {
 export const playBuzz = () => {
   try {
     initAudio();
+    if (!audioCtx) return;
     const osc = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
     
