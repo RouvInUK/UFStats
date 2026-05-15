@@ -3,9 +3,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../supabaseClient';
 import { Target, AlertTriangle, ArrowLeft } from 'lucide-react';
 
-const AuthScreen = ({ onBack }) => {
+const AuthScreen = ({ onBack, initialMode = 'login' }) => {
   const { signIn, signUp } = useAuth();
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(initialMode === 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [betaKey, setBetaKey] = useState('');

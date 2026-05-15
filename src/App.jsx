@@ -92,6 +92,7 @@ function App() {
   const { user, profile, loading: authLoading, authError, signOut } = useAuth();
   const [currentView, setCurrentView] = useState('dashboard');
   const [showAuthScreen, setShowAuthScreen] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
   
   // Database State
   const [players, setPlayers] = useState([]);
@@ -332,11 +333,12 @@ function App() {
 
   if (!user) {
     if (showAuthScreen) {
-      return <AuthScreen onBack={() => setShowAuthScreen(false)} />;
+      return <AuthScreen initialMode={authMode} onBack={() => setShowAuthScreen(false)} />;
     }
     return (
       <LandingPage 
-        onLogin={() => setShowAuthScreen(true)} 
+        onLogin={() => { setAuthMode('login'); setShowAuthScreen(true); }}
+        onSignUp={() => { setAuthMode('signup'); setShowAuthScreen(true); }}
         onDemo={() => window.location.href = '/demo'}
       />
     );

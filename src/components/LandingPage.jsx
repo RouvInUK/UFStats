@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Zap, Battery, WifiOff, Smartphone, BarChart3, Wind, CloudUpload, Dumbbell, Users, ChevronRight, Menu, X, ArrowRight, Lock, Mic, Check, Star } from 'lucide-react';
 
-const LandingPage = ({ onLogin, onDemo }) => {
+const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -34,18 +34,9 @@ const LandingPage = ({ onLogin, onDemo }) => {
             <button onClick={() => scrollTo('features')} className="text-sm text-slate-400 hover:text-white font-semibold tracking-wide transition-colors">Features</button>
             <button onClick={() => scrollTo('pwa')} className="text-sm text-slate-400 hover:text-white font-semibold tracking-wide transition-colors">Why PWA</button>
             <button onClick={() => scrollTo('pricing')} className="text-sm text-slate-400 hover:text-white font-semibold tracking-wide transition-colors">Pricing</button>
-            <button onClick={() => scrollTo('training')} className="text-sm text-slate-400 hover:text-white font-semibold tracking-wide transition-colors">Training</button>
             <div className="h-5 w-px bg-slate-700"></div>
-            <button 
-              onClick={onLogin}
-              className="text-sm font-bold text-indigo-400 hover:text-indigo-300 transition-colors tracking-wide"
-            >
-              Login
-            </button>
-            <button 
-              onClick={onLogin}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-black rounded-xl transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 active:scale-95 tracking-wider uppercase"
-            >
+            <button onClick={onLogin} className="text-sm font-bold text-indigo-400 hover:text-indigo-300 transition-colors tracking-wide">Login</button>
+            <button onClick={onSignUp} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-black rounded-xl transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 active:scale-95 tracking-wider uppercase">
               Sign Up
             </button>
           </div>
@@ -62,10 +53,9 @@ const LandingPage = ({ onLogin, onDemo }) => {
             <button onClick={() => scrollTo('features')} className="block w-full text-left text-slate-300 hover:text-white font-semibold py-2">Features</button>
             <button onClick={() => scrollTo('pwa')} className="block w-full text-left text-slate-300 hover:text-white font-semibold py-2">Why PWA</button>
             <button onClick={() => scrollTo('pricing')} className="block w-full text-left text-slate-300 hover:text-white font-semibold py-2">Pricing</button>
-            <button onClick={() => scrollTo('training')} className="block w-full text-left text-slate-300 hover:text-white font-semibold py-2">Training</button>
             <div className="h-px bg-slate-800 my-2"></div>
             <button onClick={onLogin} className="block w-full text-left text-indigo-400 font-bold py-2">Login</button>
-            <button onClick={onLogin} className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl transition-all uppercase tracking-widest text-sm">
+            <button onClick={onSignUp} className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl transition-all uppercase tracking-widest text-sm">
               Sign Up Free
             </button>
           </div>
@@ -112,12 +102,8 @@ const LandingPage = ({ onLogin, onDemo }) => {
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button 
-              onClick={onLogin}
-              id="hero-signup-btn"
-              className="group w-full sm:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl transition-all shadow-xl shadow-indigo-500/25 hover:shadow-indigo-500/40 active:scale-[0.97] uppercase tracking-widest text-sm flex items-center justify-center gap-3"
-            >
-              Sign Up / Login
+            <button onClick={onSignUp} id="hero-signup-btn" className="group w-full sm:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl transition-all shadow-xl shadow-indigo-500/25 hover:shadow-indigo-500/40 active:scale-[0.97] uppercase tracking-widest text-sm flex items-center justify-center gap-3">
+              Sign Up Free
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
             <button 
@@ -247,7 +233,7 @@ const LandingPage = ({ onLogin, onDemo }) => {
                 <TierFeature text="Implicit Flow — 50% fewer taps" />
                 <TierFeature text="Smart-Sync — Universal offline reliability" />
               </div>
-              <button onClick={onLogin} className="w-full py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-black rounded-xl transition-all uppercase tracking-widest text-sm">
+              <button onClick={onSignUp} className="w-full py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-black rounded-xl transition-all uppercase tracking-widest text-sm">
                 Get Started Free
               </button>
             </div>
@@ -272,7 +258,7 @@ const LandingPage = ({ onLogin, onDemo }) => {
                 <TierFeature text="Season-long performance trends" pro />
                 <TierFeature text="Smart-Sync — Universal offline reliability" pro />
               </div>
-              <button onClick={onLogin} className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl transition-all uppercase tracking-widest text-sm shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40">
+              <button onClick={onSignUp} className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl transition-all uppercase tracking-widest text-sm shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40">
                 Upgrade to Coach Pro
               </button>
             </div>
