@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Target, Zap, Battery, WifiOff, Smartphone, BarChart3, Wind, CloudUpload, Dumbbell, Users, ChevronRight, Menu, X, ArrowRight } from 'lucide-react';
+import { Zap, Battery, WifiOff, Smartphone, BarChart3, Wind, CloudUpload, Dumbbell, Users, ChevronRight, Menu, X, ArrowRight, Lock, Mic, Check, Star } from 'lucide-react';
 
 const LandingPage = ({ onLogin, onDemo }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -33,6 +33,7 @@ const LandingPage = ({ onLogin, onDemo }) => {
           <div className="hidden md:flex items-center gap-8">
             <button onClick={() => scrollTo('features')} className="text-sm text-slate-400 hover:text-white font-semibold tracking-wide transition-colors">Features</button>
             <button onClick={() => scrollTo('pwa')} className="text-sm text-slate-400 hover:text-white font-semibold tracking-wide transition-colors">Why PWA</button>
+            <button onClick={() => scrollTo('pricing')} className="text-sm text-slate-400 hover:text-white font-semibold tracking-wide transition-colors">Pricing</button>
             <button onClick={() => scrollTo('training')} className="text-sm text-slate-400 hover:text-white font-semibold tracking-wide transition-colors">Training</button>
             <div className="h-5 w-px bg-slate-700"></div>
             <button 
@@ -60,6 +61,7 @@ const LandingPage = ({ onLogin, onDemo }) => {
           <div className="md:hidden bg-slate-950/98 backdrop-blur-xl border-t border-white/5 px-6 py-6 space-y-4 animate-in">
             <button onClick={() => scrollTo('features')} className="block w-full text-left text-slate-300 hover:text-white font-semibold py-2">Features</button>
             <button onClick={() => scrollTo('pwa')} className="block w-full text-left text-slate-300 hover:text-white font-semibold py-2">Why PWA</button>
+            <button onClick={() => scrollTo('pricing')} className="block w-full text-left text-slate-300 hover:text-white font-semibold py-2">Pricing</button>
             <button onClick={() => scrollTo('training')} className="block w-full text-left text-slate-300 hover:text-white font-semibold py-2">Training</button>
             <div className="h-px bg-slate-800 my-2"></div>
             <button onClick={onLogin} className="block w-full text-left text-indigo-400 font-bold py-2">Login</button>
@@ -195,7 +197,6 @@ const LandingPage = ({ onLogin, onDemo }) => {
       {/* ========== FEATURE GRID ========== */}
       <section id="features" className="relative py-24 sm:py-32 px-4 sm:px-8">
         <div className="absolute top-0 right-0 w-96 h-96 bg-violet-600/8 rounded-full blur-[120px] pointer-events-none"></div>
-        
         <div className="relative z-10 max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-violet-500/10 border border-violet-500/20 rounded-full mb-4">
@@ -209,39 +210,100 @@ const LandingPage = ({ onLogin, onDemo }) => {
               Every feature designed around a single principle: eyes on the field, not on the screen.
             </p>
           </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <FeatureCard
-              icon={<Smartphone className="w-7 h-7" />}
-              title="Implicit Flow"
-              subtitle="50% FEWER TAPS"
-              description="Tap players, not actions. The system infers passes from the possession chain. Score a point in two taps, not five."
-              gradient="from-indigo-600/20 to-indigo-600/5"
-              borderColor="border-indigo-500/20"
+            <FeatureCard icon={<Smartphone className="w-7 h-7" />} title="Implicit Flow" subtitle="50% FEWER TAPS" description="Tap players, not actions. The system infers passes from the possession chain. Score a point in two taps, not five." gradient="from-indigo-600/20 to-indigo-600/5" borderColor="border-indigo-500/20" />
+            <FeatureCard icon={<BarChart3 className="w-7 h-7" />} title="NIS Analytics" subtitle="NET IMPACT SCORES" description="Real-time Net Impact Scores for every player on your roster. Know who's lifting the team and who needs rotation — instantly." gradient="from-violet-600/20 to-violet-600/5" borderColor="border-violet-500/20" />
+            <FeatureCard icon={<Wind className="w-7 h-7" />} title="Pull Quality" subtitle="MEASURABLE PRESSURE" description="Track distance and pressure to find your best puller. Quantify what used to be gut feeling with real pull analytics." gradient="from-emerald-600/20 to-emerald-600/5" borderColor="border-emerald-500/20" />
+            <FeatureCard icon={<CloudUpload className="w-7 h-7" />} title="Smart-Sync" subtitle="ALL TIERS — ZERO DATA LOSS" description="Automatic background sync with 100% offline reliability, included for every user. Track in airplane mode — data uploads the moment you find Wi-Fi." gradient="from-amber-600/20 to-amber-600/5" borderColor="border-amber-500/20" />
+          </div>
+        </div>
+      </section>
+
+      {/* ========== PRICING TIERS ========== */}
+      <section id="pricing" className="relative py-24 sm:py-32 px-4 sm:px-8">
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-900/40 to-slate-950 pointer-events-none"></div>
+        <div className="relative z-10 max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full mb-4">
+              <Star className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="text-xs font-bold text-indigo-300 tracking-widest uppercase">Pricing</span>
+            </div>
+            <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-4">
+              Simple, <span className="text-indigo-400">Transparent</span> Pricing.
+            </h2>
+            <p className="text-slate-400 max-w-xl mx-auto text-lg">Start free. Upgrade when you're ready to go deeper.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Starter */}
+            <div className="bg-slate-900/60 border border-white/10 rounded-3xl p-8 flex flex-col">
+              <div className="mb-6">
+                <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Starter</div>
+                <div className="text-5xl font-black text-white mb-1">Free</div>
+                <div className="text-slate-500 text-sm">No credit card required.</div>
+              </div>
+              <div className="space-y-3 flex-1 mb-8">
+                <TierFeature text="1 Club / up to 3 Teams" />
+                <TierFeature text="Basic Points & Score Tracking" />
+                <TierFeature text="Implicit Flow — 50% fewer taps" />
+                <TierFeature text="Smart-Sync — Universal offline reliability" />
+              </div>
+              <button onClick={onLogin} className="w-full py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-black rounded-xl transition-all uppercase tracking-widest text-sm">
+                Get Started Free
+              </button>
+            </div>
+            {/* Coach Pro */}
+            <div className="relative bg-gradient-to-br from-indigo-600/20 to-violet-600/10 border border-indigo-500/30 rounded-3xl p-8 flex flex-col shadow-2xl shadow-indigo-500/10">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                <div className="px-4 py-1 bg-indigo-500 text-white text-xs font-black uppercase tracking-widest rounded-full shadow-lg">Most Popular</div>
+              </div>
+              <div className="mb-6">
+                <div className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-2">Coach Pro</div>
+                <div className="flex items-end gap-2 mb-1">
+                  <span className="text-5xl font-black text-white">$9</span>
+                  <span className="text-slate-400 text-lg mb-2">/month</span>
+                </div>
+                <div className="text-slate-500 text-sm">Per club. Cancel anytime.</div>
+              </div>
+              <div className="space-y-3 flex-1 mb-8">
+                <TierFeature text="Unlimited Clubs & Teams" pro />
+                <TierFeature text="Advanced NIS (Net Impact Score) Analytics" pro />
+                <TierFeature text="Pull Quality Tracking & Pressure Reports" pro />
+                <TierFeature text="Coach Pro Data Analytics Page" pro />
+                <TierFeature text="Season-long performance trends" pro />
+                <TierFeature text="Smart-Sync — Universal offline reliability" pro />
+              </div>
+              <button onClick={onLogin} className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl transition-all uppercase tracking-widest text-sm shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40">
+                Upgrade to Coach Pro
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========== COMING SOON TEASER ========== */}
+      <section className="relative py-24 sm:py-32 px-4 sm:px-8">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-violet-600/8 rounded-full blur-[140px] pointer-events-none"></div>
+        <div className="relative z-10 max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full mb-4">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+              <span className="text-xs font-bold text-amber-300 tracking-widest uppercase">Coming Soon</span>
+            </div>
+            <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-4">
+              The Future of <span className="bg-gradient-to-r from-amber-400 to-violet-400 bg-clip-text text-transparent">Sideline Intelligence.</span>
+            </h2>
+            <p className="text-slate-400 max-w-xl mx-auto text-lg">The roadmap for what's coming next to Coach Pro.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <ComingSoonCard
+              icon={<Mic className="w-7 h-7" />}
+              title="Voice Pro"
+              description="Eyes on the disc, not the device. Voice Pro will leverage offline AI to track every pass, D, and goal using simple voice commands — no screen interaction required."
             />
-            <FeatureCard
-              icon={<BarChart3 className="w-7 h-7" />}
-              title="NIS Analytics"
-              subtitle="NET IMPACT SCORES"
-              description="Real-time Net Impact Scores for every player on your roster. Know who's lifting the team and who needs rotation — instantly."
-              gradient="from-violet-600/20 to-violet-600/5"
-              borderColor="border-violet-500/20"
-            />
-            <FeatureCard
-              icon={<Wind className="w-7 h-7" />}
-              title="Pull Quality"
-              subtitle="MEASURABLE PRESSURE"
-              description="Track distance and pressure to find your best puller. Quantify what used to be gut feeling with real pull analytics."
-              gradient="from-emerald-600/20 to-emerald-600/5"
-              borderColor="border-emerald-500/20"
-            />
-            <FeatureCard
-              icon={<CloudUpload className="w-7 h-7" />}
-              title="Smart-Sync"
-              subtitle="ZERO DATA LOSS"
-              description="Auto-syncs to the cloud the moment you find Wi-Fi. Track in airplane mode at a field tournament — data uploads later."
-              gradient="from-amber-600/20 to-amber-600/5"
-              borderColor="border-amber-500/20"
+            <ComingSoonCard
+              icon={<Dumbbell className="w-7 h-7" />}
+              title="Advanced Training Mode Pro"
+              description="Deep-dive drill analytics including rep-speed tracking, heat maps, and historical training efficiency trends to bridge the gap between practice and gameday."
             />
           </div>
         </div>
@@ -398,6 +460,32 @@ const TrainingBullet = ({ text }) => (
       <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
     </div>
     <span className="text-slate-300 text-sm font-medium">{text}</span>
+  </div>
+);
+
+const TierFeature = ({ text, pro }) => (
+  <div className="flex items-center gap-3">
+    <Check className={`w-4 h-4 flex-shrink-0 ${pro ? 'text-indigo-400' : 'text-emerald-500'}`} />
+    <span className="text-slate-300 text-sm font-medium">{text}</span>
+  </div>
+);
+
+const ComingSoonCard = ({ icon, title, description }) => (
+  <div className="relative bg-slate-900/40 border border-white/5 rounded-2xl p-8 overflow-hidden group">
+    <div className="absolute inset-0 bg-gradient-to-br from-slate-800/30 to-transparent pointer-events-none"></div>
+    <div className="absolute top-4 right-4">
+      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full">
+        <Lock className="w-3 h-3 text-amber-400" />
+        <span className="text-[10px] font-black text-amber-400 tracking-widest uppercase">Coming Soon</span>
+      </div>
+    </div>
+    <div className="flex items-start gap-5 opacity-70 grayscale group-hover:opacity-90 group-hover:grayscale-0 transition-all duration-500">
+      <div className="flex-shrink-0 p-3 bg-white/5 rounded-xl text-slate-400">{icon}</div>
+      <div>
+        <h3 className="text-xl font-black text-white mb-2 tracking-tight">{title}</h3>
+        <p className="text-slate-400 text-sm leading-relaxed">{description}</p>
+      </div>
+    </div>
   </div>
 );
 
