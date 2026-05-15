@@ -123,7 +123,7 @@ const LandingPage = ({ onLogin, onDemo }) => {
               id="hero-demo-btn"
               className="group w-full sm:w-auto px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-slate-300 hover:text-white font-bold rounded-2xl transition-all active:scale-[0.97] uppercase tracking-widest text-sm flex items-center justify-center gap-3"
             >
-              View Live Demo
+              View Demo
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
@@ -331,7 +331,7 @@ const LandingPage = ({ onLogin, onDemo }) => {
               id="cta-demo-btn"
               className="group w-full sm:w-auto px-10 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-slate-300 hover:text-white font-bold rounded-2xl transition-all active:scale-[0.97] uppercase tracking-widest text-sm flex items-center justify-center gap-3"
             >
-              Live Demo
+              View Demo
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
