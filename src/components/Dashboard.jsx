@@ -249,7 +249,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   };
 
   // Voice Tracking Engine
-  const lastActionTimeRef = useRef(0);
   const lastExecutedTranscriptRef = useRef('');
   const voiceCommandTimeoutRef = useRef(null);
 
@@ -401,12 +400,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       // Show the user exactly what the mic is hearing in real-time
       setVoiceFeedback(`Hearing: "${fullTranscript}"...`);
       
-      // Debounce lock (ignore if recognized something in the last 1500ms)
-      if (Date.now() - lastActionTimeRef.current < 1500) {
-          return;
-      }
-
-      // Pre-process transcript with word map
+      // 4. Find the best match at the END of the transcript
       let normalizedTranscript = fullTranscript;
       for (const [word, replacement] of Object.entries(wordMap)) {
          normalizedTranscript = normalizedTranscript.replace(new RegExp(`\\b${word}\\b`, 'g'), replacement);
@@ -431,10 +425,9 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               return;
           }
 
-          // Debounce execution by 600ms to allow interim results to settle (e.g. "1" -> "14" or "14" -> "14 score")
           if (voiceCommandTimeoutRef.current) clearTimeout(voiceCommandTimeoutRef.current);
           
-          voiceCommandTimeoutRef.current = setTimeout(() => {
+          const executeCommand = () => {
               lastExecutedTranscriptRef.current = normalizedTranscript;
               const cmd = matchedCmd;
               
@@ -461,7 +454,15 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                 setVoiceRecognizedAction(null);
                 setVoiceRecognizedPlayer(null);
               }, 500);
-          }, 600);
+          };
+
+          // Delay simple number selections slightly to allow interim words to settle (e.g. "14" -> "14 score")
+          if (matchedCmd.action === 'PlayerSelect') {
+              voiceCommandTimeoutRef.current = setTimeout(executeCommand, 300);
+          } else {
+              // Execute complex actions instantly for maximum responsiveness
+              executeCommand();
+          }
       } else {
          setVoiceFeedback(`Heard: "${fullTranscript}" (No match)`);
       }
