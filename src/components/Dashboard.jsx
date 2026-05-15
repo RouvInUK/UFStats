@@ -116,14 +116,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     setPossessionChain(prev => {
       if (prev.length > 0 && prev[prev.length - 1] === playerName) {
         setCallahanModeFor(c => c === playerName ? null : playerName);
-        playClick();
         return prev;
       }
       
       setCallahanModeFor(null);
       const newChain = [...prev, playerName];
       
-      playClick();
       if (prev.length >= 2) {
         const playerNMinus2 = prev[prev.length - 2];
         // Fire and forget the pass log so the UI doesn't freeze
@@ -252,7 +250,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
 
   // Voice Tracking Engine
   const lastActionTimeRef = useRef(0);
-  const executedCommandsCountRef = useRef({});
+  const lastExecutedTranscriptRef = useRef('');
+  const voiceCommandTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (!isVoiceEnabled || !isTrackingActive) {
@@ -414,59 +413,58 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
          normalizedTranscript = normalizedTranscript.replace(new RegExp(`\\b${word}\\b`, 'g'), replacement);
       }
       
-      // Require an action word OR a player number to be present
-      const playerNumbers = activeObjects.map(p => String(p.shirt_number).toLowerCase()).filter(Boolean);
-      const validActions = ['score', 'drop', 'throwaway', 'defence', 'stall out', 'point', ...playerNumbers];
-      const hasAction = validActions.some(action => {
-          const regex = new RegExp(`\\b${action}\\b`, 'i');
-          return regex.test(normalizedTranscript);
-      });
-      if (!hasAction) {
-          return; // Wait for the rest of the sentence
-      }
-
-      // 4. Find the best match using counting logic
+      // 4. Find the best match at the END of the transcript
       // Sort commands by length descending so "34 score" is checked before "34"
       const sortedCommands = [...expectedCommands].sort((a, b) => b.text.length - a.text.length);
       
       let matchedCmd = null;
-      
       for (const cmd of sortedCommands) {
-          const regex = new RegExp(`\\b${cmd.text}\\b`, 'ig');
-          const matches = normalizedTranscript.match(regex);
-          const countInTranscript = matches ? matches.length : 0;
-          const countExecuted = executedCommandsCountRef.current[cmd.text] || 0;
-
-          if (countInTranscript > countExecuted) {
-              console.log(`[Voice] MATCHED: "${cmd.text}" (Found: ${countInTranscript}, Executed: ${countExecuted})`);
+          const regex = new RegExp(`\\b${cmd.text}$`, 'i');
+          if (regex.test(normalizedTranscript)) {
               matchedCmd = cmd;
               break;
           }
       }
-      if (matchedCmd) {
-         const cmd = matchedCmd;
-         // Increment the execution count for this specific command text
-         executedCommandsCountRef.current[cmd.text] = (executedCommandsCountRef.current[cmd.text] || 0) + 1;
-         lastActionTimeRef.current = Date.now(); // Lock
-         
-         setVoiceFeedback(`Heard: "${cmd.text}" ✓`);
-         setVoiceRecognizedAction(cmd.action);
-         setVoiceRecognizedPlayer(cmd.player);
-         if (cmd.action === 'Opponent Point') {
-             handleStatRecord('Opponent Point');
-         } else if (cmd.action === 'PlayerSelect') {
-             handlePlayerSelect(cmd.player);
-         } else {
-             handleStatRecord(cmd.action, cmd.player);
-         }
-         
-         setTimeout(() => {
-           setVoiceRecognizedAction(null);
-           setVoiceRecognizedPlayer(null);
-         }, 500);
 
+      if (matchedCmd) {
+          // If this is exactly the same transcript text we already executed, ignore it!
+          if (lastExecutedTranscriptRef.current === normalizedTranscript) {
+              return;
+          }
+
+          // Debounce execution by 600ms to allow interim results to settle (e.g. "1" -> "14" or "14" -> "14 score")
+          if (voiceCommandTimeoutRef.current) clearTimeout(voiceCommandTimeoutRef.current);
+          
+          voiceCommandTimeoutRef.current = setTimeout(() => {
+              lastExecutedTranscriptRef.current = normalizedTranscript;
+              const cmd = matchedCmd;
+              
+              setVoiceFeedback(`Heard: "${cmd.text}" ✓`);
+              setVoiceRecognizedAction(cmd.action);
+              setVoiceRecognizedPlayer(cmd.player);
+
+              if (cmd.action === 'Opponent Point') {
+                  handleStatRecord('Opponent Point');
+              } else if (cmd.action === 'PlayerSelect') {
+                  handlePlayerSelect(cmd.player);
+              } else {
+                  // For combined commands like "14 score", ensure the player is selected first to log the pass!
+                  if (cmd.player) {
+                      handlePlayerSelect(cmd.player);
+                      // Slight delay to allow React state to process the chain
+                      setTimeout(() => handleStatRecord(cmd.action, cmd.player), 100);
+                  } else {
+                      handleStatRecord(cmd.action);
+                  }
+              }
+              
+              setTimeout(() => {
+                setVoiceRecognizedAction(null);
+                setVoiceRecognizedPlayer(null);
+              }, 500);
+          }, 600);
       } else {
-         setVoiceFeedback(`Heard: "${transcript}" (No match)`);
+         setVoiceFeedback(`Heard: "${fullTranscript}" (No match)`);
       }
     };
 
