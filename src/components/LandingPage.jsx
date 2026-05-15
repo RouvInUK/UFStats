@@ -256,9 +256,15 @@ const LandingPage = ({ onLogin, onDemo }) => {
             <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
               {/* Left: Content */}
               <div className="flex-1">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full mb-5">
-                  <Dumbbell className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-xs font-bold text-emerald-300 tracking-widest uppercase">Training Mode</span>
+                <div className="flex flex-wrap items-center gap-3 mb-5">
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                    <Dumbbell className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-xs font-bold text-emerald-300 tracking-widest uppercase">Training Mode</span>
+                  </div>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span className="text-xs font-black text-amber-400 tracking-widest uppercase">Coming Soon</span>
+                  </div>
                 </div>
                 
                 <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight mb-5 leading-tight">
