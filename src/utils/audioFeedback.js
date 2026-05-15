@@ -12,6 +12,24 @@ const initAudio = () => {
   }
 };
 
+export const unlockAudio = () => {
+  try {
+    initAudio();
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+      
+      // Play an inaudible sound to force context unlock on iOS/Android
+      const buffer = audioCtx.createBuffer(1, 1, 22050);
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioCtx.destination);
+      source.start();
+    }
+  } catch (err) {
+    console.warn("Audio unlock failed", err);
+  }
+};
+
 export const playChime = () => {
   try {
     initAudio();

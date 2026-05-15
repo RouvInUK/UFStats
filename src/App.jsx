@@ -14,6 +14,7 @@ import { fetchPlayers } from './supabaseClient';
 import { useAuth } from './contexts/AuthContext';
 import { ShieldCheck, Star, LogOut, Cloud, CloudOff, CloudUpload, Crown } from 'lucide-react';
 import { getPendingSyncCount } from './SyncEngine';
+import { unlockAudio } from './utils/audioFeedback';
 
 const SyncIndicator = () => {
 // ... existing SyncIndicator logic ...
@@ -363,7 +364,7 @@ function App() {
 
 
   return (
-    <div className="min-h-screen bg-slate-900 selection:bg-indigo-500 selection:text-white pb-24">
+    <div onClick={unlockAudio} onTouchStart={unlockAudio} className="min-h-screen bg-slate-900 selection:bg-indigo-500 selection:text-white pb-24">
       {shadowTeam && (
         <div className="bg-amber-500 text-amber-950 font-black tracking-widest text-xs py-2 px-4 flex justify-center items-center gap-4 z-50 sticky top-0 shadow-md">
            <span>IMPERSONATING: {shadowTeam.name}</span>
