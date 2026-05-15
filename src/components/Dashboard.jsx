@@ -277,7 +277,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     activeObjects.forEach(player => {
         if (player.shirt_number != null && player.shirt_number !== '') {
            const num = String(player.shirt_number).toLowerCase();
-           expectedCommands.push({ text: `${num} pass`, action: 'Pass', player: player.name });
+           expectedCommands.push({ text: num, action: 'PlayerSelect', player: player.name });
+           // We also keep combined commands just in case they say it fast together
            expectedCommands.push({ text: `${num} score`, action: 'Point', player: player.name });
            expectedCommands.push({ text: `${num} drop`, action: 'Drop', player: player.name });
            expectedCommands.push({ text: `${num} throwaway`, action: 'Throwaway', player: player.name });
@@ -285,6 +286,14 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
            expectedCommands.push({ text: `${num} defence`, action: 'Defence', player: player.name });
         }
     });
+    
+    // Add standalone actions that operate on the currently active player
+    expectedCommands.push({ text: `score`, action: 'Point', player: null });
+    expectedCommands.push({ text: `drop`, action: 'Drop', player: null });
+    expectedCommands.push({ text: `throwaway`, action: 'Throwaway', player: null });
+    expectedCommands.push({ text: `stall out`, action: 'Stall Out', player: null });
+    expectedCommands.push({ text: `defence`, action: 'Defence', player: null });
+    
     expectedCommands.push({ text: `opponent score`, action: 'Opponent Point', player: 'Opponent' });
 
     // Initialize Fuse for full-phrase matching
@@ -397,18 +406,19 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
          normalizedTranscript = normalizedTranscript.replace(new RegExp(`\\b${word}\\b`, 'g'), replacement);
       }
       
-      // Handle currency edge cases where numbers are attached to symbols (e.g. "£28" -> "28 pass")
-      normalizedTranscript = normalizedTranscript.replace(/£\s*(\d+)/g, '$1 pass').replace(/(\d+)\s*£/g, '$1 pass').replace(/£/g, ' pass ');
-
-      // Require an action word to be present to prevent interim results (e.g. just "0") from prematurely triggering an action
-      const validActions = ['pass', 'score', 'drop', 'throwaway', 'defence', 'stall out', 'point'];
-      const hasAction = validActions.some(action => normalizedTranscript.includes(action));
+      // Require an action word OR a player number to be present
+      const playerNumbers = activeObjects.map(p => String(p.shirt_number).toLowerCase()).filter(Boolean);
+      const validActions = ['score', 'drop', 'throwaway', 'defence', 'stall out', 'point', ...playerNumbers];
+      const hasAction = validActions.some(action => {
+          const regex = new RegExp(`\\b${action}\\b`, 'i');
+          return regex.test(normalizedTranscript);
+      });
       if (!hasAction) {
           return; // Wait for the rest of the sentence
       }
 
       // 4. Find the best match using counting logic
-      // Sort commands by length descending so "34 pass" is checked before "4 pass"
+      // Sort commands by length descending so "34 score" is checked before "34"
       const sortedCommands = [...expectedCommands].sort((a, b) => b.text.length - a.text.length);
       
       let matchedCmd = null;
@@ -425,36 +435,31 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               break;
           }
       }
-      
       if (matchedCmd) {
          const cmd = matchedCmd;
          // Increment the execution count for this specific command text
          executedCommandsCountRef.current[cmd.text] = (executedCommandsCountRef.current[cmd.text] || 0) + 1;
          lastActionTimeRef.current = Date.now(); // Lock
          
-         if (cmd.action === 'Opponent Point') {
-             setVoiceFeedback(`Heard: "Opponent Point" ✓`);
-             setVoiceRecognizedAction('Opponent Point');
-             playBuzz();
-             handleStatRecord('Opponent Point');
-             setTimeout(() => setVoiceRecognizedAction(null), 500);
-             return;
-         }
-
-         // Standard action
          setVoiceFeedback(`Heard: "${cmd.text}" ✓`);
          setVoiceRecognizedAction(cmd.action);
          setVoiceRecognizedPlayer(cmd.player);
          
          if (['Point', 'Defence'].includes(cmd.action)) {
             playChime();
-         } else if (cmd.action === 'Pass') {
+         } else if (cmd.action === 'PlayerSelect') {
             playClick();
          } else {
             playBuzz();
          }
 
-         handleStatRecord(cmd.action, cmd.player);
+         if (cmd.action === 'Opponent Point') {
+             handleStatRecord('Opponent Point');
+         } else if (cmd.action === 'PlayerSelect') {
+             handlePlayerSelect(cmd.player);
+         } else {
+             handleStatRecord(cmd.action, cmd.player);
+         }
          
          setTimeout(() => {
            setVoiceRecognizedAction(null);
