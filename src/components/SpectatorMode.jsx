@@ -62,22 +62,41 @@ const SpectatorMode = ({ spectatorGameId }) => {
 
     loadData();
 
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamId);
+    const filterStr = isUUID ? `team_id=eq.${teamId}` : undefined;
+
     const channel = supabase
       .channel(`public:stats:${gameName}`)
       .on('postgres_changes', { 
-        event: 'INSERT', 
+        event: '*', 
         schema: 'public', 
         table: 'stats',
-        filter: `team_id=eq.${teamId}`
+        ...(filterStr ? { filter: filterStr } : {})
       }, payload => {
-        if (payload.new.game_name === gameName) {
+        if (payload.eventType === 'DELETE') {
            setStats(prev => {
-             const updated = [payload.new, ...prev];
-             if (updated.length === 1) {
+              const updated = prev.filter(s => s.id !== payload.old.id);
+              recalculateState(updated);
+              return updated;
+           });
+           return;
+        }
+
+        if (payload.new && payload.new.game_name === gameName) {
+           setStats(prev => {
+             // Handle both INSERT and UPDATE
+             const exists = prev.some(s => s.id === payload.new.id);
+             let updated;
+             if (exists) {
+                updated = prev.map(s => s.id === payload.new.id ? payload.new : s);
+             } else {
+                updated = [payload.new, ...prev];
+                triggerPulse();
+             }
+             if (updated.length === 1 && payload.new.created_at) {
                 setStartTime(new Date(payload.new.created_at));
              }
              recalculateState(updated);
-             triggerPulse();
              return updated;
            });
         }
@@ -165,19 +184,23 @@ const SpectatorMode = ({ spectatorGameId }) => {
            </div>
         </div>
 
-        <div className="flex justify-between items-center w-full max-w-md px-2">
-           <div className="flex flex-col items-center flex-1">
-             <span className="text-[10px] sm:text-xs text-white/50 tracking-widest uppercase font-bold mb-2 break-all text-center">{teamNames.us}</span>
-             <span className={`text-6xl sm:text-8xl font-black tracking-tighter ${pulse && lastAction?.type === 'us' ? 'animate-bounce text-white' : 'text-white'}`}>{score.us}</span>
+        <div className="flex justify-between items-center w-full max-w-md px-2 mt-4">
+           <div className="flex flex-col items-center flex-1 w-1/3">
+             <div className="h-12 flex items-end justify-center mb-2">
+                <span className="text-sm sm:text-lg text-white/80 tracking-widest uppercase font-extrabold break-words text-center line-clamp-2">{teamNames.us}</span>
+             </div>
+             <span className={`text-7xl sm:text-9xl font-black tracking-tighter ${pulse && lastAction?.type === 'us' ? 'animate-bounce text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]' : 'text-white'}`}>{score.us}</span>
            </div>
            
-           <div className="flex flex-col items-center px-4">
-             <span className="text-xl sm:text-3xl font-black text-white/30">-</span>
+           <div className="flex flex-col items-center px-2 w-1/3 mt-10">
+             <span className="text-2xl sm:text-4xl font-black text-white/30">-</span>
            </div>
 
-           <div className="flex flex-col items-center flex-1">
-             <span className="text-[10px] sm:text-xs text-white/50 tracking-widest uppercase font-bold mb-2 break-all text-center">{teamNames.them}</span>
-             <span className={`text-6xl sm:text-8xl font-black tracking-tighter ${pulse && lastAction?.type === 'them' ? 'animate-bounce text-white' : 'text-white/80'}`}>{score.them}</span>
+           <div className="flex flex-col items-center flex-1 w-1/3">
+             <div className="h-12 flex items-end justify-center mb-2">
+                <span className="text-sm sm:text-lg text-white/80 tracking-widest uppercase font-extrabold break-words text-center line-clamp-2">{teamNames.them}</span>
+             </div>
+             <span className={`text-7xl sm:text-9xl font-black tracking-tighter ${pulse && lastAction?.type === 'them' ? 'animate-bounce text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]' : 'text-white/80'}`}>{score.them}</span>
            </div>
         </div>
       </header>
