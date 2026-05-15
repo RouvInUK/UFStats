@@ -554,6 +554,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
               </div>
             </div>
           )}
+          </div>
           
           <div className="flex flex-wrap items-center gap-3 mt-2">
             {!isMultiGame && (
@@ -563,6 +564,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
               >
                 {visualGameType === 'beach' ? '5v5 Beach' : '7v7 Grass'}
               </button>
+            )}
             {!isMultiGame && selectedGames.length > 0 && (
                <button 
                   onClick={async () => {
