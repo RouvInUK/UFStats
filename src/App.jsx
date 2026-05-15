@@ -9,12 +9,14 @@ import BetaBadge from './components/BetaBadge';
 import AuthScreen from './components/AuthScreen';
 import AdminDashboard from './components/AdminDashboard';
 import TeamSelectionScreen from './components/TeamSelectionScreen';
+import SpectatorMode from './components/SpectatorMode';
 import { fetchPlayers } from './supabaseClient';
 import { useAuth } from './contexts/AuthContext';
 import { ShieldCheck, Star, LogOut, Cloud, CloudOff, CloudUpload, Crown } from 'lucide-react';
 import { getPendingSyncCount } from './SyncEngine';
 
 const SyncIndicator = () => {
+// ... existing SyncIndicator logic ...
   const [status, setStatus] = useState('synced');
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -32,7 +34,6 @@ const SyncIndicator = () => {
 
     window.addEventListener('sync-status', handleSyncStatus);
     
-    // Initial check
     updateCount();
     const interval = setInterval(updateCount, 2000);
 
@@ -67,6 +68,18 @@ const SyncIndicator = () => {
 };
 
 function App() {
+  const [spectatorGameId, setSpectatorGameId] = useState(() => {
+     const path = window.location.pathname;
+     if (path.startsWith('/live/')) {
+        return path.replace('/live/', '');
+     }
+     return null;
+  });
+
+  if (spectatorGameId) {
+     return <SpectatorMode spectatorGameId={spectatorGameId} />;
+  }
+
   const { user, profile, loading: authLoading, authError, signOut } = useAuth();
   const [currentView, setCurrentView] = useState('dashboard');
   

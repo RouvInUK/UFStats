@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { fetchGameStats, fetchAllGameNames, fetchAllTeamNames } from '../supabaseClient';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
-import { Lock, Zap, Target, AlertTriangle, Presentation, Users, ChevronDown, Check, Activity, TrendingUp, TrendingDown } from 'lucide-react';
+import { Lock, Zap, Target, AlertTriangle, Presentation, Users, ChevronDown, Check, Activity, TrendingUp, TrendingDown, Share2 } from 'lucide-react';
 
 const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam, players = [] }) => {
   const [stats, setStats] = useState([]);
@@ -520,18 +520,18 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       
       {/* Live Header / Selector Panel */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl relative z-50">
-        <div className="w-full sm:w-auto relative group" ref={dropdownRef}>
-          <button 
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex items-center gap-2 group-hover:opacity-80 transition-opacity"
-          >
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase">
-              {isMultiGame ? `Aggregated View: ${selectedGames.length} Games | ${score.us + score.them} Total Points` : selectedGames[0]}
-            </h1>
-            <ChevronDown className="w-6 h-6 text-indigo-400 bg-indigo-500/10 rounded-full p-1" />
-          </button>
-          
-          {isDropdownOpen && (
+        <div className="w-full sm:w-auto flex flex-wrap items-center gap-4">
+          <div className="relative group" ref={dropdownRef}>
+            <button 
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="flex items-center gap-2 group-hover:opacity-80 transition-opacity"
+            >
+              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase">
+                {isMultiGame ? `Aggregated View: ${selectedGames.length} Games | ${score.us + score.them} Total Points` : selectedGames[0]}
+              </h1>
+              <ChevronDown className="w-6 h-6 text-indigo-400 bg-indigo-500/10 rounded-full p-1" />
+            </button>
+            {isDropdownOpen && (
             <div className="absolute top-full left-0 mt-4 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-50 max-h-64 flex flex-col">
               <div className="p-3 border-b border-slate-800 flex items-center justify-between">
                 <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Select Matches</span>
@@ -563,6 +563,33 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
               >
                 {visualGameType === 'beach' ? '5v5 Beach' : '7v7 Grass'}
               </button>
+            {!isMultiGame && selectedGames.length > 0 && (
+               <button 
+                  onClick={async () => {
+                     // Safe base64 encoding for unicode
+                     const rawStr = `${targetTeamId}|${selectedGames[0]}`;
+                     const slug = btoa(unescape(encodeURIComponent(rawStr)));
+                     const url = `https://ustats.pro/live/${slug}`;
+                     if (navigator.share) {
+                        try {
+                           await navigator.share({
+                              title: 'Live Ultimate Score',
+                              text: `Follow our game live on ustats.pro:`,
+                              url: url
+                           });
+                        } catch (err) {
+                           console.warn("Share failed or cancelled", err);
+                        }
+                     } else {
+                        navigator.clipboard.writeText(url);
+                        alert("Live link copied to clipboard!");
+                     }
+                  }}
+                  className="px-3 py-1 font-bold text-xs uppercase tracking-widest rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center gap-1.5 hover:bg-indigo-500/30 transition-colors"
+               >
+                  <Share2 className="w-3 h-3" />
+                  Live Link
+               </button>
             )}
             <span className="flex items-center gap-1 text-slate-400 text-sm font-medium bg-slate-800/50 px-3 py-1 rounded-full">
               {loading ? (
