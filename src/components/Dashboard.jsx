@@ -261,7 +261,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         recognitionRef.current = null;
       }
       setVoiceFeedback('');
-      executedCommandsCountRef.current = {};
       return;
     }
 
@@ -478,7 +477,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       if (isVoiceEnabled && isTrackingActive && recognitionRef.current) {
         setTimeout(() => {
            try {
-             executedCommandsCountRef.current = {}; // Reset counts on hard restart
              if (recognitionRef.current) recognitionRef.current.start();
            } catch(e) {
              // Ignore already started errors
