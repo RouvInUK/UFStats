@@ -58,14 +58,21 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
                   }
                }
 
-               if (isFirstEvent) {
+               if (stat.stat_type === 'Start Defense') {
+                   isDPoint = true;
+               } else if (stat.stat_type === 'Start Offense') {
+                   isDPoint = false;
+               }
+
+               const realActions = ['Pull', 'Pass', 'Opponent Turnover', 'Throwaway', 'Drop', 'Stall Out', 'Defence', 'Block'];
+               if (isFirstEvent && realActions.includes(stat.stat_type)) {
                   if (stat.stat_type === 'Pull') {
                      isDPoint = true;
-                     dPointsPlayed++;
-                  } else {
-                     isDPoint = false;
-                     oPointsPlayed++;
                   }
+                  
+                  if (isDPoint) dPointsPlayed++;
+                  else oPointsPlayed++;
+                  
                   isFirstEvent = false;
                }
 
@@ -81,6 +88,7 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
                      currentPointPasses = 0;
                      currentPointTurnovers = 0;
                      isFirstEvent = true;
+                     isDPoint = true; // We scored, so we pull next
                   }
                } else if (['Throwaway', 'Drop', 'Stall Out'].includes(stat.stat_type)) {
                   currentPointTurnovers++;
@@ -88,6 +96,7 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
                   currentPointPasses = 0;
                   currentPointTurnovers = 0;
                   isFirstEvent = true;
+                  isDPoint = false; // They scored, we receive next
                }
             });
         }
@@ -141,7 +150,7 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
         // --- Paragraph 3: Tactical Recommendation ---
         let p3 = `**Tactical Recommendation:** `;
         if (cleanHoldRate < 40 && oPointsPlayed > 0) {
-           p3 += `**Protect the football.** The Active Unit must prioritize possession over progression. Look to the break-side handler immediately if the primary cut isn't open by stall 3. Do not force the disc into tight windows.`;
+           p3 += `**Protect the disc.** The Active Unit must prioritize possession over progression. Look to the break-side handler immediately if the primary cut isn't open by stall 3. Do not force the disc into tight windows.`;
         } else if (huckAttempts > 0 && huckIntegrityPct < 40) {
            p3 += `**Holster the deep ball.** We are turning the disc over on forced hucks. I want the deep look held strictly as a decoy. Establish the dump-swing rhythm first, and only take the deep shot if it's a clear 1-on-1 mismatch.`;
         } else if (passToScoreRatio > 7) {
