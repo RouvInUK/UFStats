@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { fetchGameStats, fetchAllGameNames, fetchAllTeamNames } from '../supabaseClient';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
 import { Lock, Zap, Target, AlertTriangle, Presentation, Users, ChevronDown, Check, Activity, TrendingUp, TrendingDown, Share2 } from 'lucide-react';
+import AiAdvisorModule from './AiAdvisorModule';
 
 const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam, players = [] }) => {
   const [stats, setStats] = useState([]);
@@ -617,6 +618,13 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
           </div>
         </div>
       </div>
+
+      <AiAdvisorModule 
+        playerStats={sortedPlayers} 
+        rawStats={stats} 
+        gameType={visualGameType} 
+        score={score} 
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         
