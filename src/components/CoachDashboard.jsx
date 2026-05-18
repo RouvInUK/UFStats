@@ -365,7 +365,10 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
         ova,
         avgPullScore,
         pointsPlayed: p.holdsPlayed + p.breaksPlayed,
-        tags
+        passAttempts: passAttempts,
+        tags,
+        totalHuckAttempts,
+        huckCompletions
       };
     }).sort((a, b) => b.touches - a.touches);
 
@@ -822,8 +825,14 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                     <th className="p-4 font-bold hover:text-white transition-colors" onClick={() => handleSort('name')}>
                       Player {sortField === 'name' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
-                    <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('pointsPlayed')} title="O-Points / D-Points">
-                      Pts Played {sortField === 'pointsPlayed' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                    <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('pointsPlayed')} title="Total Points Played">
+                      PP {sortField === 'pointsPlayed' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                    </th>
+                    <th className="p-4 font-bold text-center hover:text-white transition-colors" title="O-Points / D-Points">
+                      O/D
+                    </th>
+                    <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('touches')} title="Total Touches">
+                      Touches {sortField === 'touches' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
                     <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('touchesPerPoint')} title="Avg Touches per Point">
                       Touches/Pt {sortField === 'touchesPerPoint' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
@@ -833,6 +842,9 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                     </th>
                     <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('turnovers')} title="Throwaways / Drops / Stalls">
                       Turnovers {sortField === 'turnovers' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                    </th>
+                    <th className="p-4 font-bold text-right hover:text-white transition-colors" title="Completed Passes / Attempted Passes">
+                      Passes (C/A)
                     </th>
                     <th className="p-4 font-bold text-right hover:text-white transition-colors" onClick={() => handleSort('completion')} title="Pass Completion %">
                       Comp % {sortField === 'completion' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
@@ -875,8 +887,14 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                             </span>
                           </div>
                         </td>
+                        <td className="p-4 text-center font-mono font-bold text-slate-200">
+                          {p.pointsPlayed}
+                        </td>
                         <td className="p-4 text-center font-mono font-medium text-slate-400 text-xs text-nowrap">
                            <span className="text-emerald-400/80" title="Offense Points">{p.holdsPlayed} O</span><span className="text-slate-600 mx-1">/</span><span className="text-rose-400/80" title="Defense Points">{p.breaksPlayed} D</span>
+                        </td>
+                        <td className="p-4 text-center font-mono font-medium text-slate-300">
+                          {p.touches}
                         </td>
                         <td className="p-4 text-center font-mono font-medium text-slate-300">
                           {p.touchesPerPoint}
@@ -897,6 +915,9 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                             <span className="text-rose-400 font-bold">{p.turnovers}</span>
                             <span className="text-slate-500 font-medium tracking-tight">({p.throwaways}T / {p.drops}D / {p.stalls}S)</span>
                           </div>
+                        </td>
+                        <td className="p-4 text-right font-mono font-bold text-slate-300">
+                          {p.passes} / {p.passAttempts}
                         </td>
                         <td className="p-4 text-right font-mono font-bold text-slate-300">
                           {p.completion}%
