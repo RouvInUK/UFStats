@@ -41,8 +41,10 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
         let scoringPointsCount = 0;
         let passesInScoringPoints = 0;
 
-        let huckAttempts = 0;
-        let huckCompletions = 0;
+        let oHuckAttempts = 0;
+        let oHuckCompletions = 0;
+        let dHuckAttempts = 0;
+        let dHuckCompletions = 0;
 
         let currentPointPasses = 0;
         let currentPointTurnovers = 0;
@@ -51,13 +53,6 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
 
         if (rawStats && rawStats.length > 0) {
             rawStats.forEach(stat => {
-               if (stat.is_huck) {
-                  huckAttempts++;
-                  if (['Pass', 'Point'].includes(stat.stat_type)) {
-                     huckCompletions++;
-                  }
-               }
-
                if (stat.stat_type === 'Start Defense') {
                    isDPoint = true;
                } else if (stat.stat_type === 'Start Offense') {
@@ -74,6 +69,16 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
                   else oPointsPlayed++;
                   
                   isFirstEvent = false;
+               }
+
+               if (stat.details?.is_huck) {
+                  if (isDPoint) {
+                     dHuckAttempts++;
+                     if (['Pass', 'Point'].includes(stat.stat_type)) dHuckCompletions++;
+                  } else {
+                     oHuckAttempts++;
+                     if (['Pass', 'Point'].includes(stat.stat_type)) oHuckCompletions++;
+                  }
                }
 
                if (['Pass', 'Point'].includes(stat.stat_type)) {
@@ -104,7 +109,8 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
         const cleanHoldRate = oPointsPlayed > 0 ? (cleanHolds / oPointsPlayed) * 100 : 0;
         const breakRate = dPointsPlayed > 0 ? (breaks / dPointsPlayed) * 100 : 0;
         const passToScoreRatio = scoringPointsCount > 0 ? (passesInScoringPoints / scoringPointsCount) : 0;
-        const huckIntegrityPct = huckAttempts > 0 ? (huckCompletions / huckAttempts) * 100 : 0;
+        const oHuckIntegrityPct = oHuckAttempts > 0 ? (oHuckCompletions / oHuckAttempts) * 100 : 0;
+        const dHuckIntegrityPct = dHuckAttempts > 0 ? (dHuckCompletions / dHuckAttempts) * 100 : 0;
 
         // --- Paragraph 1: Offensive Execution ---
         let p1 = `**Offensive Execution:** The Active Unit is currently operating with a **${cleanHoldRate.toFixed(0)}% Clean Hold Rate** on offense. `;
@@ -117,11 +123,16 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
         }
 
         if (passToScoreRatio > 7) {
-           p1 += `With a Pass-to-Score ratio of **${passToScoreRatio.toFixed(1)}**, we are being forced into long, grinding possessions. The opposition is taking away our primary looks.`;
+           p1 += `With a Pass-to-Score ratio of **${passToScoreRatio.toFixed(1)}**, we are being forced into long, grinding possessions. The opposition is taking away our primary looks. `;
         } else if (passToScoreRatio > 0 && passToScoreRatio <= 4) {
-           p1 += `With a clinical Pass-to-Score ratio of **${passToScoreRatio.toFixed(1)}**, we are striking fast and efficiently tearing through their defensive sets.`;
+           p1 += `With a clinical Pass-to-Score ratio of **${passToScoreRatio.toFixed(1)}**, we are striking fast and efficiently tearing through their defensive sets. `;
         } else if (passToScoreRatio > 0) {
-           p1 += `Our Pass-to-Score ratio sits at **${passToScoreRatio.toFixed(1)}**, indicating a healthy balance of patience and decisive attacking motion.`;
+           p1 += `Our Pass-to-Score ratio sits at **${passToScoreRatio.toFixed(1)}**, indicating a healthy balance of patience and decisive attacking motion. `;
+        }
+
+        if (oHuckAttempts > 0) {
+           p1 += `Our set offense is launching deep with a **${oHuckIntegrityPct.toFixed(0)}% Huck Integrity** (${oHuckCompletions}/${oHuckAttempts}). `;
+           if (oHuckIntegrityPct < 50) p1 += `We are turning the disc over on low-percentage deep looks. `;
         }
         briefing.para1 = p1;
 
@@ -131,27 +142,33 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
            p2 += `We are absolutely ruthless on the counter-attack, capitalizing on their mistakes immediately. `;
         } else if (breakRate > 0) {
            p2 += `We are generating turns, but our conversion leaves points on the board. `;
-        } else {
+        } else if (dPointsPlayed > 0) {
            p2 += `We are failing to convert when the opponent gives us the disc. `;
+        } else {
+           p2 += `We haven't recorded any defensive points yet. `;
         }
 
-        if (huckAttempts > 0) {
-           p2 += `Looking at our transition offense, our Huck Integrity is at **${huckIntegrityPct.toFixed(0)}%** (${huckCompletions}/${huckAttempts}). `;
-           if (huckIntegrityPct >= 50) {
-              p2 += `We are taking calculated deep shots and stretching the field responsibly.`;
+        if (dHuckAttempts > 0) {
+           p2 += `Looking at our transition offense, our Huck Integrity is at **${dHuckIntegrityPct.toFixed(0)}%** (${dHuckCompletions}/${dHuckAttempts}). `;
+           if (dHuckIntegrityPct >= 50) {
+              p2 += `We are taking calculated deep shots and stretching the field responsibly after generating a turn.`;
            } else {
               p2 += `We are forcing low-percentage deep looks after securing the disc instead of establishing the offense.`;
            }
-        } else {
-           p2 += `We haven't recorded any deep shots yet. The unit is keeping everything underneath and refusing to stretch the field.`;
+        } else if (dPointsPlayed > 0) {
+           p2 += `We haven't recorded any transition deep shots yet. The D-unit is keeping everything underneath after generating a turn.`;
         }
         briefing.para2 = p2;
 
         // --- Paragraph 3: Tactical Recommendation ---
         let p3 = `**Tactical Recommendation:** `;
+        const totalHuckAttempts = oHuckAttempts + dHuckAttempts;
+        const totalHuckCompletions = oHuckCompletions + dHuckCompletions;
+        const totalHuckIntegrity = totalHuckAttempts > 0 ? (totalHuckCompletions / totalHuckAttempts) * 100 : 0;
+
         if (cleanHoldRate < 40 && oPointsPlayed > 0) {
            p3 += `**Protect the disc.** The Active Unit must prioritize possession over progression. Look to the break-side handler immediately if the primary cut isn't open by stall 3. Do not force the disc into tight windows.`;
-        } else if (huckAttempts > 0 && huckIntegrityPct < 40) {
+        } else if (totalHuckAttempts > 0 && totalHuckIntegrity < 40) {
            p3 += `**Holster the deep ball.** We are turning the disc over on forced hucks. I want the deep look held strictly as a decoy. Establish the dump-swing rhythm first, and only take the deep shot if it's a clear 1-on-1 mismatch.`;
         } else if (passToScoreRatio > 7) {
            p3 += `**Pace the offense.** We are working extremely hard for every point. Call strategic timeouts to preserve legs, and look for isolation plays to generate larger chunks of yardage.`;
