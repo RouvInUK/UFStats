@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { addPlayerToClub, togglePlayerOnTeam, removePlayerGlobally, fetchClubPlayers } from '../supabaseClient';
+import { addPlayerToClub, togglePlayerOnTeam, removePlayerGlobally, fetchClubPlayers, updatePlayerInClub } from '../supabaseClient';
 
 const RosterSetup = ({ players, setPlayers, currentTeam, currentTeamObject, targetTeamId }) => {
   const [newPlayerName, setNewPlayerName] = useState('');
@@ -7,6 +7,9 @@ const RosterSetup = ({ players, setPlayers, currentTeam, currentTeamObject, targ
   const [isProcessing, setIsProcessing] = useState(false);
   const [clubPlayers, setClubPlayers] = useState([]);
   const [viewMode, setViewMode] = useState('team'); // 'team' or 'club'
+  const [editingPlayerId, setEditingPlayerId] = useState(null);
+  const [editPlayerName, setEditPlayerName] = useState('');
+  const [editShirtNumber, setEditShirtNumber] = useState('');
   const inputRef = useRef(null);
 
   const clubId = typeof currentTeamObject === 'object' ? currentTeamObject?.club_id : null;
@@ -93,6 +96,35 @@ const RosterSetup = ({ players, setPlayers, currentTeam, currentTeamObject, targ
     }
   };
 
+  const handleEditClick = (player) => {
+    setEditingPlayerId(player.id);
+    setEditPlayerName(player.name);
+    setEditShirtNumber(player.shirt_number || '');
+  };
+
+  const handleSaveEdit = async (e, playerId) => {
+    e.preventDefault();
+    const trimmedName = editPlayerName.trim();
+    const trimmedNumber = editShirtNumber.trim();
+    if (!trimmedName) return;
+
+    if (trimmedNumber && !/^[A-Za-z0-9]{1,3}$/.test(trimmedNumber)) {
+      return alert("Shirt number must be 1-3 alphanumeric characters.");
+    }
+
+    setIsProcessing(true);
+    try {
+      const updatedPlayer = await updatePlayerInClub(playerId, trimmedName, trimmedNumber || null);
+      setClubPlayers(clubPlayers.map(p => p.id === playerId ? updatedPlayer : p));
+      setPlayers(players.map(p => p.id === playerId ? { ...p, name: updatedPlayer.name, shirt_number: updatedPlayer.shirt_number } : p));
+      setEditingPlayerId(null);
+    } catch (err) {
+      alert("Failed to update player: " + (err.message || JSON.stringify(err)));
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center p-4 py-8 sm:py-12 min-h-screen">
       <div className="w-full max-w-xl bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-slate-700 pb-6">
@@ -168,17 +200,48 @@ const RosterSetup = ({ players, setPlayers, currentTeam, currentTeamObject, targ
                     {clubPlayers.map((player) => {
                       const isOnTeam = teamPlayerIds.has(player.id);
                       return (
-                        <li key={player.id} className={`flex justify-between items-center p-3 rounded-xl border transition-all ${isOnTeam ? 'bg-indigo-900/20 border-indigo-500/50' : 'bg-slate-900/50 border-slate-700/50 opacity-60 hover:opacity-100'}`}>
-                          <span className={`font-semibold ${isOnTeam ? 'text-indigo-200' : 'text-slate-300'}`}>
-                            {player.name} {player.shirt_number ? <span className="text-indigo-400/70 font-mono ml-1">#{player.shirt_number}</span> : ''}
-                          </span>
-                          <button 
-                            onClick={() => handleToggleTeamAssignment(player)}
-                            disabled={isProcessing}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all disabled:opacity-50 ${isOnTeam ? 'bg-rose-500/20 text-rose-400 hover:bg-rose-500/30' : 'bg-indigo-600 text-white hover:bg-indigo-500'}`}
-                          >
-                            {isOnTeam ? 'Remove' : 'Add to Team'}
-                          </button>
+                        <li key={player.id} className={`flex flex-col sm:flex-row justify-between sm:items-center p-3 rounded-xl border transition-all gap-3 ${isOnTeam ? 'bg-indigo-900/20 border-indigo-500/50' : 'bg-slate-900/50 border-slate-700/50 opacity-60 hover:opacity-100'}`}>
+                          {editingPlayerId === player.id ? (
+                             <form onSubmit={(e) => handleSaveEdit(e, player.id)} className="flex flex-1 gap-2 w-full">
+                               <input
+                                 type="text"
+                                 value={editShirtNumber}
+                                 onChange={(e) => setEditShirtNumber(e.target.value)}
+                                 className="w-16 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white text-sm"
+                                 placeholder="#"
+                               />
+                               <input
+                                 type="text"
+                                 value={editPlayerName}
+                                 onChange={(e) => setEditPlayerName(e.target.value)}
+                                 className="flex-1 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white text-sm min-w-0"
+                               />
+                               <button type="submit" disabled={isProcessing} className="bg-emerald-600 text-white px-3 py-1 rounded text-sm font-bold disabled:opacity-50 hover:bg-emerald-500">Save</button>
+                               <button type="button" onClick={() => setEditingPlayerId(null)} className="bg-slate-700 text-slate-300 px-3 py-1 rounded text-sm hover:bg-slate-600">Cancel</button>
+                             </form>
+                          ) : (
+                             <>
+                               <span className={`font-semibold flex-1 ${isOnTeam ? 'text-indigo-200' : 'text-slate-300'}`}>
+                                 {player.name} {player.shirt_number ? <span className="text-indigo-400/70 font-mono ml-1">#{player.shirt_number}</span> : ''}
+                               </span>
+                               <div className="flex gap-2 justify-end">
+                                 <button 
+                                   onClick={() => handleEditClick(player)}
+                                   disabled={isProcessing}
+                                   className="text-slate-300 hover:text-white font-medium text-sm px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-all disabled:opacity-50"
+                                 >
+                                   Edit
+                                 </button>
+                                 <button 
+                                   onClick={() => handleToggleTeamAssignment(player)}
+                                   disabled={isProcessing}
+                                   className={`px-4 py-2 rounded-lg text-sm font-bold transition-all disabled:opacity-50 ${isOnTeam ? 'bg-rose-500/20 text-rose-400 hover:bg-rose-500/30' : 'bg-indigo-600 text-white hover:bg-indigo-500'}`}
+                                 >
+                                   {isOnTeam ? 'Remove' : 'Add'}
+                                 </button>
+                               </div>
+                             </>
+                          )}
                         </li>
                       );
                     })}
@@ -193,17 +256,48 @@ const RosterSetup = ({ players, setPlayers, currentTeam, currentTeamObject, targ
                <p className="text-xs text-slate-400 uppercase tracking-wider font-bold mb-3">Manage Club Roster</p>
                <ul className="space-y-2 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
                  {clubPlayers.map((player) => (
-                   <li key={player.id} className="flex justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
-                     <span className="text-slate-200 font-semibold">
-                       {player.name} {player.shirt_number ? <span className="text-indigo-400 font-mono ml-1">#{player.shirt_number}</span> : ''}
-                     </span>
-                     <button 
-                       onClick={() => handleDeleteFromClub(player.id)}
-                       disabled={isProcessing}
-                       className="text-rose-400 hover:text-rose-300 font-medium text-sm px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 rounded-lg transition-all disabled:opacity-50"
-                     >
-                       Delete Globally
-                     </button>
+                   <li key={player.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-slate-900/50 p-4 rounded-xl border border-slate-700/50 gap-3">
+                     {editingPlayerId === player.id ? (
+                        <form onSubmit={(e) => handleSaveEdit(e, player.id)} className="flex flex-1 gap-2 w-full">
+                          <input
+                            type="text"
+                            value={editShirtNumber}
+                            onChange={(e) => setEditShirtNumber(e.target.value)}
+                            className="w-16 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white text-sm"
+                            placeholder="#"
+                          />
+                          <input
+                            type="text"
+                            value={editPlayerName}
+                            onChange={(e) => setEditPlayerName(e.target.value)}
+                            className="flex-1 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white text-sm min-w-0"
+                          />
+                          <button type="submit" disabled={isProcessing} className="bg-emerald-600 text-white px-3 py-1 rounded text-sm font-bold disabled:opacity-50 hover:bg-emerald-500">Save</button>
+                          <button type="button" onClick={() => setEditingPlayerId(null)} className="bg-slate-700 text-slate-300 px-3 py-1 rounded text-sm hover:bg-slate-600">Cancel</button>
+                        </form>
+                     ) : (
+                        <>
+                          <span className="text-slate-200 font-semibold flex-1">
+                            {player.name} {player.shirt_number ? <span className="text-indigo-400 font-mono ml-1">#{player.shirt_number}</span> : ''}
+                          </span>
+                          <div className="flex gap-2 justify-end">
+                            <button 
+                              onClick={() => handleEditClick(player)}
+                              disabled={isProcessing}
+                              className="text-slate-300 hover:text-white font-medium text-sm px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-all disabled:opacity-50"
+                            >
+                              Edit
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteFromClub(player.id)}
+                              disabled={isProcessing}
+                              className="text-rose-400 hover:text-rose-300 font-medium text-sm px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 rounded-lg transition-all disabled:opacity-50"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </>
+                     )}
                    </li>
                  ))}
                </ul>

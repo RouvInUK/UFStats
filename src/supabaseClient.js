@@ -114,6 +114,23 @@ export const addPlayerToClub = async (name, clubId, shirtNumber) => {
   return data[0];
 };
 
+export const updatePlayerInClub = async (playerId, name, shirtNumber) => {
+  const { data, error } = await supabase
+    .from('players')
+    .update({ 
+      name, 
+      shirt_number: shirtNumber || null
+    })
+    .eq('id', playerId)
+    .select();
+
+  if (error) {
+    console.error("Supabase Update Error:", error);
+    throw error;
+  }
+  return data[0];
+};
+
 export const togglePlayerOnTeam = async (playerId, teamId, isAdding) => {
   if (isAdding) {
     const { error } = await supabase
