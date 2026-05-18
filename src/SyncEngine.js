@@ -272,7 +272,7 @@ export const upgradeLastStatToHuck = async (gameName) => {
   if (!lastStat) return null;
 
   // Prevent upgrading non-action stats
-  if (['Point', 'Opponent Point', 'Game Completed', 'Start Offense', 'Start Defense', 'Half Time', 'Timeout', 'Pull'].includes(lastStat.stat_type)) {
+  if (['Opponent Point', 'Game Completed', 'Start Offense', 'Start Defense', 'Half Time', 'Timeout', 'Pull'].includes(lastStat.stat_type)) {
     return null;
   }
 

@@ -216,7 +216,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
             p.passDropped += 1;
         } else {
             p.passes += 1; // Completed pass
-            if (stat.details?.is_huck) {
+            if (stat.details?.is_huck || (nextStat && nextStat.details?.is_huck && (nextStat.stat_type === 'Pass' || nextStat.stat_type === 'Point'))) {
                 p.huckPasses = (p.huckPasses || 0) + 1;
             }
         }
@@ -850,7 +850,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                       Comp % {sortField === 'completion' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
                     <th className={`p-4 font-bold text-right hover:text-white transition-colors ${visualGameType === 'beach' ? 'font-black text-slate-100' : ''}`} onClick={() => handleSort('huckCompletions')} title="Completed Hucks / Attempted Hucks">
-                      Deep Throws {sortField === 'huckCompletions' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                      Deep Throws (C/A) {sortField === 'huckCompletions' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
                     <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('systemImpact')} title="The % change in team scoring efficiency when this player is on the field. Corrects for O/D starting bias.">
                       System Impact % {sortField === 'systemImpact' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}

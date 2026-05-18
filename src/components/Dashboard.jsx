@@ -14,6 +14,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   const [flashType, setFlashType] = useState(null);
   const [huckTargetId, setHuckTargetId] = useState(null);
   const lastTapRef = useRef({ id: null, time: 0 });
+  const pendingHuckRef = useRef(new Set());
 
   const handleDoubleTap = async (id) => {
     try {
@@ -23,7 +24,14 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       setHuckTargetId(id);
       setTimeout(() => setHuckTargetId(null), 800);
       
-      const upgraded = await upgradeLastStatToHuck(currentGame);
+      let upgraded = false;
+      if (id !== 'Drop' && id !== 'Throwaway') {
+         pendingHuckRef.current.add(id);
+         upgraded = true;
+      } else {
+         upgraded = await upgradeLastStatToHuck(currentGame);
+      }
+      
       if (upgraded) {
          setLastSaved("Upgraded to Huck");
       }
@@ -157,15 +165,18 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       
       if (prev.length >= 2) {
         const playerNMinus2 = prev[prev.length - 2];
+        const receiver = prev[prev.length - 1];
+        const isHuck = pendingHuckRef.current.has(receiver);
+        if (isHuck) pendingHuckRef.current.delete(receiver);
         // Fire and forget the pass log so the UI doesn't freeze
-        handleStatRecord('Pass', playerNMinus2, prev);
+        handleStatRecord('Pass', playerNMinus2, prev, isHuck ? { is_huck: true } : null);
       }
       
       return newChain;
     });
   };
 
-  const handleStatRecord = async (statType, overridePlayer = null, overrideChain = null) => {
+  const handleStatRecord = async (statType, overridePlayer = null, overrideChain = null, detailsOverride = null) => {
     // Use overrideChain if provided, otherwise fallback to the current state.
     // Note: fallback to current state is still susceptible to race conditions for rapid sequential calls,
     // but we use overrideChain from handlePlayerSelect to fix the critical path.
@@ -202,14 +213,18 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
            pendingPasser = currentChain[currentChain.length - 2];
         }
 
-        if (pendingPasser) statsToSave.push({ ...baseStat, player: pendingPasser, stat: 'Pass' });
+        if (pendingPasser) {
+           const isHuck = pendingHuckRef.current.has(activePlayer);
+           if (isHuck) pendingHuckRef.current.delete(activePlayer);
+           statsToSave.push({ ...baseStat, player: pendingPasser, stat: 'Pass', details: isHuck ? { is_huck: true } : null });
+        }
         statsToSave.push({ ...baseStat, player: activePlayer, stat: 'Point' });
         
         setPossessionChain([]);
         setCallahanModeFor(null);
         playChime();
       } else if (statType === 'Pass') {
-        statsToSave.push({ ...baseStat, player: activePlayer, stat: 'Pass' });
+        statsToSave.push({ ...baseStat, player: activePlayer, stat: 'Pass', details: detailsOverride });
         playClick();
       } else if (['Drop', 'Throwaway', 'Stall Out'].includes(statType)) {
         if (currentChain.length > 1 && statType === 'Drop') {
@@ -217,7 +232,10 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
           statsToSave.push({ ...baseStat, player: thrower, stat: 'Pass Attempt' });
         } else if (currentChain.length > 1 && (statType === 'Throwaway' || statType === 'Stall Out')) {
           const pendingPasser = currentChain[currentChain.length - 2];
-          statsToSave.push({ ...baseStat, player: pendingPasser, stat: 'Pass' });
+          const receiver = currentChain[currentChain.length - 1];
+          const isHuck = pendingHuckRef.current.has(receiver);
+          if (isHuck) pendingHuckRef.current.delete(receiver);
+          statsToSave.push({ ...baseStat, player: pendingPasser, stat: 'Pass', details: isHuck ? { is_huck: true } : null });
         }
         statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
         setPossessionChain([]);
