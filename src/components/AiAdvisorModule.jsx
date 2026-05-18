@@ -33,10 +33,10 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
 
       if (playerStats && playerStats.length > 0) {
         
-        const totalPasses = playerStats.reduce((sum, p) => sum + p.passes, 0);
-        const totalTurnovers = playerStats.reduce((sum, p) => sum + p.turnovers, 0);
-        const totalBlocks = playerStats.reduce((sum, p) => sum + p.blocks, 0);
-        const totalCompletionsGlobal = playerStats.reduce((sum, p) => sum + p.completions, 0);
+        const totalPasses = playerStats.reduce((sum, p) => sum + (p.passes || 0), 0);
+        const totalTurnovers = playerStats.reduce((sum, p) => sum + (p.turnovers || 0), 0);
+        const totalBlocks = playerStats.reduce((sum, p) => sum + (p.blocks || 0), 0);
+        const totalCompletionsGlobal = playerStats.reduce((sum, p) => sum + (p.completions || 0), 0);
         const totalHuckAttemptsGlobal = playerStats.reduce((sum, p) => sum + (p.totalHuckAttempts || 0), 0);
         
         const huckIntentPct = totalCompletionsGlobal > 0 ? (totalHuckAttemptsGlobal / totalCompletionsGlobal) * 100 : 0;
@@ -95,8 +95,8 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
         let lineAEff = 0;
         let lineBEff = 0;
         if (lineB.length >= 5) {
-            lineAEff = lineA.reduce((sum, p) => sum + (p.completions/(Math.max(p.passes, 1))), 0) / Math.max(lineA.length, 1) * 100;
-            lineBEff = lineB.reduce((sum, p) => sum + (p.completions/(Math.max(p.passes, 1))), 0) / Math.max(lineB.length, 1) * 100;
+            lineAEff = lineA.reduce((sum, p) => sum + ((p.completions || 0)/(Math.max(p.passes || 0, 1))), 0) / Math.max(lineA.length, 1) * 100;
+            lineBEff = lineB.reduce((sum, p) => sum + ((p.completions || 0)/(Math.max(p.passes || 0, 1))), 0) / Math.max(lineB.length, 1) * 100;
         }
 
         // --- Paragraph 1: Tactical Identity ---
