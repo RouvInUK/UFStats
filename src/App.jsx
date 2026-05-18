@@ -168,7 +168,6 @@ function App() {
         setIsTrackingActive(false);
         setOpponentName('');
         setGameType('game');
-        setActiveLineup([]);
       }
       setPreviousTeamId(currentTeam.id);
     }
