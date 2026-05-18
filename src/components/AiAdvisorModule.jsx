@@ -254,13 +254,15 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
             }
         });
 
-        const focusPlayers = [...eligiblePlayers]
-            .filter(p => p.touches > 3 && p.turnovers > 0)
-            .sort((a, b) => (b.turnovers / b.touches) - (a.turnovers / a.touches))
-            .slice(0, 2);
-
         let focusArray = [];
-        focusPlayers.forEach(p => {
+
+        // 1. High Turnover Frequency (Active Mistakes)
+        const turnoverPlayers = [...eligiblePlayers]
+            .filter(p => p.touches > 3 && p.turnovers > 0)
+            .sort((a, b) => (b.turnovers / b.touches) - (a.turnovers / a.touches));
+
+        if (turnoverPlayers.length > 0) {
+            const p = turnoverPlayers[0];
             const huckCompRate = p.huckAttempts > 0 ? p.huckCompletions / p.huckAttempts : 0;
             if (p.huckAttempts >= 2 && huckCompRate < 0.5) {
                 focusArray.push(`**${p.name}:** Work on deep shot selection or resetting the stall earlier.`);
@@ -269,7 +271,36 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
             } else {
                 focusArray.push(`**${p.name}:** Prioritize possession and look for the reset option earlier in the stall count.`);
             }
-        });
+        }
+
+        // 2. Low Pitch Presence (Invisible Players)
+        const invisiblePlayers = [...eligiblePlayers]
+            .filter(p => p.pointsPlayed >= Math.max(3, minPointsReq))
+            .map(p => ({ ...p, impactRatio: (p.touches + p.ds) / p.pointsPlayed }))
+            .filter(p => p.impactRatio <= 0.4)
+            .sort((a, b) => a.impactRatio - b.impactRatio);
+
+        if (invisiblePlayers.length > 0) {
+            const ghost = invisiblePlayers.find(p => !focusArray.some(f => f.includes(`**${p.name}:**`)));
+            if (ghost) {
+                focusArray.push(`**${ghost.name}:** Needs to increase pitch presence. Work on dominating the cutting lanes to demand the disc, or generating more defensive pressure.`);
+            }
+        }
+
+        // 3. Backfill with second highest turnover offender if room allows
+        if (focusArray.length < 2 && turnoverPlayers.length > 1) {
+            const p = turnoverPlayers[1];
+            if (!focusArray.some(f => f.includes(`**${p.name}:**`))) {
+                const huckCompRate = p.huckAttempts > 0 ? p.huckCompletions / p.huckAttempts : 0;
+                if (p.huckAttempts >= 2 && huckCompRate < 0.5) {
+                    focusArray.push(`**${p.name}:** Work on deep shot selection or resetting the stall earlier.`);
+                } else if (p.drops >= 2 || p.drops > p.turnovers / 2) {
+                    focusArray.push(`**${p.name}:** Focus on hand-eye coordination and secure catches before moving the disc.`);
+                } else {
+                    focusArray.push(`**${p.name}:** Prioritize possession and look for the reset option earlier in the stall count.`);
+                }
+            }
+        }
 
         briefing.archetypes = {
             engine: theEngine,
