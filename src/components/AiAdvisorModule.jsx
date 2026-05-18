@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Brain, RefreshCw, Activity, Target, Users, Zap, ShieldAlert, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Brain, RefreshCw, Megaphone } from 'lucide-react';
 
 const FormatText = ({ text }) => {
   if (!text) return null;
@@ -8,53 +8,13 @@ const FormatText = ({ text }) => {
     <>
       {parts.map((part, i) => {
         if (part.startsWith('**') && part.endsWith('**')) {
-          return <strong key={i} className="text-white font-black">{part.slice(2, -2)}</strong>;
+          return <strong key={i} className="text-white font-black text-lg">{part.slice(2, -2)}</strong>;
         }
-        return <React.Fragment key={i}>
-           {part.split('\n\n').map((subpart, j, arr) => (
-              <React.Fragment key={`${i}-${j}`}>
-                {subpart}
-                {j < arr.length - 1 && <><br/><br/></>}
-              </React.Fragment>
-           ))}
-        </React.Fragment>;
+        return <span key={i} className="text-slate-200 font-bold text-base leading-relaxed">{part}</span>;
       })}
     </>
   );
 };
-
-const ProblemSolutionCard = ({ title, icon: Icon, data, iconColor, hoverBorder }) => (
-  <div className={`bg-slate-950/50 border border-slate-800 rounded-2xl p-5 flex flex-col gap-3 group ${hoverBorder} transition-colors h-full`}>
-    <div className={`flex items-center justify-between`}>
-      <div className={`flex items-center gap-2 ${iconColor}`}>
-        <Icon className="w-5 h-5" />
-        <h3 className="font-bold text-sm uppercase tracking-wider">{title}</h3>
-      </div>
-    </div>
-    {data ? (
-      <div className="space-y-3 mt-2 text-sm leading-relaxed font-medium text-slate-300">
-        <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-700/50">
-           <span className="text-slate-400 font-bold block mb-1 uppercase text-[10px] tracking-widest">System Status</span>
-           <FormatText text={data.status} />
-        </div>
-        <div className="bg-amber-950/20 p-3 rounded-lg border border-amber-900/30">
-           <span className="text-amber-400 font-bold block mb-1 uppercase text-[10px] tracking-widest">Unit Trend</span>
-           <FormatText text={data.trend} />
-        </div>
-        <div className="bg-emerald-950/30 p-3 rounded-lg border border-emerald-900/40">
-           <span className="text-emerald-400 font-bold block mb-1 uppercase text-[10px] tracking-widest">Actionable System Fix</span>
-           <FormatText text={data.fix} />
-        </div>
-      </div>
-    ) : (
-      <div className="space-y-3 mt-2">
-         <div className="h-16 bg-slate-800/50 rounded-lg animate-pulse w-full"></div>
-         <div className="h-16 bg-slate-800/50 rounded-lg animate-pulse w-full"></div>
-         <div className="h-16 bg-slate-800/50 rounded-lg animate-pulse w-full"></div>
-      </div>
-    )}
-  </div>
-);
 
 const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -65,10 +25,10 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
     setInsights(null);
 
     setTimeout(() => {
-      const generated = {
-        offense: null,
-        defense: null,
-        roster: null
+      let briefing = {
+        para1: "",
+        para2: "",
+        para3: ""
       };
 
       if (playerStats && playerStats.length > 0) {
@@ -126,74 +86,81 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
            longGrindConv = (longPossessions.filter(p => p.scored).length / longPossessions.length) * 100;
         }
 
-        // --- 1. Detailed Offense Assessment ---
-        let offStatus, offTrend, offFix;
-        if (huckIntentPct > 15) {
-           offStatus = `The O-Line is heavily reliant on the deep ball (Unit Completion: **${oLineCompPct.toFixed(1)}%**).`;
-           offTrend = `High huck volume is expanding the field, but early-stall deep shots are lowering overall possession retention.`;
-           offFix = `Hold the deep look explicitly for the 'under' cut to open the lane. Establish the short game first before looking deep.`;
-        } else if (first3PassesConv > longGrindConv + 20) {
-           offStatus = `The O-Line excels at rapid strikes (Unit Completion: **${oLineCompPct.toFixed(1)}%**).`;
-           offTrend = `The unit converts highly on drives under 3 passes, but struggles severely in prolonged, grinding possessions.`;
-           offFix = `Increase horizontal resets when the primary vertical motion stops. Prioritize swinging the disc to the break side.`;
-        } else {
-           offStatus = `The O-Line is grinding out points effectively (Unit Completion: **${oLineCompPct.toFixed(1)}%**).`;
-           offTrend = `The unit is patient, utilizing long possession chains rather than forcing quick strikes or high-risk hucks.`;
-           offFix = `Maintain structural discipline, but actively look to punish the defense with a deep shot if they over-commit underneath.`;
-        }
-        generated.offense = { status: offStatus, trend: offTrend, fix: offFix };
-
-        // --- 2. Detailed Defense Assessment ---
-        let defStatus, defTrend, defFix;
-        let timeToTurn = "42s";
-        if (totalBlocks > 5) timeToTurn = "28s";
-        else if ((score?.them || 0) > 8 && totalBlocks < 3) timeToTurn = "75s+";
-
         const dLineConv = dLinePointsPlayed > 0 ? (teamBreaks / dLinePointsPlayed) * 100 : 0;
 
-        if (totalBlocks > totalTurnovers * 0.4) {
-           defStatus = `The D-Line is generating elite pressure (Avg Time to Turn: **${timeToTurn}**).`;
-           defTrend = `Turnovers are stemming from direct defensive pressure and poach anticipation rather than unforced errors.`;
-           defFix = `Maintain chaotic defensive structures. Once the turn is forced, the D-Line handlers must establish a calm reset instantly.`;
-        } else if (dLineConv < 30 && teamBreaks === 0 && dLinePointsPlayed > 3) {
-           defStatus = `The D-Line is struggling with post-turnover conversion (Avg Time to Turn: **${timeToTurn}**).`;
-           defTrend = `The unit is rushing the transition after securing a block, leading to chaotic give-aways back to the opponent.`;
-           defFix = `Implement a mandatory 'one reset' rule upon securing a block to stabilize the offensive shape before attacking.`;
-        } else {
-           defStatus = `The D-Line is operating with average disruption (Avg Time to Turn: **${timeToTurn}**).`;
-           defTrend = `Turnover generation is primarily reliant on unforced opposition errors rather than active blocks or interceptions.`;
-           defFix = `Tighten the defensive brackets and apply harder localized pressure on the primary handler resets to force difficult throws.`;
-        }
-        generated.defense = { status: defStatus, trend: defTrend, fix: defFix };
-
-        // --- 3. Lineup & Roster Assessment ---
         const sortedByPP = [...playerStats].sort((a, b) => (b.pp || b.pointsPlayed || 0) - (a.pp || a.pointsPlayed || 0));
         const lineA = sortedByPP.slice(0, 7);
         const lineB = sortedByPP.slice(7, 14);
-
-        let rosterStatus, rosterTrend, rosterFix;
+        
+        let lineAEff = 0;
+        let lineBEff = 0;
         if (lineB.length >= 5) {
-            const lineAEff = lineA.reduce((sum, p) => sum + (p.completions/(Math.max(p.passes, 1))), 0) / Math.max(lineA.length, 1) * 100;
-            const lineBEff = lineB.reduce((sum, p) => sum + (p.completions/(Math.max(p.passes, 1))), 0) / Math.max(lineB.length, 1) * 100;
+            lineAEff = lineA.reduce((sum, p) => sum + (p.completions/(Math.max(p.passes, 1))), 0) / Math.max(lineA.length, 1) * 100;
+            lineBEff = lineB.reduce((sum, p) => sum + (p.completions/(Math.max(p.passes, 1))), 0) / Math.max(lineB.length, 1) * 100;
+        }
 
-            if (lineAEff > lineBEff + 15) {
-               rosterStatus = `Line A (**${lineAEff.toFixed(0)}%** Eff) is drastically outperforming Line B (**${lineBEff.toFixed(0)}%** Eff).`;
-               rosterTrend = `Unit fatigue is setting in for the primary starters, while the rotational unit is struggling to maintain possession.`;
-               rosterFix = `Implement a strategic mix. Integrate 2 reliable handlers from Line A into the Line B rotation to stabilize their offensive flow.`;
+        // --- Paragraph 1: Tactical Identity ---
+        let p1 = `We're establishing our tactical identity out there. Overall, our offensive unit is moving the disc at a **${oLineCompPct.toFixed(0)}% completion rate** over **${totalPasses} total attempts**. `;
+        if (lineB.length >= 5) {
+            if (Math.abs(lineAEff - lineBEff) < 10) {
+                p1 += `Our rotation strategy is paying massive dividends—both the starting line and the rotational unit are executing with absolute parity, meaning we are winning the war of attrition without dropping efficiency. `;
+            } else if (lineAEff > lineBEff + 15) {
+                p1 += `However, we are seeing a harsh drop-off when we rotate. The primary unit is carrying the load at **${lineAEff.toFixed(0)}% efficiency**, while our secondary line is struggling to protect the disc. We need to trust the system and tighten up the execution from the entire 14-man roster. `;
             } else {
-               rosterStatus = `Line A (**${lineAEff.toFixed(0)}%** Eff) and Line B (**${lineBEff.toFixed(0)}%** Eff) are performing at parity.`;
-               rosterTrend = `The collective system is holding up well against fatigue. Load management is currently optimal.`;
-               rosterFix = `Maintain strict, short shifts for all lines to preserve energy for late-game defensive stands.`;
+                p1 += `The lines are rotating smoothly and maintaining our structural intensity. `;
             }
         } else {
-            rosterStatus = `Playing with a tight rotation (Less than 12 active players).`;
-            rosterTrend = `The core units are playing heavy minutes, increasing the risk of mechanical breakdown late in the game.`;
-            rosterFix = `Call strategic timeouts immediately following long, grinding points to preserve the primary unit's legs.`;
+            p1 += `We're running a very tight rotation today, which means every set of legs matters. We have to lean on our handler structure rather than raw athleticism to survive the late-game grind. `;
         }
-        generated.roster = { status: rosterStatus, trend: rosterTrend, fix: rosterFix };
+        briefing.para1 = p1;
+
+        // --- Paragraph 2: Offensive & Defensive Flow ---
+        let p2 = `Looking at the rhythm of the game, `;
+        if (first3PassesConv > longGrindConv + 20) {
+            p2 += `our O-unit is lethal on rapid strikes but struggling heavily when forced into a prolonged, grinding point. If we can't score in the first three passes, we're panicking. `;
+        } else if (longGrindConv >= 50) {
+            p2 += `our O-unit is displaying incredible patience. We are effectively grinding out the long, high-pass possessions without forcing desperate looks. `;
+        } else {
+            p2 += `our offensive flow is stable, finding a healthy balance between quick action and structured resets. `;
+        }
+
+        if (huckIntentPct > 15) {
+            p2 += `That being said, our huck integrity is slipping. We're launching deep on **${huckIntentPct.toFixed(0)}%** of our completions, which means we are actively abandoning the under lanes and playing too vertically. `;
+        } else {
+            p2 += `We are keeping our huck integrity intact, stretching the field responsibly without over-relying on the deep ball. `;
+        }
+
+        if (totalBlocks > totalTurnovers * 0.4) {
+            p2 += `Defensively, the D-unit is an absolute buzzsaw. We are actively hunting the disc and generating blocks through raw pressure. `;
+        } else if (dLineConv > 30) {
+            p2 += `When the opponent makes a mistake, our D-unit is converting with lethal calmness, boasting a **${dLineConv.toFixed(0)}% break rate**. `;
+        } else {
+            p2 += `On the defensive side, we are struggling to capitalize on turns. We are rushing the transition after securing a block, giving the disc right back instead of punishing them. `;
+        }
+        briefing.para2 = p2;
+
+        // --- Paragraph 3: The Work-On (Marching Order) ---
+        let p3 = `Here is our marching order for the next half. `;
+        if (lineB.length >= 5 && lineAEff > lineBEff + 15) {
+            p3 += `**We must stabilize the rotational unit.** We are going to integrate two of our most reliable handlers into the secondary line to act as anchors. Take the chaotic pressure off the cutters and ensure the system runs smoothly regardless of who is on the pitch.`;
+        } else if (huckIntentPct > 15) {
+            p3 += `**We are pulling the trigger too early.** I want the deep look held strictly as a decoy to open up the primary under cuts. Establish the dump-swing rhythm first, and only take the huck if the defense explicitly gives us a 1-on-1 mismatch.`;
+        } else if (first3PassesConv > longGrindConv + 20) {
+            p3 += `**We have to embrace the reset.** We cannot rely purely on fast-breaks. If the primary vertical motion stops, immediately look to the break-side handler. Keep the disc alive and force their defense to work for the full stall count.`;
+        } else if (dLineConv < 30 && teamBreaks === 0) {
+            p3 += `**The D-line needs to take a breath.** We are working too hard to earn the disc just to throw it away. Upon a turnover, establish a mandatory 'one reset' rule. Stop the fast-break, secure possession, and attack against a unset defense.`;
+        } else {
+            p3 += `**Maintain the clinical execution.** We are dictating the pace of the game and owning the structure. Keep the defensive brackets tight, trust the reset space on offense, and step onto the line knowing we are executing our game plan to perfection.`;
+        }
+        briefing.para3 = p3;
+
+      } else {
+        briefing.para1 = "We need more data before I can give you a comprehensive breakdown.";
+        briefing.para2 = "Keep logging the points so we can start seeing the tactical trends emerge.";
+        briefing.para3 = "**Focus on the fundamentals** until we have enough volume to make structural adjustments.";
       }
 
-      setInsights(generated);
+      setInsights(briefing);
       setIsAnalyzing(false);
     }, 2500);
   };
@@ -204,64 +171,60 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
   }, [gameType, score?.us, score?.them]);
 
   return (
-    <div className="w-full bg-slate-900 border border-slate-700/50 rounded-3xl p-6 shadow-xl relative overflow-hidden mb-8">
+    <div className="w-full bg-slate-900 border border-slate-700/50 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden mb-8">
       {isAnalyzing && (
         <div className="absolute inset-0 bg-indigo-500/5 animate-pulse rounded-3xl pointer-events-none" />
       )}
       
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 relative z-10">
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 ${isAnalyzing ? 'animate-spin-slow' : ''}`}>
-            <Brain className={`w-6 h-6 ${isAnalyzing ? 'text-indigo-400' : 'text-indigo-500'}`} />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 relative z-10 border-b border-slate-800 pb-6">
+        <div className="flex items-center gap-4">
+          <div className={`p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 ${isAnalyzing ? 'animate-pulse' : ''}`}>
+            <Megaphone className={`w-8 h-8 ${isAnalyzing ? 'text-amber-400' : 'text-amber-500'}`} />
           </div>
           <div>
-            <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
-              Unit-Based Tactical Analysis
-              <span className="text-[10px] uppercase tracking-widest bg-indigo-600 px-2 py-0.5 rounded-full text-white font-bold">AI Pro</span>
+            <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
+              The Coach's Briefing
+              <span className="text-[10px] uppercase tracking-widest bg-amber-600 px-2 py-0.5 rounded-full text-white font-bold shadow-lg shadow-amber-500/30">Huddle Ready</span>
             </h2>
-            <p className="text-xs text-slate-400 uppercase tracking-widest font-bold mt-1">Lineup & System Assessment</p>
+            <p className="text-sm text-slate-400 uppercase tracking-widest font-bold mt-1">AI Tactical Narrative Assessment</p>
           </div>
         </div>
         
         <button 
           onClick={generateInsights}
           disabled={isAnalyzing}
-          className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 text-sm font-bold rounded-xl transition-all shadow-md disabled:opacity-50 shrink-0"
+          className="flex items-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 text-sm font-bold rounded-xl transition-all shadow-md disabled:opacity-50 shrink-0 uppercase tracking-wider"
         >
           <RefreshCw className={`w-4 h-4 ${isAnalyzing ? 'animate-spin' : ''}`} />
-          {isAnalyzing ? 'Processing...' : 'Run Analysis'}
+          {isAnalyzing ? 'Processing...' : 'Generate Briefing'}
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
-        
-        {/* Offense Assessment */}
-        <ProblemSolutionCard 
-          title="Detailed Offense Assessment" 
-          icon={TrendingUp} 
-          data={insights?.offense} 
-          iconColor="text-indigo-400" 
-          hoverBorder="hover:border-indigo-500/30" 
-        />
-        
-        {/* Defense Assessment */}
-        <ProblemSolutionCard 
-          title="Detailed Defense Assessment" 
-          icon={ShieldAlert} 
-          data={insights?.defense} 
-          iconColor="text-rose-400" 
-          hoverBorder="hover:border-rose-500/30" 
-        />
-
-        {/* Roster & Lineup Assessment */}
-        <ProblemSolutionCard 
-          title="Lineup & System View" 
-          icon={Users} 
-          data={insights?.roster} 
-          iconColor="text-emerald-400" 
-          hoverBorder="hover:border-emerald-500/30" 
-        />
-
+      <div className="relative z-10 bg-slate-950/60 border border-slate-800 rounded-2xl p-6 sm:p-10 shadow-inner">
+        {insights ? (
+          <div className="space-y-8">
+            <p className="text-slate-300 font-medium leading-relaxed tracking-wide text-lg sm:text-xl">
+              <FormatText text={insights.para1} />
+            </p>
+            <p className="text-slate-300 font-medium leading-relaxed tracking-wide text-lg sm:text-xl">
+              <FormatText text={insights.para2} />
+            </p>
+            <div className="bg-amber-950/20 border-l-4 border-amber-500 p-6 rounded-r-2xl">
+               <p className="text-amber-100 font-medium leading-relaxed tracking-wide text-lg sm:text-xl">
+                 <FormatText text={insights.para3} />
+               </p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="h-6 bg-slate-800/50 rounded-lg animate-pulse w-full"></div>
+            <div className="h-6 bg-slate-800/50 rounded-lg animate-pulse w-11/12"></div>
+            <div className="h-6 bg-slate-800/50 rounded-lg animate-pulse w-4/5"></div>
+            <div className="h-6 bg-slate-800/50 rounded-lg animate-pulse w-full mt-8"></div>
+            <div className="h-6 bg-slate-800/50 rounded-lg animate-pulse w-5/6"></div>
+            <div className="h-20 bg-slate-800/30 rounded-xl animate-pulse w-full mt-8"></div>
+          </div>
+        )}
       </div>
     </div>
   );
