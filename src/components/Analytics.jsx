@@ -78,7 +78,9 @@ const Analytics = ({ targetTeamId, players = [] }) => {
         return; // Don't count lineup explicitly as a touch
       }
 
-      p.touches += 1;
+      if (!stat.stat_type.startsWith('Pull')) {
+        p.touches += 1;
+      }
 
       if (stat.stat_type === 'Point') {
         p.goals += 1;

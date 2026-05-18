@@ -186,8 +186,10 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       if (stat.player === 'System' || stat.player === 'Opponent' || SYSTEM_EVENTS.includes(stat.stat_type)) return;
 
       const p = ensurePlayer(stat.player);
-      p.touches += 1;
-      teamTouchesCount += 1;
+      if (!stat.stat_type.startsWith('Pull')) {
+        p.touches += 1;
+        teamTouchesCount += 1;
+      }
 
       if (stat.stat_type === 'Point') {
         p.goals += 1;
