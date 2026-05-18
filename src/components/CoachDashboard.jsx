@@ -534,7 +534,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
 
 
   return (
-    <div className="min-h-screen bg-slate-950 p-4 sm:p-8 pb-32 space-y-6 sm:space-y-8 max-w-7xl mx-auto font-sans">
+    <div className="min-h-screen bg-slate-950 p-4 sm:p-8 pb-32 space-y-6 sm:space-y-8 w-full max-w-[98%] mx-auto font-sans">
       
       {/* Live Header / Selector Panel */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl relative z-50">
