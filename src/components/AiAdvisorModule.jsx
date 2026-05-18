@@ -8,9 +8,9 @@ const FormatText = ({ text }) => {
     <>
       {parts.map((part, i) => {
         if (part.startsWith('**') && part.endsWith('**')) {
-          return <strong key={i} className="text-white font-black text-lg">{part.slice(2, -2)}</strong>;
+          return <strong key={i} className="text-white font-black text-xl uppercase tracking-wider">{part.slice(2, -2)}</strong>;
         }
-        return <span key={i} className="text-slate-200 font-bold text-base leading-relaxed">{part}</span>;
+        return <span key={i} className="text-slate-100 font-black text-lg leading-relaxed">{part}</span>;
       })}
     </>
   );
@@ -33,124 +33,123 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
 
       if (playerStats && playerStats.length > 0) {
         
-        const totalPasses = playerStats.reduce((sum, p) => sum + (p.passes || 0), 0);
-        const totalTurnovers = playerStats.reduce((sum, p) => sum + (p.turnovers || 0), 0);
-        const totalBlocks = playerStats.reduce((sum, p) => sum + (p.blocks || 0), 0);
-        const totalCompletionsGlobal = playerStats.reduce((sum, p) => sum + (p.completions || 0), 0);
-        const totalHuckAttemptsGlobal = playerStats.reduce((sum, p) => sum + (p.totalHuckAttempts || 0), 0);
-        
-        const huckIntentPct = totalCompletionsGlobal > 0 ? (totalHuckAttemptsGlobal / totalCompletionsGlobal) * 100 : 0;
-        const oLineCompPct = totalPasses > 0 ? (totalCompletionsGlobal / totalPasses) * 100 : 0;
+        let oPointsPlayed = 0;
+        let cleanHolds = 0;
+        let dPointsPlayed = 0;
+        let breaks = 0;
 
-        let possessions = [];
-        let currentPossession = { passes: 0, scored: false };
-        let teamBreaks = 0;
-        let dLinePointsPlayed = 0;
-        let currentPointHadPull = false;
+        let scoringPointsCount = 0;
+        let passesInScoringPoints = 0;
+
+        let huckAttempts = 0;
+        let huckCompletions = 0;
+
+        let currentPointPasses = 0;
+        let currentPointTurnovers = 0;
+        let isDPoint = false;
+        let isFirstEvent = true;
 
         if (rawStats && rawStats.length > 0) {
             rawStats.forEach(stat => {
-               if (stat.stat_type === 'Pull') {
-                  currentPointHadPull = true;
-                  dLinePointsPlayed++;
-               } else if (stat.stat_type === 'Pass') {
-                  currentPossession.passes += 1;
-               } else if (stat.stat_type === 'Point') {
-                  currentPossession.passes += 1;
-                  currentPossession.scored = true;
-                  possessions.push(currentPossession);
-                  if (currentPointHadPull) teamBreaks++;
-                  currentPossession = { passes: 0, scored: false };
-                  currentPointHadPull = false;
-               } else if (['Throwaway', 'Drop', 'Stall Out', 'Opponent Turnover', 'Opponent Point'].includes(stat.stat_type)) {
-                  if (stat.stat_type !== 'Opponent Turnover' && stat.stat_type !== 'Opponent Point') {
-                     possessions.push(currentPossession);
+               if (stat.is_huck) {
+                  huckAttempts++;
+                  if (['Pass', 'Point'].includes(stat.stat_type)) {
+                     huckCompletions++;
                   }
-                  if (stat.stat_type === 'Opponent Point') {
-                     currentPointHadPull = false;
+               }
+
+               if (isFirstEvent) {
+                  if (stat.stat_type === 'Pull') {
+                     isDPoint = true;
+                     dPointsPlayed++;
+                  } else {
+                     isDPoint = false;
+                     oPointsPlayed++;
                   }
-                  currentPossession = { passes: 0, scored: false };
+                  isFirstEvent = false;
+               }
+
+               if (['Pass', 'Point'].includes(stat.stat_type)) {
+                  currentPointPasses++;
+                  if (stat.stat_type === 'Point') {
+                     scoringPointsCount++;
+                     passesInScoringPoints += currentPointPasses;
+                     
+                     if (isDPoint) breaks++;
+                     else if (currentPointTurnovers === 0) cleanHolds++;
+
+                     currentPointPasses = 0;
+                     currentPointTurnovers = 0;
+                     isFirstEvent = true;
+                  }
+               } else if (['Throwaway', 'Drop', 'Stall Out'].includes(stat.stat_type)) {
+                  currentPointTurnovers++;
+               } else if (stat.stat_type === 'Opponent Point') {
+                  currentPointPasses = 0;
+                  currentPointTurnovers = 0;
+                  isFirstEvent = true;
                }
             });
         }
-        
-        const shortPossessions = possessions.filter(p => p.passes <= 3 && p.passes > 0);
-        const longPossessions = possessions.filter(p => p.passes > 6);
-        
-        let first3PassesConv = 0;
-        let longGrindConv = 0;
-        if (shortPossessions.length > 0) {
-           first3PassesConv = (shortPossessions.filter(p => p.scored).length / shortPossessions.length) * 100;
-        }
-        if (longPossessions.length > 0) {
-           longGrindConv = (longPossessions.filter(p => p.scored).length / longPossessions.length) * 100;
-        }
 
-        const dLineConv = dLinePointsPlayed > 0 ? (teamBreaks / dLinePointsPlayed) * 100 : 0;
+        const cleanHoldRate = oPointsPlayed > 0 ? (cleanHolds / oPointsPlayed) * 100 : 0;
+        const breakRate = dPointsPlayed > 0 ? (breaks / dPointsPlayed) * 100 : 0;
+        const passToScoreRatio = scoringPointsCount > 0 ? (passesInScoringPoints / scoringPointsCount) : 0;
+        const huckIntegrityPct = huckAttempts > 0 ? (huckCompletions / huckAttempts) * 100 : 0;
 
-        const sortedByPP = [...playerStats].sort((a, b) => (b.pp || b.pointsPlayed || 0) - (a.pp || a.pointsPlayed || 0));
-        const lineA = sortedByPP.slice(0, 7);
-        const lineB = sortedByPP.slice(7, 14);
-        
-        let lineAEff = 0;
-        let lineBEff = 0;
-        if (lineB.length >= 5) {
-            lineAEff = lineA.reduce((sum, p) => sum + ((p.completions || 0)/(Math.max(p.passes || 0, 1))), 0) / Math.max(lineA.length, 1) * 100;
-            lineBEff = lineB.reduce((sum, p) => sum + ((p.completions || 0)/(Math.max(p.passes || 0, 1))), 0) / Math.max(lineB.length, 1) * 100;
-        }
-
-        // --- Paragraph 1: Tactical Identity ---
-        let p1 = `We're establishing our tactical identity out there. Overall, our offensive unit is moving the disc at a **${oLineCompPct.toFixed(0)}% completion rate** over **${totalPasses} total attempts**. `;
-        if (lineB.length >= 5) {
-            if (Math.abs(lineAEff - lineBEff) < 10) {
-                p1 += `Our rotation strategy is paying massive dividends—both the starting line and the rotational unit are executing with absolute parity, meaning we are winning the war of attrition without dropping efficiency. `;
-            } else if (lineAEff > lineBEff + 15) {
-                p1 += `However, we are seeing a harsh drop-off when we rotate. The primary unit is carrying the load at **${lineAEff.toFixed(0)}% efficiency**, while our secondary line is struggling to protect the disc. We need to trust the system and tighten up the execution from the entire 14-man roster. `;
-            } else {
-                p1 += `The lines are rotating smoothly and maintaining our structural intensity. `;
-            }
+        // --- Paragraph 1: Offensive Execution ---
+        let p1 = `**Offensive Execution:** The Active Unit is currently operating with a **${cleanHoldRate.toFixed(0)}% Clean Hold Rate** on offense. `;
+        if (cleanHoldRate >= 60) {
+           p1 += `We are maintaining absolute possession and punishing the opposition without giving them second chances. `;
+        } else if (cleanHoldRate >= 30) {
+           p1 += `We are getting broken too frequently, relying heavily on getting the disc back after our own mistakes. `;
         } else {
-            p1 += `We're running a very tight rotation today, which means every set of legs matters. We have to lean on our handler structure rather than raw athleticism to survive the late-game grind. `;
+           p1 += `We are bleeding possessions. The offense is failing to convert first-chance opportunities. `;
+        }
+
+        if (passToScoreRatio > 7) {
+           p1 += `With a Pass-to-Score ratio of **${passToScoreRatio.toFixed(1)}**, we are being forced into long, grinding possessions. The opposition is taking away our primary looks.`;
+        } else if (passToScoreRatio > 0 && passToScoreRatio <= 4) {
+           p1 += `With a clinical Pass-to-Score ratio of **${passToScoreRatio.toFixed(1)}**, we are striking fast and efficiently tearing through their defensive sets.`;
+        } else if (passToScoreRatio > 0) {
+           p1 += `Our Pass-to-Score ratio sits at **${passToScoreRatio.toFixed(1)}**, indicating a healthy balance of patience and decisive attacking motion.`;
         }
         briefing.para1 = p1;
 
-        // --- Paragraph 2: Offensive & Defensive Flow ---
-        let p2 = `Looking at the rhythm of the game, `;
-        if (first3PassesConv > longGrindConv + 20) {
-            p2 += `our O-unit is lethal on rapid strikes but struggling heavily when forced into a prolonged, grinding point. If we can't score in the first three passes, we're panicking. `;
-        } else if (longGrindConv >= 50) {
-            p2 += `our O-unit is displaying incredible patience. We are effectively grinding out the long, high-pass possessions without forcing desperate looks. `;
+        // --- Paragraph 2: Defensive & Counter-Attack ---
+        let p2 = `**Defensive & Counter-Attack:** On the other side of the disc, our D-Line is converting at a **${breakRate.toFixed(0)}% Break Rate**. `;
+        if (breakRate >= 40) {
+           p2 += `We are absolutely ruthless on the counter-attack, capitalizing on their mistakes immediately. `;
+        } else if (breakRate > 0) {
+           p2 += `We are generating turns, but our conversion leaves points on the board. `;
         } else {
-            p2 += `our offensive flow is stable, finding a healthy balance between quick action and structured resets. `;
+           p2 += `We are failing to convert when the opponent gives us the disc. `;
         }
 
-        if (huckIntentPct > 15) {
-            p2 += `That being said, our huck integrity is slipping. We're launching deep on **${huckIntentPct.toFixed(0)}%** of our completions, which means we are actively abandoning the under lanes and playing too vertically. `;
+        if (huckAttempts > 0) {
+           p2 += `Looking at our transition offense, our Huck Integrity is at **${huckIntegrityPct.toFixed(0)}%** (${huckCompletions}/${huckAttempts}). `;
+           if (huckIntegrityPct >= 50) {
+              p2 += `We are taking calculated deep shots and stretching the field responsibly.`;
+           } else {
+              p2 += `We are forcing low-percentage deep looks after securing the disc instead of establishing the offense.`;
+           }
         } else {
-            p2 += `We are keeping our huck integrity intact, stretching the field responsibly without over-relying on the deep ball. `;
-        }
-
-        if (totalBlocks > totalTurnovers * 0.4) {
-            p2 += `Defensively, the D-unit is an absolute buzzsaw. We are actively hunting the disc and generating blocks through raw pressure. `;
-        } else if (dLineConv > 30) {
-            p2 += `When the opponent makes a mistake, our D-unit is converting with lethal calmness, boasting a **${dLineConv.toFixed(0)}% break rate**. `;
-        } else {
-            p2 += `On the defensive side, we are struggling to capitalize on turns. We are rushing the transition after securing a block, giving the disc right back instead of punishing them. `;
+           p2 += `We haven't recorded any deep shots yet. The unit is keeping everything underneath and refusing to stretch the field.`;
         }
         briefing.para2 = p2;
 
-        // --- Paragraph 3: The Work-On (Marching Order) ---
-        let p3 = `Here is our marching order for the next half. `;
-        if (lineB.length >= 5 && lineAEff > lineBEff + 15) {
-            p3 += `**We must stabilize the rotational unit.** We are going to integrate two of our most reliable handlers into the secondary line to act as anchors. Take the chaotic pressure off the cutters and ensure the system runs smoothly regardless of who is on the pitch.`;
-        } else if (huckIntentPct > 15) {
-            p3 += `**We are pulling the trigger too early.** I want the deep look held strictly as a decoy to open up the primary under cuts. Establish the dump-swing rhythm first, and only take the huck if the defense explicitly gives us a 1-on-1 mismatch.`;
-        } else if (first3PassesConv > longGrindConv + 20) {
-            p3 += `**We have to embrace the reset.** We cannot rely purely on fast-breaks. If the primary vertical motion stops, immediately look to the break-side handler. Keep the disc alive and force their defense to work for the full stall count.`;
-        } else if (dLineConv < 30 && teamBreaks === 0) {
-            p3 += `**The D-line needs to take a breath.** We are working too hard to earn the disc just to throw it away. Upon a turnover, establish a mandatory 'one reset' rule. Stop the fast-break, secure possession, and attack against a unset defense.`;
+        // --- Paragraph 3: Tactical Recommendation ---
+        let p3 = `**Tactical Recommendation:** `;
+        if (cleanHoldRate < 40 && oPointsPlayed > 0) {
+           p3 += `**Protect the football.** The Active Unit must prioritize possession over progression. Look to the break-side handler immediately if the primary cut isn't open by stall 3. Do not force the disc into tight windows.`;
+        } else if (huckAttempts > 0 && huckIntegrityPct < 40) {
+           p3 += `**Holster the deep ball.** We are turning the disc over on forced hucks. I want the deep look held strictly as a decoy. Establish the dump-swing rhythm first, and only take the deep shot if it's a clear 1-on-1 mismatch.`;
+        } else if (passToScoreRatio > 7) {
+           p3 += `**Pace the offense.** We are working extremely hard for every point. Call strategic timeouts to preserve legs, and look for isolation plays to generate larger chunks of yardage.`;
+        } else if (dPointsPlayed > 0 && breakRate < 30) {
+           p3 += `**Value the block.** The D-Line is working too hard to earn the disc just to throw it away. Upon a turnover, establish a mandatory 'one reset' rule to calm the chaos before attacking.`;
         } else {
-            p3 += `**Maintain the clinical execution.** We are dictating the pace of the game and owning the structure. Keep the defensive brackets tight, trust the reset space on offense, and step onto the line knowing we are executing our game plan to perfection.`;
+           p3 += `**Maintain the clinical execution.** The Active Unit is dictating the pace of the game. Keep the defensive brackets tight, trust the reset space on offense, and step onto the line knowing we are executing our game plan to perfection.`;
         }
         briefing.para3 = p3;
 
