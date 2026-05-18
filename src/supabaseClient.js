@@ -161,6 +161,28 @@ export const clearActiveLineup = async (teamId) => {
   if (error) throw error;
 };
 
+export const setLineupActiveStatus = async (playerIds, teamId) => {
+  if (!teamId) return;
+  
+  const { error: clearError } = await supabase
+    .from('team_players')
+    .update({ is_active: false })
+    .eq('team_id', teamId)
+    .eq('is_active', true);
+    
+  if (clearError) throw clearError;
+
+  if (playerIds.length > 0) {
+    const { error: setActiveError } = await supabase
+      .from('team_players')
+      .update({ is_active: true })
+      .in('player_id', playerIds)
+      .eq('team_id', teamId);
+      
+    if (setActiveError) throw setActiveError;
+  }
+};
+
 export const fetchStats = async (teamIdentifier) => {
   if (!teamIdentifier) return [];
   let query = supabase

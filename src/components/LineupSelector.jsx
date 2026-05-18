@@ -1,7 +1,8 @@
-import { togglePlayerActiveStatus, clearActiveLineup, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB, checkIfHalfTimeLogged, fetchActiveGames, deletePoint, fetchGameStats } from '../supabaseClient';
+import { togglePlayerActiveStatus, clearActiveLineup, setLineupActiveStatus, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB, checkIfHalfTimeLogged, fetchActiveGames, deletePoint, fetchGameStats } from '../supabaseClient';
 import { useState, useEffect } from 'react';
-import { Undo2, Mic, MicOff, Share2 } from 'lucide-react';
+import { Undo2, Mic, MicOff, Share2, Users, LayoutList } from 'lucide-react';
 import PullTracker from './PullTracker';
+import ManageLinesModal from './ManageLinesModal';
 
 const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavigate, currentGame, setCurrentGame, currentPoint, setCurrentPoint, gameType, setGameType, setIsTrackingActive, opponentName, setOpponentName, initialPossession, setInitialPossession, isVoiceEnabled, setIsVoiceEnabled }) => {
   const [processingId, setProcessingId] = useState(null);
@@ -15,6 +16,29 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
   const [hasHalfTime, setHasHalfTime] = useState(false);
   const [activeGames, setActiveGames] = useState([]);
   const [allGameStats, setAllGameStats] = useState([]);
+
+  // Line Templates
+  const [lines, setLines] = useState([]);
+  const [showManageLines, setShowManageLines] = useState(false);
+  const [activeLineId, setActiveLineId] = useState(null);
+
+  useEffect(() => {
+    if (targetTeamId) {
+      const saved = localStorage.getItem(`lines_${targetTeamId}`);
+      if (saved) {
+        try {
+          setLines(JSON.parse(saved));
+        } catch (e) {
+          console.error("Failed to parse lines");
+        }
+      }
+    }
+  }, [targetTeamId]);
+
+  const handleSaveLines = (newLines) => {
+    setLines(newLines);
+    localStorage.setItem(`lines_${targetTeamId}`, JSON.stringify(newLines));
+  };
 
   const filteredPlayers = players;
 
@@ -253,6 +277,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
   };
 
   const togglePlayer = async (player) => {
+    setActiveLineId(null);
     const optimisticPlayers = players.map(p => 
       p.id === player.id ? { ...p, is_active: !p.is_active } : p
     );
@@ -275,6 +300,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
   };
 
   const handleClearLineup = async () => {
+    setActiveLineId(null);
     const optimisticPlayers = players.map(p => ({ ...p, is_active: false }));
     setPlayers(optimisticPlayers);
     
@@ -290,6 +316,38 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
       }
     } finally {
       setIsClearing(false);
+    }
+  };
+
+  const handleLineSelect = async (line) => {
+    const requiredCount = gameType === 'grass' ? 7 : (gameType === 'beach' || gameType === 'indoor' ? 5 : 7);
+    const selectedCount = line.playerIds.length;
+    
+    const updatedPlayers = players.map(p => ({
+      ...p,
+      is_active: line.playerIds.includes(p.id)
+    }));
+    
+    setPlayers(updatedPlayers);
+    setActiveLineId(line.id);
+
+    try {
+      if (navigator.onLine) {
+        await setLineupActiveStatus(line.playerIds, targetTeamId);
+      }
+    } catch {
+      if (navigator.onLine) alert("Failed to sync line selection to cloud.");
+    }
+
+    // Auto-confirm if exact and game is valid
+    if (selectedCount === requiredCount) {
+      if (currentPoint === 0 && (!opponentName || (gameType !== 'training' && !initialPossession))) return;
+      if (!currentGame) return;
+      
+      setTimeout(() => {
+         // Proceed to next step
+         handleStartPoint(null, updatedPlayers);
+      }, 300);
     }
   };
 
@@ -341,6 +399,12 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
               className="px-4 py-2 bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 text-sm font-bold rounded-xl transition-all w-full sm:w-auto text-center disabled:opacity-50"
             >
               {isClearing ? 'Clearing...' : 'Clear All'}
+            </button>
+            <button 
+              onClick={() => setShowManageLines(true)}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-white text-sm font-bold rounded-xl transition-all w-full sm:w-auto text-center shadow-md flex items-center justify-center gap-2"
+            >
+              <LayoutList className="w-4 h-4" /> Manage Lines
             </button>
             <button 
               onClick={() => onNavigate('roster')}
@@ -448,6 +512,23 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
 
         <div className="p-6 sm:p-8">
 
+          {lines.length > 0 && (
+            <div className="mb-6 -mx-6 sm:-mx-8 px-6 sm:px-8 overflow-x-auto custom-scrollbar pb-2">
+              <div className="flex gap-2 min-w-max">
+                {lines.map(line => (
+                  <button
+                    key={line.id}
+                    onClick={() => handleLineSelect(line)}
+                    className={`px-5 py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all shadow-md flex items-center gap-2 ${activeLineId === line.id ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 scale-105 z-10' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700'}`}
+                  >
+                    <Users className="w-4 h-4" />
+                    {line.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {filteredPlayers.length === 0 ? (
             <div className="text-center py-10 bg-slate-900/50 rounded-2xl border border-slate-700/50 space-y-4">
               <p className="text-slate-400 font-medium">Your roster is currently empty.</p>
@@ -464,6 +545,10 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
                 const isActive = player.is_active;
                 const isProcessing = processingId === player.id;
                 
+                // If a line is active, highlight the players that belong to it slightly, 
+                // or emphasize the active line members.
+                const isLineMember = activeLineId && lines.find(l => l.id === activeLineId)?.playerIds.includes(player.id);
+                
                 return (
                   <button
                     key={player.id}
@@ -472,7 +557,9 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
                     className={`px-3 py-4 text-sm font-bold rounded-xl transition-all flex flex-col items-center justify-center gap-3 ${
                       isActive
                         ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] ring-2 ring-emerald-400 scale-105 z-10'
-                        : 'bg-slate-900 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-slate-200'
+                        : isLineMember 
+                           ? 'bg-slate-800 border-indigo-500/50 text-indigo-300 shadow-[0_0_10px_rgba(99,102,241,0.2)]'
+                           : 'bg-slate-900 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-slate-200'
                     } ${isProcessing ? 'opacity-50 animate-pulse' : ''}`}
                   >
                     <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-white shadow-sm' : 'bg-slate-700'}`} />
@@ -556,6 +643,15 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
             setShowPullTracker(false);
             onNavigate('dashboard');
           }}
+        />
+      )}
+
+      {showManageLines && (
+        <ManageLinesModal
+          lines={lines}
+          saveLines={handleSaveLines}
+          players={players}
+          onClose={() => setShowManageLines(false)}
         />
       )}
     </div>
