@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { ShieldCheck, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, CheckCircle, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 export default function UpdatePassword({ onComplete }) {
   const [password, setPassword] = useState('');
@@ -8,6 +8,8 @@ export default function UpdatePassword({ onComplete }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Validate the password
   const isValid = password.length >= 8 && /\d/.test(password);
@@ -92,15 +94,24 @@ export default function UpdatePassword({ onComplete }) {
             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 block">
               New Password
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner"
-              placeholder="••••••••"
-            />
-            <div className="px-2 flex gap-4 text-xs font-medium">
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-4 pr-12 py-3 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors focus:outline-none"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+            <div className="px-2 flex gap-4 text-xs font-medium mt-2">
               <span className={password.length >= 8 ? 'text-emerald-400' : 'text-slate-500'}>
                 ✓ Min 8 chars
               </span>
@@ -114,14 +125,23 @@ export default function UpdatePassword({ onComplete }) {
             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 block">
               Confirm Password
             </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner"
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-4 pr-12 py-3 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors focus:outline-none"
+              >
+                {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
             {confirmPassword.length > 0 && !isMatch && (
               <p className="text-rose-400 text-xs px-2 mt-1">Passwords do not match.</p>
             )}
