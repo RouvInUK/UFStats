@@ -97,8 +97,6 @@ function App() {
 
   const { user, profile, loading: authLoading, authError, signOut } = useAuth();
   const [currentView, setCurrentView] = useState('dashboard');
-  const [showAuthScreen, setShowAuthScreen] = useState(false);
-  const [authMode, setAuthMode] = useState('login');
   
   // Database State
   const [players, setPlayers] = useState([]);
@@ -331,23 +329,42 @@ function App() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-indigo-400 font-bold tracking-widest text-lg">
-        AUTHENTICATING...
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
+        <img src="/logo.png" alt="ustats.pro" className="w-20 h-20 rounded-full mb-6 shadow-[0_0_40px_rgba(99,102,241,0.5)] animate-pulse" />
+        <div className="text-indigo-400 font-black tracking-widest text-sm uppercase animate-pulse">
+          Initializing Session
+        </div>
       </div>
     );
   }
 
+  const path = window.location.pathname;
+
   if (!user) {
-    if (showAuthScreen) {
-      return <AuthScreen initialMode={authMode} onBack={() => setShowAuthScreen(false)} />;
+    if (path === '/login') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const mode = urlParams.get('mode') || 'login';
+      return <AuthScreen initialMode={mode} onBack={() => window.location.assign('/')} />;
     }
+    
+    // Redirect unauthenticated /dashboard attempts to login
+    if (path === '/dashboard') {
+      window.location.replace('/login');
+      return null;
+    }
+
     return (
       <LandingPage 
-        onLogin={() => { setAuthMode('login'); setShowAuthScreen(true); }}
-        onSignUp={() => { setAuthMode('signup'); setShowAuthScreen(true); }}
-        onDemo={() => window.location.href = '/demo'}
+        onLogin={() => window.location.assign('/login?mode=login')}
+        onSignUp={() => window.location.assign('/login?mode=signup')}
+        onDemo={() => window.location.assign('/demo')}
       />
     );
+  }
+
+  // If user is authenticated and hits root or login, redirect to dashboard
+  if (path === '/' || path === '/login') {
+    window.history.replaceState({}, '', '/dashboard');
   }
 
   if ((authError && !profile) || (user && !profile && !authLoading)) {
