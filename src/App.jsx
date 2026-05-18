@@ -12,6 +12,7 @@ import TeamSelectionScreen from './components/TeamSelectionScreen';
 import SpectatorMode from './components/SpectatorMode';
 import LandingPage from './components/LandingPage';
 import DemoFramework from './components/DemoFramework';
+import UpdatePassword from './components/UpdatePassword';
 import { fetchPlayers } from './supabaseClient';
 import { useAuth } from './contexts/AuthContext';
 import { ShieldCheck, Star, LogOut, Cloud, CloudOff, CloudUpload, Crown } from 'lucide-react';
@@ -80,6 +81,11 @@ function App() {
   });
 
   const [isDemoMode] = useState(() => window.location.pathname === '/demo');
+  const [isUpdatePassword] = useState(() => window.location.pathname === '/update-password');
+
+  if (isUpdatePassword) {
+    return <UpdatePassword onComplete={() => window.location.assign('/')} />;
+  }
 
   if (isDemoMode) {
      return <DemoFramework />;

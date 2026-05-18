@@ -6,18 +6,31 @@ import { Target, AlertTriangle, ArrowLeft } from 'lucide-react';
 const AuthScreen = ({ onBack, initialMode = 'login' }) => {
   const { signIn, signUp } = useAuth();
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [betaKey, setBetaKey] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setMessage('');
 
     try {
+      if (isForgotPassword) {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/update-password`,
+        });
+        if (resetError) throw resetError;
+        setMessage('Check your email for the password reset link.');
+        setLoading(false);
+        return;
+      }
+
       if (!isLogin) {
         if (!betaKey || betaKey.length !== 6) {
           throw new Error("A valid 6-character Beta Key is required to create a workspace.");
@@ -88,8 +101,31 @@ const AuthScreen = ({ onBack, initialMode = 'login' }) => {
               <span>{error}</span>
             </div>
           )}
+          
+          {message && (
+            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3 rounded-xl text-sm flex items-start gap-3">
+              <Target className="w-5 h-5 shrink-0" />
+              <span>{message}</span>
+            </div>
+          )}
 
-          <div className="space-y-2">
+          {isForgotPassword ? (
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 block">
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner"
+                placeholder="coach@team.com"
+              />
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 block">
               Email Address
             </label>
@@ -135,23 +171,54 @@ const AuthScreen = ({ onBack, initialMode = 'login' }) => {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full group relative flex items-center justify-center gap-2 px-6 py-4 border border-indigo-500/50 text-sm font-black rounded-2xl text-white bg-indigo-600/80 hover:bg-indigo-500 backdrop-blur-md focus:outline-none focus:ring-4 focus:ring-indigo-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_30px_rgba(99,102,241,0.4)] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest mt-4"
-          >
-            {loading ? 'Authenticating...' : isLogin ? 'Sign In' : 'Create Team'}
-            {!loading && <Target className="w-4 h-4 text-indigo-300" />}
-          </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full group relative flex items-center justify-center gap-2 px-6 py-4 border border-indigo-500/50 text-sm font-black rounded-2xl text-white bg-indigo-600/80 hover:bg-indigo-500 backdrop-blur-md focus:outline-none focus:ring-4 focus:ring-indigo-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_30px_rgba(99,102,241,0.4)] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest mt-4"
+              >
+                {loading ? 'Authenticating...' : isLogin ? 'Sign In' : 'Create Team'}
+                {!loading && <Target className="w-4 h-4 text-indigo-300" />}
+              </button>
+            </>
+          )}
+
+          {isForgotPassword && (
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full group relative flex items-center justify-center gap-2 px-6 py-4 border border-indigo-500/50 text-sm font-black rounded-2xl text-white bg-indigo-600/80 hover:bg-indigo-500 backdrop-blur-md focus:outline-none focus:ring-4 focus:ring-indigo-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(99,102,241,0.2)] hover:shadow-[0_0_30px_rgba(99,102,241,0.4)] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest mt-4"
+            >
+              {loading ? 'Sending...' : 'Send Reset Link'}
+            </button>
+          )}
         </form>
 
-        <div className="mt-8 text-center">
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-slate-500 hover:text-indigo-400 text-sm font-bold transition-colors"
-          >
-            {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-          </button>
+        <div className="mt-8 text-center space-y-4 flex flex-col">
+          {isForgotPassword ? (
+            <button
+              onClick={() => { setIsForgotPassword(false); setMessage(''); setError(''); }}
+              className="text-slate-500 hover:text-indigo-400 text-sm font-bold transition-colors"
+            >
+              Back to Login
+            </button>
+          ) : (
+            <>
+              {isLogin && (
+                <button
+                  onClick={() => setIsForgotPassword(true)}
+                  className="text-slate-500 hover:text-indigo-400 text-sm font-bold transition-colors"
+                >
+                  Forgot Password?
+                </button>
+              )}
+              <button
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-slate-500 hover:text-indigo-400 text-sm font-bold transition-colors"
+              >
+                {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
