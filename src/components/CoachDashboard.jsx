@@ -216,6 +216,9 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
             p.passDropped += 1;
         } else {
             p.passes += 1; // Completed pass
+            if (stat.details?.is_huck) {
+                p.huckPasses = (p.huckPasses || 0) + 1;
+            }
         }
 
         if (nextStat && nextStat.game_name === stat.game_name && nextStat.point_number === stat.point_number && nextStat.stat_type === 'Point') {
@@ -227,9 +230,11 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
         p.blocks += 1;
       } else if (stat.stat_type === 'Throwaway') {
         p.throwaways += 1;
+        if (stat.details?.is_huck) p.huckTurnovers = (p.huckTurnovers || 0) + 1;
         pointTurnovers[pointKey] = (pointTurnovers[pointKey] || 0) + 1;
       } else if (stat.stat_type === 'Drop') {
         p.drops += 1;
+        if (stat.details?.is_huck) p.huckTurnovers = (p.huckTurnovers || 0) + 1;
         pointTurnovers[pointKey] = (pointTurnovers[pointKey] || 0) + 1;
       } else if (stat.stat_type === 'Stall Out') {
         p.stalls += 1;
@@ -284,7 +289,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       const passAttempts = p.passes + p.throwaways + p.passDropped;
       const completion = passAttempts > 0 ? (p.passes / passAttempts) * 100 : 0;
       
-      const nis = ((p.goals * 2) + (p.assists * 1.5) + (p.blocks * 2) + (p.passes * 0.3) - (turnovers * 2)) / pointsPlayed;
+      const nis = ((p.goals * 2) + (p.assists * 1.5) + (p.blocks * 2) + (p.passes * 0.3) + ((p.huckPasses || 0) * 0.7) - (turnovers * 2) + ((p.huckTurnovers || 0) * 0.5)) / pointsPlayed;
 
       let plusMinus = 0;
       let totalWeightedImpact = 0;

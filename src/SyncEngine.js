@@ -253,6 +253,46 @@ export const getLastLocalStat = async (gameName) => {
   return allStats[0];
 };
 
+export const upgradeLastStatToHuck = async (gameName) => {
+  const allKeys = await keys();
+  const pointKeys = allKeys.filter(k => typeof k === 'string' && k.startsWith(`point_${gameName}_`));
+  
+  let allStats = [];
+  for (const key of pointKeys) {
+    const pointData = await get(key);
+    if (pointData && pointData.stats) {
+      allStats.push(...pointData.stats.filter(s => s.stat_type !== 'Lineup').map(s => ({...s, _key: key})));
+    }
+  }
+  
+  if (allStats.length === 0) return null;
+  allStats.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  
+  const lastStat = allStats[0];
+  if (!lastStat) return null;
+
+  // Prevent upgrading non-action stats
+  if (['Point', 'Opponent Point', 'Game Completed', 'Start Offense', 'Start Defense', 'Half Time', 'Timeout', 'Pull'].includes(lastStat.stat_type)) {
+    return null;
+  }
+
+  const pointData = await get(lastStat._key);
+  const statIndex = pointData.stats.findIndex(s => s.id === lastStat.id);
+  if (statIndex !== -1) {
+    pointData.stats[statIndex].details = { ...(pointData.stats[statIndex].details || {}), is_huck: true };
+    pointData.last_modified = Date.now();
+    pointData.synced = false;
+    await set(lastStat._key, pointData);
+    
+    if (navigator.onLine) {
+       await supabase.from('stats').update({ details: pointData.stats[statIndex].details }).eq('id', lastStat.id).catch(() => {});
+       attemptSync();
+    }
+    return pointData.stats[statIndex];
+  }
+  return null;
+};
+
 // Setup online listener and initial sync
 if (typeof window !== 'undefined') {
   window.addEventListener('online', attemptSync);

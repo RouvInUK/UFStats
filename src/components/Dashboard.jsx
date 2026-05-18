@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { recordStatToDB, fetchActiveGames, clearActiveLineup, fetchLastStatForGame, deleteStat, fetchGameStats } from '../supabaseClient';
+import { upgradeLastStatToHuck } from '../SyncEngine';
 import { Undo2, ArrowLeftRight, Mic, MicOff } from 'lucide-react';
 import Fuse from 'fuse.js';
 import { playChime, playClick, playBuzz } from '../utils/audioFeedback';
@@ -11,6 +12,38 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   const [lastSaved, setLastSaved] = useState(null);
   const [activeGames, setActiveGames] = useState([]);
   const [flashType, setFlashType] = useState(null);
+  const [huckTargetId, setHuckTargetId] = useState(null);
+  const lastTapRef = useRef({ id: null, time: 0 });
+
+  const handleDoubleTap = async (id) => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([30, 50, 30, 50, 30]); // Unique double pulse
+      }
+      setHuckTargetId(id);
+      setTimeout(() => setHuckTargetId(null), 800);
+      
+      const upgraded = await upgradeLastStatToHuck(currentGame);
+      if (upgraded) {
+         setLastSaved("Upgraded to Huck");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleTap = (id, singleAction) => {
+    const now = Date.now();
+    const isDoubleTap = lastTapRef.current.id === id && (now - lastTapRef.current.time) < 350;
+    
+    if (isDoubleTap) {
+      lastTapRef.current = { id: null, time: 0 };
+      handleDoubleTap(id);
+    } else {
+      lastTapRef.current = { id, time: now };
+      singleAction();
+    }
+  };
 
   // Voice Tracking State
   const [voiceFeedback, setVoiceFeedback] = useState('');
@@ -651,10 +684,15 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                   return (
                   <button
                     key={player}
-                    onClick={() => handlePlayerSelect(player)}
+                    onClick={() => handleTap(player, () => handlePlayerSelect(player))}
                     disabled={isSaving || isVoiceEnabled}
-                    className={`flex flex-col items-center justify-center rounded-xl p-1 sm:p-2 h-[95px] sm:h-24 min-w-0 ${getPlayerClass(player)} ${index === 6 && activeLineup.length === 7 ? 'col-start-2 sm:col-start-auto' : ''}`}
+                    className={`relative flex flex-col items-center justify-center rounded-xl p-1 sm:p-2 h-[95px] sm:h-24 min-w-0 overflow-hidden ${getPlayerClass(player)} ${index === 6 && activeLineup.length === 7 ? 'col-start-2 sm:col-start-auto' : ''}`}
                   >
+                     {huckTargetId === player && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-40 rounded-xl">
+                          <span className="text-3xl filter drop-shadow-md">↗️</span>
+                        </div>
+                     )}
                      {players?.find(p => p.name === player)?.shirt_number ? (
                         <div className="relative flex flex-col items-center justify-center w-full">
                           <span className="text-4xl sm:text-5xl font-black mb-1 shrink-0 relative">
@@ -710,17 +748,27 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
            {/* Secondary Actions */}
            <div className="grid grid-cols-4 gap-2">
               <button
-                onClick={() => handleStatRecord('Drop')}
+                onClick={() => handleTap('Drop', () => handleStatRecord('Drop'))}
                 disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
-                className={getActionClass("h-14 sm:h-16 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Drop')}
+                className={`relative overflow-hidden ${getActionClass("h-14 sm:h-16 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Drop')}`}
               >
+                {huckTargetId === 'Drop' && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-40 rounded-lg">
+                    <span className="text-3xl filter drop-shadow-md">↗️</span>
+                  </div>
+                )}
                 Drop
               </button>
               <button
-                onClick={() => handleStatRecord('Throwaway')}
+                onClick={() => handleTap('Throwaway', () => handleStatRecord('Throwaway'))}
                 disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
-                className={getActionClass("h-14 sm:h-16 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Throwaway')}
+                className={`relative overflow-hidden ${getActionClass("h-14 sm:h-16 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Throwaway')}`}
               >
+                {huckTargetId === 'Throwaway' && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-40 rounded-lg">
+                    <span className="text-3xl filter drop-shadow-md">↗️</span>
+                  </div>
+                )}
                 Incomplete
               </button>
               <button
