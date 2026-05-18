@@ -226,15 +226,18 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
         }
       } else if (stat.stat_type === 'Pass Attempt') {
         p.passDropped += 1;
+        if (stat.details?.is_huck) {
+           p.huckAttemptsDropped = (p.huckAttemptsDropped || 0) + 1;
+        }
       } else if (stat.stat_type === 'Defence') {
         p.blocks += 1;
       } else if (stat.stat_type === 'Throwaway') {
         p.throwaways += 1;
-        if (stat.details?.is_huck) p.huckTurnovers = (p.huckTurnovers || 0) + 1;
+        if (stat.details?.is_huck) p.huckThrowaways = (p.huckThrowaways || 0) + 1;
         pointTurnovers[pointKey] = (pointTurnovers[pointKey] || 0) + 1;
       } else if (stat.stat_type === 'Drop') {
         p.drops += 1;
-        if (stat.details?.is_huck) p.huckTurnovers = (p.huckTurnovers || 0) + 1;
+        if (stat.details?.is_huck) p.huckDrops = (p.huckDrops || 0) + 1;
         pointTurnovers[pointKey] = (pointTurnovers[pointKey] || 0) + 1;
       } else if (stat.stat_type === 'Stall Out') {
         p.stalls += 1;
@@ -289,7 +292,11 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       const passAttempts = p.passes + p.throwaways + p.passDropped;
       const completion = passAttempts > 0 ? (p.passes / passAttempts) * 100 : 0;
       
-      const nis = ((p.goals * 2) + (p.assists * 1.5) + (p.blocks * 2) + (p.passes * 0.3) + ((p.huckPasses || 0) * 0.7) - (turnovers * 2) + ((p.huckTurnovers || 0) * 0.5)) / pointsPlayed;
+      const totalHuckAttempts = (p.huckPasses || 0) + (p.huckThrowaways || 0) + (p.huckAttemptsDropped || 0);
+      const huckCompletions = p.huckPasses || 0;
+      
+      const totalHuckTurnovers = (p.huckThrowaways || 0) + (p.huckDrops || 0);
+      const nis = ((p.goals * 2) + (p.assists * 1.5) + (p.blocks * 2) + (p.passes * 0.3) + ((p.huckPasses || 0) * 0.7) - (turnovers * 2) + (totalHuckTurnovers * 0.5)) / pointsPlayed;
 
       let plusMinus = 0;
       let totalWeightedImpact = 0;
@@ -830,6 +837,9 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                     <th className="p-4 font-bold text-right hover:text-white transition-colors" onClick={() => handleSort('completion')} title="Pass Completion %">
                       Comp % {sortField === 'completion' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
+                    <th className={`p-4 font-bold text-right hover:text-white transition-colors ${visualGameType === 'beach' ? 'font-black text-slate-100' : ''}`} onClick={() => handleSort('huckCompletions')} title="Completed Hucks / Attempted Hucks">
+                      Deep Throws {sortField === 'huckCompletions' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                    </th>
                     <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('systemImpact')} title="The % change in team scoring efficiency when this player is on the field. Corrects for O/D starting bias.">
                       System Impact % {sortField === 'systemImpact' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
@@ -890,6 +900,16 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                         </td>
                         <td className="p-4 text-right font-mono font-bold text-slate-300">
                           {p.completion}%
+                        </td>
+                        <td className="p-4 text-right">
+                          <div className={`font-mono text-sm tracking-tight ${visualGameType === 'beach' ? 'font-black text-white' : 'font-bold text-slate-300'}`}>
+                            {p.huckCompletions} / {p.totalHuckAttempts}
+                          </div>
+                          {p.totalHuckAttempts > 0 && (
+                            <div className="text-[10px] text-slate-500 font-mono">
+                              {((p.huckCompletions / p.totalHuckAttempts) * 100).toFixed(0)}%
+                            </div>
+                          )}
                         </td>
                         <td className="p-4 align-middle group relative min-w-[120px]">
                           <div className="flex items-center justify-center w-full relative h-[18px]">

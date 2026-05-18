@@ -115,6 +115,23 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
            tacticalInsight += " Deep into the match: O-Line handlers typically lose 15% efficiency due to fatigue. Monitor your primary handlers closely.";
         }
 
+        const totalHuckAttemptsGlobal = playerStats.reduce((sum, p) => sum + (p.totalHuckAttempts || 0), 0);
+        const totalHuckCompletionsGlobal = playerStats.reduce((sum, p) => sum + (p.huckCompletions || 0), 0);
+        
+        if (totalHuckAttemptsGlobal >= 4) {
+            const huckCompPct = (totalHuckCompletionsGlobal / totalHuckAttemptsGlobal) * 100;
+            if (huckCompPct < 40) {
+                tacticalInsight += ` The team is forcing too many low-percentage deep shots (${totalHuckCompletionsGlobal}/${totalHuckAttemptsGlobal} completed). Reign in the hucks and prioritize underneath options.`;
+            } else if (huckCompPct > 60) {
+                tacticalInsight += ` The deep game is highly efficient (${totalHuckCompletionsGlobal}/${totalHuckAttemptsGlobal}). Continue stretching the field to keep the defense honest.`;
+            }
+        }
+        
+        const huckTriggerHappy = playerStats.find(p => (p.totalHuckAttempts || 0) >= 3 && ((p.huckCompletions || 0) / p.totalHuckAttempts) <= 0.33);
+        if (huckTriggerHappy) {
+             tacticalInsight += ` ${huckTriggerHappy.name} is attempting high-risk deep throws without success (${huckTriggerHappy.huckCompletions || 0}/${huckTriggerHappy.totalHuckAttempts}). Advise them to look for resets first.`;
+        }
+
         if (tacticalInsight) {
            generated.tactics = tacticalInsight;
         }
