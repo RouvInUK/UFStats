@@ -130,6 +130,7 @@ const RosterSetup = ({ players, setPlayers, currentTeam, currentTeamObject, targ
           <form onSubmit={handleAddPlayerToClub} className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
+              inputMode="numeric"
               value={newShirtNumber}
               onChange={(e) => setNewShirtNumber(e.target.value)}
               placeholder="#"
