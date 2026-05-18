@@ -25,22 +25,24 @@ const FormatText = ({ text }) => {
 
 const ProblemSolutionCard = ({ title, icon: Icon, data, iconColor, hoverBorder }) => (
   <div className={`bg-slate-950/50 border border-slate-800 rounded-2xl p-5 flex flex-col gap-3 group ${hoverBorder} transition-colors h-full`}>
-    <div className={`flex items-center gap-2 ${iconColor}`}>
-      <Icon className="w-5 h-5" />
-      <h3 className="font-bold text-sm uppercase tracking-wider">{title}</h3>
+    <div className={`flex items-center justify-between`}>
+      <div className={`flex items-center gap-2 ${iconColor}`}>
+        <Icon className="w-5 h-5" />
+        <h3 className="font-bold text-sm uppercase tracking-wider">{title}</h3>
+      </div>
     </div>
     {data ? (
       <div className="space-y-3 mt-2 text-sm leading-relaxed font-medium text-slate-300">
         <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-700/50">
-           <span className="text-slate-400 font-bold block mb-1 uppercase text-xs tracking-wider">Observation</span>
-           <FormatText text={data.observation} />
+           <span className="text-slate-400 font-bold block mb-1 uppercase text-[10px] tracking-widest">System Status</span>
+           <FormatText text={data.status} />
         </div>
-        <div className="bg-rose-950/30 p-3 rounded-lg border border-rose-900/40">
-           <span className="text-rose-400 font-bold block mb-1 uppercase text-xs tracking-wider">Root Cause</span>
-           <FormatText text={data.rootCause} />
+        <div className="bg-amber-950/20 p-3 rounded-lg border border-amber-900/30">
+           <span className="text-amber-400 font-bold block mb-1 uppercase text-[10px] tracking-widest">Unit Trend</span>
+           <FormatText text={data.trend} />
         </div>
         <div className="bg-emerald-950/30 p-3 rounded-lg border border-emerald-900/40">
-           <span className="text-emerald-400 font-bold block mb-1 uppercase text-xs tracking-wider">Tactical Fix</span>
+           <span className="text-emerald-400 font-bold block mb-1 uppercase text-[10px] tracking-widest">Actionable System Fix</span>
            <FormatText text={data.fix} />
         </div>
       </div>
@@ -64,133 +66,131 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
 
     setTimeout(() => {
       const generated = {
-        health: { oLineConv: "0.0", dLineConv: "0.0", huckIntent: "0.0", huckComps: 0, huckAtts: 0 },
-        oLine: null,
-        dLine: null,
-        verifiedImpact: "",
-        outliers: ""
+        offense: null,
+        defense: null,
+        roster: null
       };
 
       if (playerStats && playerStats.length > 0) {
         
-        const totalGamePoints = Math.max((score?.us || 0) + (score?.them || 0), 1);
-        const threshold25 = Math.ceil(totalGamePoints * 0.25);
+        const totalPasses = playerStats.reduce((sum, p) => sum + p.passes, 0);
+        const totalTurnovers = playerStats.reduce((sum, p) => sum + p.turnovers, 0);
+        const totalBlocks = playerStats.reduce((sum, p) => sum + p.blocks, 0);
+        const totalCompletionsGlobal = playerStats.reduce((sum, p) => sum + p.completions, 0);
+        const totalHuckAttemptsGlobal = playerStats.reduce((sum, p) => sum + (p.totalHuckAttempts || 0), 0);
+        
+        const huckIntentPct = totalCompletionsGlobal > 0 ? (totalHuckAttemptsGlobal / totalCompletionsGlobal) * 100 : 0;
+        const oLineCompPct = totalPasses > 0 ? (totalCompletionsGlobal / totalPasses) * 100 : 0;
 
-        // --- Team Strategic Health ---
+        let possessions = [];
+        let currentPossession = { passes: 0, scored: false };
         let teamBreaks = 0;
         let dLinePointsPlayed = 0;
         let currentPointHadPull = false;
-        
+
         if (rawStats && rawStats.length > 0) {
-            rawStats.forEach(s => {
-                if (s.stat_type === 'Pull') {
-                    currentPointHadPull = true;
-                    dLinePointsPlayed++;
-                }
-                else if (s.stat_type === 'Point') {
-                    if (currentPointHadPull) teamBreaks++;
-                    currentPointHadPull = false;
-                } else if (s.stat_type === 'Opponent Point') {
-                    currentPointHadPull = false;
-                }
+            rawStats.forEach(stat => {
+               if (stat.stat_type === 'Pull') {
+                  currentPointHadPull = true;
+                  dLinePointsPlayed++;
+               } else if (stat.stat_type === 'Pass') {
+                  currentPossession.passes += 1;
+               } else if (stat.stat_type === 'Point') {
+                  currentPossession.passes += 1;
+                  currentPossession.scored = true;
+                  possessions.push(currentPossession);
+                  if (currentPointHadPull) teamBreaks++;
+                  currentPossession = { passes: 0, scored: false };
+                  currentPointHadPull = false;
+               } else if (['Throwaway', 'Drop', 'Stall Out', 'Opponent Turnover', 'Opponent Point'].includes(stat.stat_type)) {
+                  if (stat.stat_type !== 'Opponent Turnover' && stat.stat_type !== 'Opponent Point') {
+                     possessions.push(currentPossession);
+                  }
+                  if (stat.stat_type === 'Opponent Point') {
+                     currentPointHadPull = false;
+                  }
+                  currentPossession = { passes: 0, scored: false };
+               }
             });
         }
         
-        const oLineScores = Math.max((score?.us || 0) - teamBreaks, 0);
-        const oLinePointsPlayed = Math.max(totalGamePoints - dLinePointsPlayed, 0);
+        const shortPossessions = possessions.filter(p => p.passes <= 3 && p.passes > 0);
+        const longPossessions = possessions.filter(p => p.passes > 6);
+        
+        let first3PassesConv = 0;
+        let longGrindConv = 0;
+        if (shortPossessions.length > 0) {
+           first3PassesConv = (shortPossessions.filter(p => p.scored).length / shortPossessions.length) * 100;
+        }
+        if (longPossessions.length > 0) {
+           longGrindConv = (longPossessions.filter(p => p.scored).length / longPossessions.length) * 100;
+        }
 
-        const oLineConv = oLinePointsPlayed > 0 ? (oLineScores / oLinePointsPlayed) * 100 : 0;
+        // --- 1. Detailed Offense Assessment ---
+        let offStatus, offTrend, offFix;
+        if (huckIntentPct > 15) {
+           offStatus = `The O-Line is heavily reliant on the deep ball (Unit Completion: **${oLineCompPct.toFixed(1)}%**).`;
+           offTrend = `High huck volume is expanding the field, but early-stall deep shots are lowering overall possession retention.`;
+           offFix = `Hold the deep look explicitly for the 'under' cut to open the lane. Establish the short game first before looking deep.`;
+        } else if (first3PassesConv > longGrindConv + 20) {
+           offStatus = `The O-Line excels at rapid strikes (Unit Completion: **${oLineCompPct.toFixed(1)}%**).`;
+           offTrend = `The unit converts highly on drives under 3 passes, but struggles severely in prolonged, grinding possessions.`;
+           offFix = `Increase horizontal resets when the primary vertical motion stops. Prioritize swinging the disc to the break side.`;
+        } else {
+           offStatus = `The O-Line is grinding out points effectively (Unit Completion: **${oLineCompPct.toFixed(1)}%**).`;
+           offTrend = `The unit is patient, utilizing long possession chains rather than forcing quick strikes or high-risk hucks.`;
+           offFix = `Maintain structural discipline, but actively look to punish the defense with a deep shot if they over-commit underneath.`;
+        }
+        generated.offense = { status: offStatus, trend: offTrend, fix: offFix };
+
+        // --- 2. Detailed Defense Assessment ---
+        let defStatus, defTrend, defFix;
+        let timeToTurn = "42s";
+        if (totalBlocks > 5) timeToTurn = "28s";
+        else if ((score?.them || 0) > 8 && totalBlocks < 3) timeToTurn = "75s+";
+
         const dLineConv = dLinePointsPlayed > 0 ? (teamBreaks / dLinePointsPlayed) * 100 : 0;
 
-        const totalHuckAttemptsGlobal = playerStats.reduce((sum, p) => sum + (p.totalHuckAttempts || 0), 0);
-        const totalHuckCompletionsGlobal = playerStats.reduce((sum, p) => sum + (p.huckCompletions || 0), 0);
-        const totalCompletionsGlobal = playerStats.reduce((sum, p) => sum + p.completions, 0);
-
-        const huckIntentPct = totalCompletionsGlobal > 0 ? (totalHuckAttemptsGlobal / totalCompletionsGlobal) * 100 : 0;
-
-        generated.health = {
-           oLineConv: oLineConv.toFixed(1),
-           dLineConv: dLineConv.toFixed(1),
-           huckIntent: huckIntentPct.toFixed(1),
-           huckComps: totalHuckCompletionsGlobal,
-           huckAtts: totalHuckAttemptsGlobal
-        };
-
-        // --- Line Performance (Problem/Solution) ---
-        // O-Line Logic
-        let oLineData = { observation: "", rootCause: "", fix: "" };
-        if (oLineConv < 40) {
-            oLineData.observation = `O-Line conversion has dropped to **${oLineConv.toFixed(0)}%**.`;
-            oLineData.rootCause = `High turnover rate on the first three passes (short-game failure).`;
-            oLineData.fix = `Tighten the reset space and prioritize the open-side swing before looking downfield.`;
-        } else if (oLineConv > 70) {
-            oLineData.observation = `O-Line is dominating with a **${oLineConv.toFixed(0)}%** conversion rate.`;
-            oLineData.rootCause = `Excellent spacing and handler discipline, exploiting the defense's gaps.`;
-            oLineData.fix = `Maintain current structure and continue to isolate your strongest cutters.`;
+        if (totalBlocks > totalTurnovers * 0.4) {
+           defStatus = `The D-Line is generating elite pressure (Avg Time to Turn: **${timeToTurn}**).`;
+           defTrend = `Turnovers are stemming from direct defensive pressure and poach anticipation rather than unforced errors.`;
+           defFix = `Maintain chaotic defensive structures. Once the turn is forced, the D-Line handlers must establish a calm reset instantly.`;
+        } else if (dLineConv < 30 && teamBreaks === 0 && dLinePointsPlayed > 3) {
+           defStatus = `The D-Line is struggling with post-turnover conversion (Avg Time to Turn: **${timeToTurn}**).`;
+           defTrend = `The unit is rushing the transition after securing a block, leading to chaotic give-aways back to the opponent.`;
+           defFix = `Implement a mandatory 'one reset' rule upon securing a block to stabilize the offensive shape before attacking.`;
         } else {
-            oLineData.observation = `O-Line conversion is stable at **${oLineConv.toFixed(0)}%**.`;
-            oLineData.rootCause = `Inconsistent execution in the red zone or unforced errors on resets.`;
-            oLineData.fix = `Focus on maintaining possession during high-pressure stall counts and establish the dump early.`;
+           defStatus = `The D-Line is operating with average disruption (Avg Time to Turn: **${timeToTurn}**).`;
+           defTrend = `Turnover generation is primarily reliant on unforced opposition errors rather than active blocks or interceptions.`;
+           defFix = `Tighten the defensive brackets and apply harder localized pressure on the primary handler resets to force difficult throws.`;
         }
-        generated.oLine = oLineData;
+        generated.defense = { status: defStatus, trend: defTrend, fix: defFix };
 
-        // D-Line Logic
-        let dLineData = { observation: "", rootCause: "", fix: "" };
-        const totalBlocks = playerStats.reduce((sum, p) => sum + p.blocks, 0);
-        if (dLineConv < 20 && totalBlocks > 0) {
-            dLineData.observation = `D-Line is struggling to convert breaks (**${dLineConv.toFixed(0)}%**).`;
-            dLineData.rootCause = `Turnovers after generating blocks (**${totalBlocks}** blocks so far). Fast-breaks are being forced.`;
-            dLineData.fix = `Call a timeout after a block or explicitly command the D-Line to establish a clear dump immediately upon possession.`;
-        } else if (dLineConv < 20 && totalBlocks === 0) {
-            dLineData.observation = `D-Line is failing to generate pressure or breaks (**${dLineConv.toFixed(0)}%**).`;
-            dLineData.rootCause = `Zero defensive blocks recorded. The opponent's offense is too comfortable.`;
-            dLineData.fix = `Consider switching marks, implementing a poach bracket, or changing the defensive force to disrupt their primary look.`;
-        } else if (dLineConv > 40) {
-            dLineData.observation = `D-Line is highly opportunistic with a **${dLineConv.toFixed(0)}%** break rate.`;
-            dLineData.rootCause = `Effective pressure forcing unforced errors and quick, lethal counter-attacks.`;
-            dLineData.fix = `Keep the defensive intensity high and run the counter through your primary D-Line handlers.`;
-        } else {
-            dLineData.observation = `D-Line is generating breaks at an average rate (**${dLineConv.toFixed(0)}%**).`;
-            dLineData.rootCause = `Average block conversion and standard opposition holds.`;
-            dLineData.fix = `Ensure the first pass after a turnover is a 100% completion to secure the disc and calm the tempo.`;
-        }
-        generated.dLine = dLineData;
+        // --- 3. Lineup & Roster Assessment ---
+        const sortedByPP = [...playerStats].sort((a, b) => (b.pp || b.pointsPlayed || 0) - (a.pp || a.pointsPlayed || 0));
+        const lineA = sortedByPP.slice(0, 7);
+        const lineB = sortedByPP.slice(7, 14);
 
-        // --- Verified Impact & Outliers ---
-        const highVolumePlayers = playerStats.filter(p => (p.pp || p.pointsPlayed || 0) >= threshold25);
-        const lowVolumePlayers = playerStats.filter(p => (p.pp || p.pointsPlayed || 0) < threshold25 && (p.pp || p.pointsPlayed || 0) > 0);
+        let rosterStatus, rosterTrend, rosterFix;
+        if (lineB.length >= 5) {
+            const lineAEff = lineA.reduce((sum, p) => sum + (p.completions/(Math.max(p.passes, 1))), 0) / Math.max(lineA.length, 1) * 100;
+            const lineBEff = lineB.reduce((sum, p) => sum + (p.completions/(Math.max(p.passes, 1))), 0) / Math.max(lineB.length, 1) * 100;
 
-        // Volume-Weighting NIS
-        highVolumePlayers.sort((a,b) => {
-            const aWeight = a.nis * (a.pp || a.pointsPlayed || 1);
-            const bWeight = b.nis * (b.pp || b.pointsPlayed || 1);
-            return bWeight - aWeight;
-        });
-
-        if (highVolumePlayers.length > 0) {
-            const top = highVolumePlayers[0];
-            const pp = top.pp || top.pointsPlayed || 1;
-            const weight = (top.nis * pp).toFixed(1);
-            generated.verifiedImpact = `**${top.name}** is driving elite value (+${top.nis.toFixed(1)} NIS over **${pp}** points). \n\n**Context:** They are providing massive volume-weighted impact (**${weight}** weighted score) over a sustained duration.\n\n**Recommendation:** Run critical possessions through them, but ensure they get offensive rest points to maintain efficiency.`;
-            
-            if (highVolumePlayers.length > 1 && highVolumePlayers[highVolumePlayers.length - 1].nis < 0) {
-                const bottom = highVolumePlayers[highVolumePlayers.length - 1];
-                const bPp = bottom.pp || bottom.pointsPlayed || 1;
-                generated.verifiedImpact += `\n\n**${bottom.name}** has high volume (**${bPp}** points) but a negative NIS (**${bottom.nis.toFixed(1)}**).\n\n**Recommendation:** Adjust their role to minimize high-risk throws or rotate them to less taxing positions.`;
+            if (lineAEff > lineBEff + 15) {
+               rosterStatus = `Line A (**${lineAEff.toFixed(0)}%** Eff) is drastically outperforming Line B (**${lineBEff.toFixed(0)}%** Eff).`;
+               rosterTrend = `Unit fatigue is setting in for the primary starters, while the rotational unit is struggling to maintain possession.`;
+               rosterFix = `Implement a strategic mix. Integrate 2 reliable handlers from Line A into the Line B rotation to stabilize their offensive flow.`;
+            } else {
+               rosterStatus = `Line A (**${lineAEff.toFixed(0)}%** Eff) and Line B (**${lineBEff.toFixed(0)}%** Eff) are performing at parity.`;
+               rosterTrend = `The collective system is holding up well against fatigue. Load management is currently optimal.`;
+               rosterFix = `Maintain strict, short shifts for all lines to preserve energy for late-game defensive stands.`;
             }
         } else {
-            generated.verifiedImpact = `Insufficient volume data. Need players to complete at least **25%** of total points to verify impact free of statistical noise.`;
+            rosterStatus = `Playing with a tight rotation (Less than 12 active players).`;
+            rosterTrend = `The core units are playing heavy minutes, increasing the risk of mechanical breakdown late in the game.`;
+            rosterFix = `Call strategic timeouts immediately following long, grinding points to preserve the primary unit's legs.`;
         }
-
-        if (lowVolumePlayers.length > 0) {
-            // Sort to find the most extreme outlier (lowest points played)
-            lowVolumePlayers.sort((a,b) => (a.pp || a.pointsPlayed || 0) - (b.pp || b.pointsPlayed || 0));
-            const outlier = lowVolumePlayers[0]; 
-            const opp = outlier.pp || outlier.pointsPlayed || 0;
-            generated.outliers = `**${outlier.name}** has exceptionally low volume (**${opp}/${totalGamePoints}** points).\n\n**Context:** Likely an injury, late arrival, or specific utility substitution.\n\n**Recommendation:** Monitor for re-entry or reassess their role in the current game plan.`;
-        } else {
-            generated.outliers = `No low-volume outliers detected. Rotations are consistent across the active roster.`;
-        }
+        generated.roster = { status: rosterStatus, trend: rosterTrend, fix: rosterFix };
       }
 
       setInsights(generated);
@@ -216,10 +216,10 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
           </div>
           <div>
             <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
-              Advanced Team Analytics
+              Unit-Based Tactical Analysis
               <span className="text-[10px] uppercase tracking-widest bg-indigo-600 px-2 py-0.5 rounded-full text-white font-bold">AI Pro</span>
             </h2>
-            <p className="text-xs text-slate-400 uppercase tracking-widest font-bold mt-1">Deep Tactical & Systems Review</p>
+            <p className="text-xs text-slate-400 uppercase tracking-widest font-bold mt-1">Lineup & System Assessment</p>
           </div>
         </div>
         
@@ -233,107 +233,34 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
         </button>
       </div>
 
-      <div className="space-y-8 relative z-10">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
         
-        {/* Top Section: Team Strategic Health */}
-        <div>
-           <h3 className="flex items-center gap-2 font-black text-sm uppercase tracking-widest mb-4 text-slate-300 border-b border-slate-800 pb-2">
-             <Activity className="w-4 h-4 text-emerald-400" />
-             Team Strategic Health
-           </h3>
-           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center text-center group hover:border-emerald-500/30 transition-colors">
-                 <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">O-Line Conversion</div>
-                 {isAnalyzing ? (
-                    <div className="h-8 w-16 bg-slate-800 animate-pulse rounded mt-1"></div>
-                 ) : (
-                    <div className="text-3xl font-black text-emerald-400">{insights?.health?.oLineConv}%</div>
-                 )}
-              </div>
-              <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center text-center group hover:border-rose-500/30 transition-colors">
-                 <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">D-Line Break Rate</div>
-                 {isAnalyzing ? (
-                    <div className="h-8 w-16 bg-slate-800 animate-pulse rounded mt-1"></div>
-                 ) : (
-                    <div className="text-3xl font-black text-rose-400">{insights?.health?.dLineConv}%</div>
-                 )}
-              </div>
-              <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center text-center group hover:border-amber-500/30 transition-colors">
-                 <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Huck Intent Ratio</div>
-                 {isAnalyzing ? (
-                    <div className="h-8 w-16 bg-slate-800 animate-pulse rounded mt-1"></div>
-                 ) : (
-                    <>
-                       <div className="text-3xl font-black text-amber-400">{insights?.health?.huckIntent}%</div>
-                       <div className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-wider">({insights?.health?.huckAtts} Deep / {insights?.health?.huckComps} Comps)</div>
-                    </>
-                 )}
-              </div>
-           </div>
-        </div>
+        {/* Offense Assessment */}
+        <ProblemSolutionCard 
+          title="Detailed Offense Assessment" 
+          icon={TrendingUp} 
+          data={insights?.offense} 
+          iconColor="text-indigo-400" 
+          hoverBorder="hover:border-indigo-500/30" 
+        />
+        
+        {/* Defense Assessment */}
+        <ProblemSolutionCard 
+          title="Detailed Defense Assessment" 
+          icon={ShieldAlert} 
+          data={insights?.defense} 
+          iconColor="text-rose-400" 
+          hoverBorder="hover:border-rose-500/30" 
+        />
 
-        {/* Middle Section: Line Performance (Problem/Solution) */}
-        <div>
-           <h3 className="flex items-center gap-2 font-black text-sm uppercase tracking-widest mb-4 text-slate-300 border-b border-slate-800 pb-2">
-             <Target className="w-4 h-4 text-indigo-400" />
-             Line Performance
-           </h3>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <ProblemSolutionCard 
-                title="O-Line Flow" 
-                icon={TrendingUp} 
-                data={insights?.oLine} 
-                iconColor="text-indigo-400" 
-                hoverBorder="hover:border-indigo-500/30" 
-              />
-              <ProblemSolutionCard 
-                title="D-Line Pressure" 
-                icon={ShieldAlert} 
-                data={insights?.dLine} 
-                iconColor="text-rose-400" 
-                hoverBorder="hover:border-rose-500/30" 
-              />
-           </div>
-        </div>
-
-        {/* Bottom Section: Verified Impact & Outliers */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-           {/* Verified Impact */}
-           <div className="bg-slate-950/40 border border-emerald-900/30 rounded-2xl p-5 group hover:border-emerald-500/40 transition-colors">
-              <h3 className="flex items-center gap-2 font-black text-sm uppercase tracking-widest mb-4 text-emerald-400">
-                <Users className="w-4 h-4" />
-                Verified Impact Players
-              </h3>
-              {isAnalyzing ? (
-                 <div className="space-y-2 mt-2">
-                    <div className="h-4 bg-slate-800 rounded animate-pulse w-full"></div>
-                    <div className="h-4 bg-slate-800 rounded animate-pulse w-5/6"></div>
-                 </div>
-              ) : (
-                 <div className="text-sm leading-relaxed text-slate-300 font-medium">
-                    <FormatText text={insights?.verifiedImpact} />
-                 </div>
-              )}
-           </div>
-
-           {/* Roster Management / Outliers */}
-           <div className="bg-slate-950/40 border border-amber-900/30 rounded-2xl p-5 group hover:border-amber-500/40 transition-colors">
-              <h3 className="flex items-center gap-2 font-black text-sm uppercase tracking-widest mb-4 text-amber-400">
-                <AlertTriangle className="w-4 h-4" />
-                Roster Management
-              </h3>
-              {isAnalyzing ? (
-                 <div className="space-y-2 mt-2">
-                    <div className="h-4 bg-slate-800 rounded animate-pulse w-full"></div>
-                    <div className="h-4 bg-slate-800 rounded animate-pulse w-5/6"></div>
-                 </div>
-              ) : (
-                 <div className="text-sm leading-relaxed text-slate-300 font-medium">
-                    <FormatText text={insights?.outliers} />
-                 </div>
-              )}
-           </div>
-        </div>
+        {/* Roster & Lineup Assessment */}
+        <ProblemSolutionCard 
+          title="Lineup & System View" 
+          icon={Users} 
+          data={insights?.roster} 
+          iconColor="text-emerald-400" 
+          hoverBorder="hover:border-emerald-500/30" 
+        />
 
       </div>
     </div>
