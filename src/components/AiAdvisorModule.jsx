@@ -1,5 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { Brain, RefreshCw, Activity, Target, Users, Zap, ShieldAlert, BarChart3 } from 'lucide-react';
+import { Brain, RefreshCw, Activity, Target, Users, Zap, ShieldAlert } from 'lucide-react';
+
+const FormatText = ({ text }) => {
+  if (!text) return null;
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={i} className="text-white font-black">{part.slice(2, -2)}</strong>;
+        }
+        return <React.Fragment key={i}>
+           {part.split('\n\n').map((subpart, j, arr) => (
+              <React.Fragment key={`${i}-${j}`}>
+                {subpart}
+                {j < arr.length - 1 && <><br/><br/></>}
+              </React.Fragment>
+           ))}
+        </React.Fragment>;
+      })}
+    </>
+  );
+};
 
 const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -14,126 +36,91 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
         offensiveFlow: "Insufficient data to analyze offensive patterns.",
         defensivePressure: "Insufficient data to analyze defensive pressure.",
         personnel: "No personnel anomalies detected.",
-        tactics: "No immediate tactical adjustments recommended."
+        deepGame: "No deep throws attempted yet."
       };
 
       if (playerStats && playerStats.length > 0) {
         
         // --- Aggregates ---
-        const totalPasses = playerStats.reduce((sum, p) => sum + p.passes, 0);
-        const totalCompletions = playerStats.reduce((sum, p) => sum + p.completions, 0);
         const totalTurnovers = playerStats.reduce((sum, p) => sum + p.turnovers, 0);
         const totalBlocks = playerStats.reduce((sum, p) => sum + p.blocks, 0);
         
-        const teamCompPct = totalPasses > 0 ? (totalCompletions / totalPasses) * 100 : 0;
-        const totalPoints = score ? score.us + score.them : 0;
-
         // --- 1. Offensive Flow ---
-        const avgOce = playerStats.reduce((sum, p) => sum + (p.possessionsPlayed > 0 ? (p.goalsOnPitch / p.possessionsPlayed)*100 : 0), 0) / playerStats.length;
-        const topOcePlayer = [...playerStats].sort((a,b) => {
-           const aOce = a.possessionsPlayed > 0 ? a.goalsOnPitch/a.possessionsPlayed : 0;
-           const bOce = b.possessionsPlayed > 0 ? b.goalsOnPitch/b.possessionsPlayed : 0;
-           return bOce - aOce;
-        })[0];
+        let possessions = [];
+        let currentPossession = { passes: 0, scored: false };
+        if (rawStats && rawStats.length > 0) {
+            rawStats.forEach(stat => {
+               if (stat.stat_type === 'Pass') {
+                  currentPossession.passes += 1;
+               } else if (stat.stat_type === 'Point') {
+                  currentPossession.passes += 1;
+                  currentPossession.scored = true;
+                  possessions.push(currentPossession);
+                  currentPossession = { passes: 0, scored: false };
+               } else if (['Throwaway', 'Drop', 'Stall Out', 'Opponent Turnover', 'Opponent Point'].includes(stat.stat_type)) {
+                  if (stat.stat_type !== 'Opponent Turnover' && stat.stat_type !== 'Opponent Point') {
+                     possessions.push(currentPossession);
+                  }
+                  currentPossession = { passes: 0, scored: false };
+               }
+            });
+        }
+        
+        const longPossessions = possessions.filter(p => p.passes > 6);
+        const shortPossessions = possessions.filter(p => p.passes <= 6 && p.passes > 0);
+        const longConvRate = longPossessions.length > 0 ? (longPossessions.filter(p => p.scored).length / longPossessions.length) * 100 : 0;
+        const shortConvRate = shortPossessions.length > 0 ? (shortPossessions.filter(p => p.scored).length / shortPossessions.length) * 100 : 0;
 
-        if (teamCompPct > 90 && avgOce > 50) {
-          generated.offensiveFlow = `Elite offensive efficiency. Team completion rate is ${teamCompPct.toFixed(1)}%. The disc is moving cleanly with minimal stagnation. Maintain current spacing and reset structures.`;
-        } else if (teamCompPct > 85 && totalTurnovers > totalPoints * 2) {
-          generated.offensiveFlow = `Completion rate is solid (${teamCompPct.toFixed(1)}%), but overall turnover volume is high. This indicates we are stringing together many short passes but failing in the redzone or deep space. Prioritize finishing drives.`;
-        } else if (teamCompPct < 80) {
-           generated.offensiveFlow = `Struggling with possession retention (${teamCompPct.toFixed(1)}% completion). Our offensive sets are too risky or handlers are being pressured into tight windows. Emphasize early resets and swing passes to stretch the defense.`;
+        if (longPossessions.length > 0 && longConvRate < shortConvRate - 20) {
+           generated.offensiveFlow = `Possessions longer than 6 passes have a **${longConvRate.toFixed(0)}%** conversion rate, compared to **${shortConvRate.toFixed(0)}%** for shorter drives. The offense is 'choking' in the red zone.\n\n**Strategic Adjustment:** Increase horizontal resets and swing the disc earlier.`;
+        } else if (shortPossessions.length > 0 && shortConvRate < 50) {
+           generated.offensiveFlow = `Short possessions (≤6 passes) are converting at only **${shortConvRate.toFixed(0)}%**. We are forcing throws early in the stall count.\n\n**Strategic Adjustment:** Be patient and establish the dump before looking downfield.`;
+        } else if (longPossessions.length === 0 && shortPossessions.length === 0) {
+           generated.offensiveFlow = "Insufficient data to analyze possession length.";
         } else {
-           generated.offensiveFlow = `Offense is converting at an average rate. ${topOcePlayer && topOcePlayer.possessionsPlayed > 2 ? `When ${topOcePlayer.name} is on the pitch, offensive conversion spikes. Run more handler-sets through them.` : 'Focus on clean holds to build momentum.'}`;
+           generated.offensiveFlow = `Offense is flowing well. Overall conversion is stable across drive lengths.\n\n**Strategic Adjustment:** Maintain current spacing and keep the disc moving to prevent the defense from setting.`;
         }
 
         // --- 2. Defensive Pressure ---
-        const topBlocker = [...playerStats].sort((a,b) => b.blocks - a.blocks)[0];
-        const breaksWonAvg = playerStats.reduce((sum, p) => sum + p.breaksWon, 0) / playerStats.length;
-        
-        if (totalBlocks > totalPoints * 0.5) {
-          generated.defensivePressure = `Defense is generating massive pressure (${totalBlocks} blocks). ${topBlocker && topBlocker.blocks > 1 ? `${topBlocker.name} is anchoring the D-Line with ${topBlocker.blocks} blocks.` : 'Excellent collective defensive effort.'} Ensure we are converting these break opportunities into scores.`;
-        } else if (breaksWonAvg > 1) {
-          generated.defensivePressure = `D-Line is highly opportunistic. We aren't relying purely on blocks, meaning we are forcing unforced errors or capitalizing on opposition drops effectively.`;
-        } else if (totalBlocks === 0 && score.them > 3) {
-          generated.defensivePressure = `Zero defensive blocks recorded while conceding ${score.them} points. The opponent's offense is too comfortable. Consider switching marks, implementing a poach bracket, or changing the defensive force to disrupt their primary look.`;
+        if (totalBlocks > 0 && totalBlocks < totalTurnovers * 0.3) {
+           generated.defensivePressure = `Opponents are completing passes too easily; we only have **${totalBlocks}** blocks compared to unforced errors. Your D-Line is giving up the open side too easily.\n\n**Strategic Adjustment:** Tighten the force and clamp down on the open side.`;
+        } else if (totalBlocks > (score?.them || 0) * 1.5) {
+           generated.defensivePressure = `Defense is generating massive pressure with **${totalBlocks}** blocks.\n\n**Strategic Adjustment:** Ensure we are capitalizing on break opportunities.`;
+        } else if (totalBlocks === 0 && (score?.them || 0) > 2) {
+           generated.defensivePressure = `Zero defensive blocks recorded. The opponent's offense is too comfortable.\n\n**Strategic Adjustment:** Consider switching marks or changing the defensive force to disrupt their primary look.`;
         } else {
-          generated.defensivePressure = "Defensive pressure is standard. Try varying the mark (e.g., flash flat occasionally) to bait high-stall throwaways.";
+           generated.defensivePressure = `Defensive pressure is standard with **${totalBlocks}** blocks.\n\n**Strategic Adjustment:** Try varying the mark (e.g., flash flat occasionally) to bait high-stall throwaways.`;
         }
 
         // --- 3. Personnel Mapping ---
         const topPerformers = [...playerStats].sort((a,b) => b.nis - a.nis).slice(0, 2).filter(p => p.nis > 0);
-        const liabilities = [...playerStats].sort((a,b) => a.nis - b.nis).slice(0, 2).filter(p => p.nis < 0 && p.usage > 5);
+        const fatiguedLiability = playerStats.find(p => (p.pp || 0) >= 4 && p.nis < 0);
         
-        const engines = playerStats.filter(p => p.touchesPerPoint >= 3 && p.completion >= 90);
-        const pureFinishers = playerStats.filter(p => (p.goals + p.assists) > 2 && p.touchesPerPoint < 2 && p.nis > 0);
-
-        let personnelInsights = [];
-        
-        if (topPerformers.length > 0) {
-           const names = topPerformers.map(p => `${p.name} (+${p.nis.toFixed(1)})`).join(" & ");
-           personnelInsights.push({ type: 'positive', text: `Key Anchors: ${names} are driving the highest Net Impact.` });
-        }
-        if (engines.length > 0) {
-           const names = engines.map(p => p.name).join(", ");
-           personnelInsights.push({ type: 'positive', text: `Engines: ${names} handling high volume efficiently.` });
-        }
-        if (pureFinishers.length > 0) {
-           const names = pureFinishers.map(p => p.name).join(", ");
-           personnelInsights.push({ type: 'positive', text: `Finishers: ${names} converting with minimal touches.` });
-        }
-        if (liabilities.length > 0) {
-           const names = liabilities.map(p => `${p.name} (${p.nis.toFixed(1)})`).join(" & ");
-           personnelInsights.push({ type: 'negative', text: `Underperforming: ${names} are seeing high usage but carrying negative Net Impact. Consider rotating roles.` });
+        if (fatiguedLiability) {
+           const pp = fatiguedLiability.pp || 4;
+           generated.personnel = `**${fatiguedLiability.name}** (${fatiguedLiability.nis > 0 ? '+' : ''}${fatiguedLiability.nis.toFixed(1)}) has played **${pp}** points. Their efficiency is dropping.\n\n**Strategic Adjustment:** Rotate **${fatiguedLiability.name}** to the bench for the next D-Line transition.`;
+        } else if (topPerformers.length > 0) {
+           const top = topPerformers[0];
+           generated.personnel = `**${top.name}** (+${top.nis.toFixed(1)}) is anchoring the team efficiently with high touches and completions.\n\n**Strategic Adjustment:** Keep running offensive sets through **${top.name}** while monitoring their point count to avoid fatigue.`;
+        } else {
+           generated.personnel = `No extreme personnel anomalies detected. Impact is distributed evenly.\n\n**Strategic Adjustment:** Maintain standard line rotations and ensure players get adequate rest.`;
         }
 
-        if (personnelInsights.length === 0) {
-          personnelInsights.push({ type: 'neutral', text: `No extreme personnel outliers detected. Impact is distributed evenly.` });
-        }
-        
-        generated.personnel = personnelInsights;
-
-        // --- 4. Tactics & Conditioning ---
-        const pullStats = playerStats.filter(p => p.pulls > 0);
-        let tacticalInsight = "";
-        
-        if (pullStats.length > 0) {
-          const avgScore = pullStats.reduce((sum, p) => sum + p.avgPullScore, 0) / pullStats.length;
-          if (avgScore < 2.5) {
-            tacticalInsight = `Short pulls (Avg ${avgScore.toFixed(1)}/5) are giving the opponent a short field. Deepen the pull trajectory. `;
-          } else {
-            tacticalInsight = `Pull quality is elite (Avg ${avgScore.toFixed(1)}/5), allowing our D-Line to set up effectively. `;
-          }
-        }
-
-        if (gameType === 'beach') {
-          tacticalInsight += "Given the Beach surface, fatigue compounds faster. Maintain strict, short shifts for cutters and avoid low-percentage hucks into the wind.";
-        } else if (gameType === 'indoor') {
-          tacticalInsight += "Indoor Ultimate requires lightning-fast transitions. Exploit turnovers immediately before the defense can set their structures.";
-        }
-
-        if (totalPoints > 15) {
-           tacticalInsight += " Deep into the match: O-Line handlers typically lose 15% efficiency due to fatigue. Monitor your primary handlers closely.";
-        }
-
+        // --- 4. Deep Game Analysis ---
         const totalHuckAttemptsGlobal = playerStats.reduce((sum, p) => sum + (p.totalHuckAttempts || 0), 0);
         const totalHuckCompletionsGlobal = playerStats.reduce((sum, p) => sum + (p.huckCompletions || 0), 0);
         
-        if (totalHuckAttemptsGlobal >= 4) {
+        if (totalHuckAttemptsGlobal > 0) {
             const huckCompPct = (totalHuckCompletionsGlobal / totalHuckAttemptsGlobal) * 100;
             if (huckCompPct < 40) {
-                tacticalInsight += ` The team is forcing too many low-percentage deep shots (${totalHuckCompletionsGlobal}/${totalHuckAttemptsGlobal} completed). Reign in the hucks and prioritize underneath options.`;
+                generated.deepGame = `Deep shots are **${totalHuckCompletionsGlobal}/${totalHuckAttemptsGlobal}** today. The 'Huck' intent is there, but execution is failing.\n\n**Strategic Adjustment:** Hold the deep look for the 'under' cut to open the lane.`;
             } else if (huckCompPct > 60) {
-                tacticalInsight += ` The deep game is highly efficient (${totalHuckCompletionsGlobal}/${totalHuckAttemptsGlobal}). Continue stretching the field to keep the defense honest.`;
+                generated.deepGame = `The deep game is highly efficient (**${totalHuckCompletionsGlobal}/${totalHuckAttemptsGlobal}**). \n\n**Strategic Adjustment:** Continue stretching the field to keep the defense honest.`;
+            } else {
+                generated.deepGame = `Deep shots are converting at an average rate (**${totalHuckCompletionsGlobal}/${totalHuckAttemptsGlobal}**). \n\n**Strategic Adjustment:** Pick deep targets carefully and ensure throwers have their feet set.`;
             }
-        }
-        
-        const huckTriggerHappy = playerStats.find(p => (p.totalHuckAttempts || 0) >= 3 && ((p.huckCompletions || 0) / p.totalHuckAttempts) <= 0.33);
-        if (huckTriggerHappy) {
-             tacticalInsight += ` ${huckTriggerHappy.name} is attempting high-risk deep throws without success (${huckTriggerHappy.huckCompletions || 0}/${huckTriggerHappy.totalHuckAttempts}). Advise them to look for resets first.`;
-        }
-
-        if (tacticalInsight) {
-           generated.tactics = tacticalInsight;
+        } else {
+            generated.deepGame = `No deep throws attempted yet.\n\n**Strategic Adjustment:** If the defense is playing tight underneath, look for isolated deep cuts to open up the field.`;
         }
       }
 
@@ -193,7 +180,7 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
             </div>
           ) : (
             <p className="text-slate-300 text-sm leading-relaxed font-medium">
-              {insights?.offensiveFlow || "Awaiting data..."}
+              <FormatText text={insights?.offensiveFlow} />
             </p>
           )}
         </div>
@@ -212,7 +199,7 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
             </div>
           ) : (
             <p className="text-slate-300 text-sm leading-relaxed font-medium">
-              {insights?.defensivePressure || "Awaiting data..."}
+              <FormatText text={insights?.defensivePressure} />
             </p>
           )}
         </div>
@@ -230,30 +217,17 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
               <div className="h-3 bg-slate-800 rounded animate-pulse w-5/6"></div>
             </div>
           ) : (
-            <div className="space-y-2 mt-1">
-              {Array.isArray(insights?.personnel) ? (
-                insights.personnel.map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-2 text-sm leading-relaxed font-medium">
-                    {item.type === 'positive' && <span className="text-emerald-400 mt-0.5">▲</span>}
-                    {item.type === 'negative' && <span className="text-rose-400 mt-0.5">▼</span>}
-                    {item.type === 'neutral' && <span className="text-slate-400 mt-0.5">•</span>}
-                    <span className="text-slate-300">{item.text}</span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-slate-300 text-sm leading-relaxed font-medium">
-                  {insights?.personnel || "Awaiting data..."}
-                </p>
-              )}
-            </div>
+            <p className="text-slate-300 text-sm leading-relaxed font-medium">
+              <FormatText text={insights?.personnel} />
+            </p>
           )}
         </div>
 
-        {/* Tactics & Conditioning Card */}
+        {/* Deep Game Analysis Card */}
         <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-5 flex flex-col gap-3 group hover:border-amber-500/30 transition-colors">
           <div className="flex items-center gap-2 text-amber-400">
-            <Zap className="w-4 h-4" />
-            <h3 className="font-bold text-sm uppercase tracking-wider">System & Conditioning</h3>
+            <Target className="w-4 h-4" />
+            <h3 className="font-bold text-sm uppercase tracking-wider">Deep Game Analysis</h3>
           </div>
           {isAnalyzing ? (
             <div className="space-y-2 mt-2">
@@ -263,7 +237,7 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
             </div>
           ) : (
             <p className="text-slate-300 text-sm leading-relaxed font-medium">
-              {insights?.tactics || "Awaiting data..."}
+              <FormatText text={insights?.deepGame} />
             </p>
           )}
         </div>
