@@ -51,6 +51,24 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
         let isDPoint = false;
         let isFirstEvent = true;
 
+        let playerDict = {};
+        if (playerStats) {
+            playerStats.forEach(p => {
+               playerDict[p.name] = {
+                  name: p.name,
+                  pointsPlayed: p.pp || p.pointsPlayed || 0,
+                  touches: 0,
+                  completions: 0,
+                  goals: 0,
+                  ds: 0,
+                  huckCompletions: 0,
+                  huckAttempts: 0,
+                  turnovers: 0,
+                  drops: 0
+               };
+            });
+        }
+
         if (rawStats && rawStats.length > 0) {
             rawStats.forEach(stat => {
                if (stat.stat_type === 'Start Defense') {
@@ -79,6 +97,30 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
                      oHuckAttempts++;
                      if (['Pass', 'Point'].includes(stat.stat_type)) oHuckCompletions++;
                   }
+               }
+
+               if (stat.player && playerDict[stat.player]) {
+                   const ps = playerDict[stat.player];
+                   if (['Pass', 'Point'].includes(stat.stat_type)) {
+                       ps.touches++;
+                       ps.completions++;
+                       if (stat.stat_type === 'Point') ps.goals++;
+                       if (stat.details?.is_huck) {
+                           ps.huckCompletions++;
+                           ps.huckAttempts++;
+                       }
+                   } else if (['Throwaway', 'Stall Out'].includes(stat.stat_type)) {
+                       ps.touches++;
+                       ps.turnovers++;
+                       if (stat.details?.is_huck) ps.huckAttempts++;
+                   } else if (stat.stat_type === 'Drop') {
+                       ps.touches++;
+                       ps.turnovers++;
+                       ps.drops++;
+                       if (stat.details?.is_huck) ps.huckAttempts++;
+                   } else if (['Defence', 'Block'].includes(stat.stat_type)) {
+                       ps.ds++;
+                   }
                }
 
                if (['Pass', 'Point'].includes(stat.stat_type)) {
@@ -179,6 +221,63 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
         }
         briefing.para3 = p3;
 
+        // --- Archetypes & Focus ---
+        const minPointsReq = Math.max(1, Math.ceil((oPointsPlayed + dPointsPlayed) * 0.25));
+        const eligiblePlayers = Object.values(playerDict).filter(p => p.pointsPlayed >= minPointsReq);
+
+        let theEngine = null;
+        let theFinisher = null;
+        let theDifferenceMaker = null;
+        
+        let engineScore = -1;
+        let finisherScore = -1;
+        let differenceScore = -1;
+
+        eligiblePlayers.forEach(p => {
+            const compRate = p.touches > 0 ? (p.completions / p.touches) : 0;
+            const touchesPerPoint = p.pointsPlayed > 0 ? (p.touches / p.pointsPlayed) : 0;
+            if (compRate > 0.90 && touchesPerPoint > engineScore && p.touches > 5) {
+                engineScore = touchesPerPoint;
+                theEngine = p;
+            }
+
+            const goalsToTouches = p.touches > 0 ? (p.goals / p.touches) : 0;
+            if (p.goals >= 3 && goalsToTouches > finisherScore) {
+                finisherScore = goalsToTouches;
+                theFinisher = p;
+            }
+
+            const playmakerScore = p.pointsPlayed > 0 ? ((p.ds + p.huckCompletions) / p.pointsPlayed) : 0;
+            if ((p.ds + p.huckCompletions) > 0 && playmakerScore > differenceScore) {
+                differenceScore = playmakerScore;
+                theDifferenceMaker = p;
+            }
+        });
+
+        const focusPlayers = [...eligiblePlayers]
+            .filter(p => p.touches > 3 && p.turnovers > 0)
+            .sort((a, b) => (b.turnovers / b.touches) - (a.turnovers / a.touches))
+            .slice(0, 2);
+
+        let focusArray = [];
+        focusPlayers.forEach(p => {
+            const huckCompRate = p.huckAttempts > 0 ? p.huckCompletions / p.huckAttempts : 0;
+            if (p.huckAttempts >= 2 && huckCompRate < 0.5) {
+                focusArray.push(`**${p.name}:** Work on deep shot selection or resetting the stall earlier.`);
+            } else if (p.drops >= 2 || p.drops > p.turnovers / 2) {
+                focusArray.push(`**${p.name}:** Focus on hand-eye coordination and secure catches before moving the disc.`);
+            } else {
+                focusArray.push(`**${p.name}:** Prioritize possession and look for the reset option earlier in the stall count.`);
+            }
+        });
+
+        briefing.archetypes = {
+            engine: theEngine,
+            finisher: theFinisher,
+            differenceMaker: theDifferenceMaker
+        };
+        briefing.focusAreas = focusArray;
+
       } else {
         briefing.para1 = "We need more data before I can give you a comprehensive breakdown.";
         briefing.para2 = "Keep logging the points so we can start seeing the tactical trends emerge.";
@@ -239,6 +338,54 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
                  <FormatText text={insights.para3} />
                </p>
             </div>
+
+            {insights.archetypes && (insights.archetypes.engine || insights.archetypes.finisher || insights.archetypes.differenceMaker) && (
+               <div className="mt-8 pt-8 border-t border-slate-800">
+                  <h3 className="text-xl font-black text-white uppercase tracking-widest mb-6">Player Archetypes</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                     {insights.archetypes.engine && (
+                        <div className="bg-blue-900/20 border border-blue-500/30 rounded-2xl p-5">
+                           <div className="text-xs uppercase tracking-widest text-blue-400 font-bold mb-1">The Engine</div>
+                           <div className="text-lg font-black text-white mb-2">{insights.archetypes.engine.name}</div>
+                           <p className="text-sm font-bold text-slate-300 leading-relaxed">
+                              Primary distributor, keeping the disc moving with high reliability.
+                           </p>
+                        </div>
+                     )}
+                     {insights.archetypes.finisher && (
+                        <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-2xl p-5">
+                           <div className="text-xs uppercase tracking-widest text-emerald-400 font-bold mb-1">The Finisher</div>
+                           <div className="text-lg font-black text-white mb-2">{insights.archetypes.finisher.name}</div>
+                           <p className="text-sm font-bold text-slate-300 leading-relaxed">
+                              Clinical in the endzone, converting the most scoring opportunities into points.
+                           </p>
+                        </div>
+                     )}
+                     {insights.archetypes.differenceMaker && (
+                        <div className="bg-purple-900/20 border border-purple-500/30 rounded-2xl p-5">
+                           <div className="text-xs uppercase tracking-widest text-purple-400 font-bold mb-1">The Difference Maker</div>
+                           <div className="text-lg font-black text-white mb-2">{insights.archetypes.differenceMaker.name}</div>
+                           <p className="text-sm font-bold text-slate-300 leading-relaxed">
+                              Provided the big plays, creating turnovers and deep gains at critical moments.
+                           </p>
+                        </div>
+                     )}
+                  </div>
+               </div>
+            )}
+
+            {insights.focusAreas && insights.focusAreas.length > 0 && (
+               <div className="mt-8 pt-8 border-t border-slate-800">
+                  <h3 className="text-xl font-black text-white uppercase tracking-widest mb-6 text-amber-500">Area for Focus</h3>
+                  <div className="space-y-4">
+                     {insights.focusAreas.map((focus, idx) => (
+                        <div key={idx} className="bg-slate-800/50 rounded-xl p-5 border-l-4 border-amber-500 text-slate-100 font-black text-lg tracking-wide">
+                           <FormatText text={focus} />
+                        </div>
+                     ))}
+                  </div>
+               </div>
+            )}
           </div>
         ) : (
           <div className="space-y-6">
