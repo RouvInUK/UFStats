@@ -227,34 +227,20 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
         const minPointsReq = Math.max(1, Math.ceil((oPointsPlayed + dPointsPlayed) * 0.25));
         const eligiblePlayers = Object.values(playerDict).filter(p => p.pointsPlayed >= minPointsReq);
 
-        let theEngine = null;
-        let theFinisher = null;
-        let theDifferenceMaker = null;
-        
-        let engineScore = -1;
-        let finisherScore = -1;
-        let differenceScore = -1;
+        const engines = [...eligiblePlayers]
+            .filter(p => p.touches > 5 && (p.completions / p.touches) > 0.90)
+            .sort((a, b) => (b.touches / b.pointsPlayed) - (a.touches / a.pointsPlayed))
+            .slice(0, 3);
 
-        eligiblePlayers.forEach(p => {
-            const compRate = p.touches > 0 ? (p.completions / p.touches) : 0;
-            const touchesPerPoint = p.pointsPlayed > 0 ? (p.touches / p.pointsPlayed) : 0;
-            if (compRate > 0.90 && touchesPerPoint > engineScore && p.touches > 5) {
-                engineScore = touchesPerPoint;
-                theEngine = p;
-            }
+        const finishers = [...eligiblePlayers]
+            .filter(p => p.goals >= 2 && p.touches > 0 && (p.goals / p.touches) >= 0.20)
+            .sort((a, b) => (b.goals / Math.max(1, b.touches)) - (a.goals / Math.max(1, a.touches)))
+            .slice(0, 3);
 
-            const goalsToTouches = p.touches > 0 ? (p.goals / p.touches) : 0;
-            if (p.goals >= 3 && goalsToTouches > finisherScore) {
-                finisherScore = goalsToTouches;
-                theFinisher = p;
-            }
-
-            const playmakerScore = p.pointsPlayed > 0 ? ((p.ds + p.huckCompletions + p.assists + p.secondaryAssists) / p.pointsPlayed) : 0;
-            if ((p.ds + p.huckCompletions + p.assists + p.secondaryAssists) > 0 && playmakerScore > differenceScore) {
-                differenceScore = playmakerScore;
-                theDifferenceMaker = p;
-            }
-        });
+        const differenceMakers = [...eligiblePlayers]
+            .filter(p => (p.ds + p.huckCompletions + p.assists + p.secondaryAssists) >= 2)
+            .sort((a, b) => ((b.ds + b.huckCompletions + b.assists + b.secondaryAssists) / b.pointsPlayed) - ((a.ds + a.huckCompletions + a.assists + a.secondaryAssists) / a.pointsPlayed))
+            .slice(0, 3);
 
         let focusArray = [];
 
@@ -305,9 +291,9 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
         }
 
         briefing.archetypes = {
-            engine: theEngine,
-            finisher: theFinisher,
-            differenceMaker: theDifferenceMaker
+            engine: engines,
+            finisher: finishers,
+            differenceMaker: differenceMakers
         };
         briefing.focusAreas = focusArray;
 
@@ -372,32 +358,32 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
                </p>
             </div>
 
-            {insights.archetypes && (insights.archetypes.engine || insights.archetypes.finisher || insights.archetypes.differenceMaker) && (
+            {insights.archetypes && (insights.archetypes.engine?.length > 0 || insights.archetypes.finisher?.length > 0 || insights.archetypes.differenceMaker?.length > 0) && (
                <div className="mt-8 pt-8 border-t border-slate-800">
                   <h3 className="text-xl font-black text-white uppercase tracking-widest mb-6">Player Archetypes</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                     {insights.archetypes.engine && (
+                     {insights.archetypes.engine?.length > 0 && (
                         <div className="bg-blue-900/20 border border-blue-500/30 rounded-2xl p-5">
                            <div className="text-xs uppercase tracking-widest text-blue-400 font-bold mb-1">The Engine</div>
-                           <div className="text-lg font-black text-white mb-2">{insights.archetypes.engine.name}</div>
+                           <div className="text-lg font-black text-white mb-2">{insights.archetypes.engine.map(p => p.name).join(', ')}</div>
                            <p className="text-sm font-bold text-slate-300 leading-relaxed">
-                              Primary distributor, keeping the disc moving with high reliability.
+                              Primary distributor{insights.archetypes.engine.length > 1 ? 's' : ''}, keeping the disc moving with high reliability.
                            </p>
                         </div>
                      )}
-                     {insights.archetypes.finisher && (
+                     {insights.archetypes.finisher?.length > 0 && (
                         <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-2xl p-5">
                            <div className="text-xs uppercase tracking-widest text-emerald-400 font-bold mb-1">The Finisher</div>
-                           <div className="text-lg font-black text-white mb-2">{insights.archetypes.finisher.name}</div>
+                           <div className="text-lg font-black text-white mb-2">{insights.archetypes.finisher.map(p => p.name).join(', ')}</div>
                            <p className="text-sm font-bold text-slate-300 leading-relaxed">
                               Clinical in the endzone, converting the most scoring opportunities into points.
                            </p>
                         </div>
                      )}
-                     {insights.archetypes.differenceMaker && (
+                     {insights.archetypes.differenceMaker?.length > 0 && (
                         <div className="bg-purple-900/20 border border-purple-500/30 rounded-2xl p-5">
                            <div className="text-xs uppercase tracking-widest text-purple-400 font-bold mb-1">The Difference Maker</div>
-                           <div className="text-lg font-black text-white mb-2">{insights.archetypes.differenceMaker.name}</div>
+                           <div className="text-lg font-black text-white mb-2">{insights.archetypes.differenceMaker.map(p => p.name).join(', ')}</div>
                            <p className="text-sm font-bold text-slate-300 leading-relaxed">
                               Generated the most high-value plays on the pitch (Assists, Blocks, and Hucks).
                            </p>
