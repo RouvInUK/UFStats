@@ -61,27 +61,36 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
         }
 
         // --- 3. Personnel Mapping ---
+        const topPerformers = [...playerStats].sort((a,b) => b.nis - a.nis).slice(0, 2).filter(p => p.nis > 0);
+        const liabilities = [...playerStats].sort((a,b) => a.nis - b.nis).slice(0, 2).filter(p => p.nis < 0 && p.usage > 5);
+        
         const engines = playerStats.filter(p => p.touchesPerPoint >= 3 && p.completion >= 90);
-        const liabilities = playerStats.filter(p => p.nis < -1 && p.usage > 10);
         const pureFinishers = playerStats.filter(p => (p.goals + p.assists) > 2 && p.touchesPerPoint < 2 && p.nis > 0);
 
         let personnelInsights = [];
+        
+        if (topPerformers.length > 0) {
+           const names = topPerformers.map(p => `${p.name} (+${p.nis.toFixed(1)})`).join(" & ");
+           personnelInsights.push({ type: 'positive', text: `Key Anchors: ${names} are driving the highest Net Impact.` });
+        }
         if (engines.length > 0) {
-           personnelInsights.push(`${engines[0].name} is operating as a true Engine (${engines[0].touchesPerPoint.toFixed(1)} touches/pt @ ${engines[0].completion}%). Keep the offense flowing through them.`);
+           const names = engines.map(p => p.name).join(", ");
+           personnelInsights.push({ type: 'positive', text: `Engines: ${names} handling high volume efficiently.` });
         }
         if (pureFinishers.length > 0) {
-           personnelInsights.push(`${pureFinishers[0].name} is a hyper-efficient Finisher. They require very few touches to generate scores.`);
+           const names = pureFinishers.map(p => p.name).join(", ");
+           personnelInsights.push({ type: 'positive', text: `Finishers: ${names} converting with minimal touches.` });
         }
         if (liabilities.length > 0) {
-           personnelInsights.push(`Warning: ${liabilities[0].name} is absorbing >10% usage but carrying a negative Net Impact (${liabilities[0].nis.toFixed(1)}). Rotate them out of primary initiation roles.`);
+           const names = liabilities.map(p => `${p.name} (${p.nis.toFixed(1)})`).join(" & ");
+           personnelInsights.push({ type: 'negative', text: `Underperforming: ${names} are seeing high usage but carrying negative Net Impact. Consider rotating roles.` });
         }
 
-        if (personnelInsights.length > 0) {
-          generated.personnel = personnelInsights.join(" ");
-        } else {
-          const topPerformer = playerStats.reduce((prev, current) => (prev.nis > current.nis) ? prev : current);
-          generated.personnel = `${topPerformer.name} is leading the team overall (+${topPerformer.nis.toFixed(1)} NIS). No extreme outliers detected in usage roles.`;
+        if (personnelInsights.length === 0) {
+          personnelInsights.push({ type: 'neutral', text: `No extreme personnel outliers detected. Impact is distributed evenly.` });
         }
+        
+        generated.personnel = personnelInsights;
 
         // --- 4. Tactics & Conditioning ---
         const pullStats = playerStats.filter(p => p.pulls > 0);
@@ -204,9 +213,22 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
               <div className="h-3 bg-slate-800 rounded animate-pulse w-5/6"></div>
             </div>
           ) : (
-            <p className="text-slate-300 text-sm leading-relaxed font-medium">
-              {insights?.personnel || "Awaiting data..."}
-            </p>
+            <div className="space-y-2 mt-1">
+              {Array.isArray(insights?.personnel) ? (
+                insights.personnel.map((item, idx) => (
+                  <div key={idx} className="flex items-start gap-2 text-sm leading-relaxed font-medium">
+                    {item.type === 'positive' && <span className="text-emerald-400 mt-0.5">▲</span>}
+                    {item.type === 'negative' && <span className="text-rose-400 mt-0.5">▼</span>}
+                    {item.type === 'neutral' && <span className="text-slate-400 mt-0.5">•</span>}
+                    <span className="text-slate-300">{item.text}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-slate-300 text-sm leading-relaxed font-medium">
+                  {insights?.personnel || "Awaiting data..."}
+                </p>
+              )}
+            </div>
           )}
         </div>
 
