@@ -1,6 +1,7 @@
 let audioCtx = null;
+let isUnlocked = false;
 
-const initAudio = () => {
+const initAudio = async () => {
   if (!audioCtx) {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     if (AudioContextClass) {
@@ -8,31 +9,31 @@ const initAudio = () => {
     }
   }
   if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume();
+    await audioCtx.resume();
   }
 };
 
-export const unlockAudio = () => {
+export const unlockAudio = async () => {
+  if (isUnlocked) return;
   try {
-    initAudio();
-    if (audioCtx && audioCtx.state === 'suspended') {
-      audioCtx.resume();
-      
+    await initAudio();
+    if (audioCtx && audioCtx.state !== 'suspended') {
+      isUnlocked = true;
       // Play an inaudible sound to force context unlock on iOS/Android
       const buffer = audioCtx.createBuffer(1, 1, 22050);
       const source = audioCtx.createBufferSource();
       source.buffer = buffer;
       source.connect(audioCtx.destination);
-      source.start();
+      source.start(0);
     }
   } catch (err) {
     console.warn("Audio unlock failed", err);
   }
 };
 
-export const playChime = () => {
+export const playChime = async () => {
   try {
-    initAudio();
+    await initAudio();
     if (!audioCtx) return;
     const osc = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
@@ -55,9 +56,9 @@ export const playChime = () => {
   }
 };
 
-export const playClick = () => {
+export const playClick = async () => {
   try {
-    initAudio();
+    await initAudio();
     if (!audioCtx) return;
     const osc = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
@@ -78,9 +79,9 @@ export const playClick = () => {
   }
 };
 
-export const playBuzz = () => {
+export const playBuzz = async () => {
   try {
-    initAudio();
+    await initAudio();
     if (!audioCtx) return;
     const osc = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
