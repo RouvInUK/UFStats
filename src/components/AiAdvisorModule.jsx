@@ -64,7 +64,9 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
                   huckCompletions: 0,
                   huckAttempts: 0,
                   turnovers: 0,
-                  drops: 0
+                  drops: 0,
+                  assists: p.assists || 0,
+                  secondaryAssists: p.secondaryAssists || 0
                };
             });
         }
@@ -247,8 +249,8 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
                 theFinisher = p;
             }
 
-            const playmakerScore = p.pointsPlayed > 0 ? ((p.ds + p.huckCompletions) / p.pointsPlayed) : 0;
-            if ((p.ds + p.huckCompletions) > 0 && playmakerScore > differenceScore) {
+            const playmakerScore = p.pointsPlayed > 0 ? ((p.ds + p.huckCompletions + p.assists + p.secondaryAssists) / p.pointsPlayed) : 0;
+            if ((p.ds + p.huckCompletions + p.assists + p.secondaryAssists) > 0 && playmakerScore > differenceScore) {
                 differenceScore = playmakerScore;
                 theDifferenceMaker = p;
             }
@@ -397,7 +399,7 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
                            <div className="text-xs uppercase tracking-widest text-purple-400 font-bold mb-1">The Difference Maker</div>
                            <div className="text-lg font-black text-white mb-2">{insights.archetypes.differenceMaker.name}</div>
                            <p className="text-sm font-bold text-slate-300 leading-relaxed">
-                              Provided the big plays, creating turnovers and deep gains at critical moments.
+                              Generated the most high-value plays on the pitch (Assists, Blocks, and Hucks).
                            </p>
                         </div>
                      )}
