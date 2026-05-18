@@ -315,7 +315,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                                             <span className="font-bold text-slate-300">{team.name}</span>
                                             <button 
                                               onClick={() => {
-                                                onShadowTeam({ id: team.id, name: team.name });
+                                                onShadowTeam({ id: team.id, name: team.name, tier: user.tier, beta_voice_pro: user.beta_voice_pro });
                                                 onNavigate('dashboard');
                                               }}
                                               className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 font-bold rounded-lg border border-indigo-500/20 transition-all text-[10px] flex items-center justify-center gap-1 uppercase tracking-widest"

@@ -404,6 +404,8 @@ function App() {
   // Derive active lineup (array of strings) for Dashboard compatibility
   const activeLineup = players.filter(p => p.is_active).map(p => p.name);
 
+  const isProTier = shadowTeam ? shadowTeam.tier === 'PRO' : profile?.tier === 'PRO';
+  const isVoiceBetaTier = shadowTeam ? shadowTeam.beta_voice_pro : profile?.beta_voice_pro;
 
   return (
     <div onClick={unlockAudio} onTouchStart={unlockAudio} className="min-h-screen bg-slate-900 selection:bg-indigo-500 selection:text-white pb-24">
@@ -423,7 +425,7 @@ function App() {
             <img src="/logo.png" alt="ustats.pro logo" className="w-8 h-8 rounded-full" />
             <span>ustats<span className="text-indigo-500 font-light">.pro</span></span>
             <BetaBadge />
-            {profile?.tier === 'PRO' ? (
+            {isProTier ? (
               <span className="text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-md flex items-center gap-1"><Crown className="w-3 h-3" /> PRO</span>
             ) : (
               <span className="text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">FREE</span>
@@ -447,13 +449,13 @@ function App() {
           )}
           <button 
             onClick={() => {
-              if (profile?.tier !== 'PRO') {
+              if (!isProTier) {
                 alert("Coach Pro is exclusively available on the Coach Pro Tier. Please upgrade to access advanced analytics and data.");
                 return;
               }
               setCurrentView('coach');
             }}
-            className={`px-6 py-2.5 font-extrabold rounded-xl transition-all flex items-center gap-2 uppercase tracking-wide text-sm ${profile?.tier === 'PRO' ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-[0_0_25px_rgba(245,158,11,0.2)] hover:shadow-[0_0_35px_rgba(245,158,11,0.4)] scale-100 hover:scale-[1.02]' : 'bg-slate-800 text-slate-600 border border-slate-700/50 cursor-not-allowed opacity-75'}`}
+            className={`px-6 py-2.5 font-extrabold rounded-xl transition-all flex items-center gap-2 uppercase tracking-wide text-sm ${isProTier ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-[0_0_25px_rgba(245,158,11,0.2)] hover:shadow-[0_0_35px_rgba(245,158,11,0.4)] scale-100 hover:scale-[1.02]' : 'bg-slate-800 text-slate-600 border border-slate-700/50 cursor-not-allowed opacity-75'}`}
           >
             Coach Pro ★
           </button>
@@ -495,13 +497,13 @@ function App() {
           )}
           <button 
             onClick={() => {
-              if (profile?.tier !== 'PRO') {
+              if (!isProTier) {
                 alert("Coach Pro is exclusively available on the Coach Pro Tier.");
                 return;
               }
               setCurrentView('coach');
             }}
-            className={`p-2 rounded-lg transition-all ${currentView === 'coach' ? 'text-amber-400 bg-amber-500/10' : profile?.tier === 'PRO' ? 'text-slate-400 hover:text-amber-400' : 'text-slate-600 cursor-not-allowed opacity-50'}`}
+            className={`p-2 rounded-lg transition-all ${currentView === 'coach' ? 'text-amber-400 bg-amber-500/10' : isProTier ? 'text-slate-400 hover:text-amber-400' : 'text-slate-600 cursor-not-allowed opacity-50'}`}
             title="Coach Pro"
           >
             <Star className="w-5 h-5" />
@@ -547,8 +549,8 @@ function App() {
           setPlayers={setPlayers}
           isVoiceEnabled={isVoiceEnabled}
           setIsVoiceEnabled={setIsVoiceEnabled}
-          isPro={profile?.tier === 'PRO'}
-          isVoiceBeta={profile?.beta_voice_pro}
+          isPro={isProTier}
+          isVoiceBeta={isVoiceBetaTier}
         />
       )}
 
