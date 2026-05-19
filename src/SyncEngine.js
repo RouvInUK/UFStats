@@ -260,8 +260,17 @@ export const upgradeLastStatToHuck = async (gameName, teamId) => {
   
   // We MUST acquire the lock for the CURRENT POINT before fetching pointData,
   // otherwise we read IDB *before* the stat we just tapped is actually saved!
-  // To find the current point key, we can sort the keys.
-  const latestPointKey = pointKeys.sort().reverse()[0];
+  // To find the current point key, we parse the point number.
+  let latestPointKey = null;
+  let maxPoint = -1;
+  for (const k of pointKeys) {
+    const parts = k.split('_');
+    const ptNum = parseInt(parts[parts.length - 1], 10);
+    if (!isNaN(ptNum) && ptNum > maxPoint) {
+      maxPoint = ptNum;
+      latestPointKey = k;
+    }
+  }
   if (!latestPointKey) return null;
 
   while (pointLocks[latestPointKey]) {
