@@ -172,12 +172,12 @@ export const attemptSync = async () => {
       try {
         const latestPointData = await get(key);
         if (latestPointData) {
-          if (latestPointData.stats.length === pointData.stats.length) {
+          if (latestPointData.last_modified === pointData.last_modified) {
             // Nothing changed locally during upload
             latestPointData.synced = true;
             await set(key, latestPointData);
           } else {
-            // New stats were added locally while we were uploading!
+            // New stats or edits (like huck upgrades) occurred locally while we were uploading!
             // Leave synced as false so the new stats get synced next time.
             console.log(`[SyncEngine] Stats appended during upload for ${key}. Leaving synced=false.`);
           }
