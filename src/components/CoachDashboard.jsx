@@ -816,7 +816,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
           )}
 
           {/* Master Sortable Analytics Table */}
-          <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl overflow-hidden mt-6">
+          <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl overflow-hidden print:overflow-visible mt-6">
             <div className="p-6 border-b border-white/10 flex items-center justify-between">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <Lock className="w-5 h-5 text-amber-400" /> True Impact Master Roster
@@ -825,7 +825,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                 Click column headers to sort
               </span>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto print:overflow-visible w-full">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-950/80 text-slate-400 text-[10px] uppercase tracking-widest cursor-pointer select-none">
