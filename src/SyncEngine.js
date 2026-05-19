@@ -273,43 +273,50 @@ export const upgradeLastStatToHuck = async (gameName) => {
     return 0;
   });
   
-  const lastStat = allStats[0];
+  // Find the last actual player action, skipping over metadata stats like 'Opponent Point'
+  const validActionTypes = ['Pass', 'Pass Attempt', 'Drop', 'Throwaway', 'Stall Out', 'Defence', 'Block', 'Point'];
+  const lastStat = allStats.find(s => validActionTypes.includes(s.stat_type));
   if (!lastStat) return null;
 
-  // Prevent upgrading non-action stats
-  if (['Opponent Point', 'Game Completed', 'Start Offense', 'Start Defense', 'Half Time', 'Timeout', 'Pull'].includes(lastStat.stat_type)) {
-    return null;
+  while (pointLocks[lastStat._key]) {
+    await new Promise(resolve => setTimeout(resolve, 10));
   }
+  pointLocks[lastStat._key] = true;
 
-  const pointData = await get(lastStat._key);
-  const statIndex = pointData.stats.findIndex(s => s.id === lastStat.id);
-  if (statIndex !== -1) {
-    pointData.stats[statIndex].details = { ...(pointData.stats[statIndex].details || {}), is_huck: true };
-    const updatePromises = [];
-    updatePromises.push(
-       navigator.onLine ? supabase.from('stats').update({ details: pointData.stats[statIndex].details }).eq('id', lastStat.id).catch(() => {}) : Promise.resolve()
-    );
+  try {
+    const pointData = await get(lastStat._key);
+    const statIndex = pointData.stats.findIndex(s => s.id === lastStat.id);
+    if (statIndex !== -1) {
+      pointData.stats[statIndex].details = { ...(pointData.stats[statIndex].details || {}), is_huck: true };
+      const updatePromises = [];
+      updatePromises.push(
+         navigator.onLine ? supabase.from('stats').update({ details: pointData.stats[statIndex].details }).eq('id', lastStat.id).catch(() => {}) : Promise.resolve()
+      );
 
-    // Also upgrade the paired thrower action if it's a Drop
-    if (statIndex > 0 && lastStat.stat_type === 'Drop') {
-      const prevStat = pointData.stats[statIndex - 1];
-      if (['Pass', 'Pass Attempt'].includes(prevStat.stat_type) && prevStat.timestamp === lastStat.timestamp) {
-         pointData.stats[statIndex - 1].details = { ...(pointData.stats[statIndex - 1].details || {}), is_huck: true };
-         updatePromises.push(
-            navigator.onLine ? supabase.from('stats').update({ details: pointData.stats[statIndex - 1].details }).eq('id', prevStat.id).catch(() => {}) : Promise.resolve()
-         );
+      // Also upgrade the paired thrower action if it's a Drop
+      if (statIndex > 0 && lastStat.stat_type === 'Drop') {
+        const prevStat = pointData.stats[statIndex - 1];
+        if (['Pass', 'Pass Attempt'].includes(prevStat.stat_type) && prevStat.timestamp === lastStat.timestamp) {
+           pointData.stats[statIndex - 1].details = { ...(pointData.stats[statIndex - 1].details || {}), is_huck: true };
+           updatePromises.push(
+              navigator.onLine ? supabase.from('stats').update({ details: pointData.stats[statIndex - 1].details }).eq('id', prevStat.id).catch(() => {}) : Promise.resolve()
+           );
+        }
       }
-    }
 
-    pointData.last_modified = Date.now();
-    pointData.synced = false;
-    await set(lastStat._key, pointData);
-    
-    if (navigator.onLine) {
-       await Promise.all(updatePromises);
-       attemptSync();
+      pointData.last_modified = Date.now();
+      pointData.synced = false;
+      await set(lastStat._key, pointData);
+
+      // Fire off network updates async, don't wait for them
+      Promise.all(updatePromises).then(() => {
+        attemptSync();
+      });
+
+      return pointData.stats[statIndex];
     }
-    return pointData.stats[statIndex];
+  } finally {
+    delete pointLocks[lastStat._key];
   }
   return null;
 };
