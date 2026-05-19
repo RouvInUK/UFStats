@@ -254,6 +254,7 @@ export const getLastLocalStat = async (gameName) => {
 };
 
 export const upgradeLastStatToHuck = async (gameName) => {
+  if (navigator.onLine) supabase.from('stats').insert({ game_name: 'DEBUG_LOG', stat_type: 'Log', point_number: 99, team_id: 'debug', player: 'Logger', details: { event: 'called', gameName } }).catch(()=>{});
   const allKeys = await keys();
   const pointKeys = allKeys.filter(k => typeof k === 'string' && k.startsWith(`point_${gameName}_`));
   
@@ -277,6 +278,8 @@ export const upgradeLastStatToHuck = async (gameName) => {
   const validActionTypes = ['Pass', 'Pass Attempt', 'Drop', 'Throwaway', 'Stall Out', 'Defence', 'Block', 'Point'];
   const lastStat = allStats.find(s => validActionTypes.includes(s.stat_type));
   if (!lastStat) return null;
+  
+  const debugLog = { event: 'upgrade_start', lastStatId: lastStat.id, type: lastStat.stat_type };
 
   while (pointLocks[lastStat._key]) {
     await new Promise(resolve => setTimeout(resolve, 10));
@@ -312,6 +315,9 @@ export const upgradeLastStatToHuck = async (gameName) => {
       Promise.all(updatePromises).then(() => {
         attemptSync();
       });
+
+      debugLog.success = true;
+      if (navigator.onLine) supabase.from('stats').insert({ game_name: 'DEBUG_LOG', stat_type: 'Log', point_number: 99, team_id: 'debug', player: 'Logger', details: debugLog }).catch(()=>{});
 
       return pointData.stats[statIndex];
     }
