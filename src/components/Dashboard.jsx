@@ -13,6 +13,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   const [activeGames, setActiveGames] = useState([]);
   const [flashType, setFlashType] = useState(null);
   const [huckTargetId, setHuckTargetId] = useState(null);
+  const [debugData, setDebugData] = useState("");
   const lastTapRef = useRef({ id: null, time: 0 });
   const pendingHuckRef = useRef(new Set());
 
@@ -41,6 +42,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       
       if (upgraded) {
          setLastSaved("Upgraded to Huck");
+      } else {
+         setLastSaved("Upgrade returned null");
       }
     } catch (err) {
       console.error(err);
@@ -48,6 +51,35 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   };
 
   const [doubleTapWindow, setDoubleTapWindow] = useState(null);
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      import('idb-keyval').then(async ({ keys, get }) => {
+        const allKeys = await keys();
+        const pointKeys = allKeys.filter(k => typeof k === 'string' && k.startsWith(`point_${currentGame}_`));
+        let maxPoint = -1;
+        let latestKey = null;
+        for (const k of pointKeys) {
+          const ptNum = parseInt(k.split('_').pop(), 10);
+          if (!isNaN(ptNum) && ptNum > maxPoint) {
+            maxPoint = ptNum;
+            latestKey = k;
+          }
+        }
+        if (latestKey) {
+          const pt = await get(latestKey);
+          if (pt && pt.stats) {
+             const throwaways = pt.stats.filter(s => s.stat_type === 'Throwaway');
+             if (throwaways.length > 0) {
+               const lastTh = throwaways[throwaways.length - 1];
+               setDebugData(`IDB T-Aways: ${throwaways.length} | Last details: ${JSON.stringify(lastTh.details)}`);
+             }
+          }
+        }
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [currentGame]);
 
   const handleTap = (id, singleAction) => {
     const now = Date.now();
@@ -694,6 +726,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               <span className="text-[11px] sm:text-xs uppercase font-bold text-slate-400 tracking-wider whitespace-nowrap">On Pitch ({activeLineup.length})</span>
               <div className="flex-1 overflow-hidden">
                   {isSaving && <span className="text-amber-400 text-[10px] font-bold animate-pulse truncate block text-left">Synchronizing...</span>}
+                  {debugData && <span className="text-red-400 text-[10px] font-bold truncate block text-left">{debugData}</span>}
                   {lastSaved && !isSaving && <span className="text-emerald-400 text-[10px] font-bold truncate block text-left">✓ {lastSaved}</span>}
               </div>
            </div>
