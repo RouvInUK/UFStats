@@ -704,7 +704,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                   <button
                     key={player}
                     onClick={() => handleTap(player, () => handlePlayerSelect(player))}
-                    disabled={isSaving || isVoiceEnabled}
+                    disabled={isVoiceEnabled}
                     className={`relative flex flex-col items-center justify-center rounded-xl p-1 sm:p-2 h-[95px] sm:h-24 min-w-0 overflow-hidden ${getPlayerClass(player)} ${index === 6 && activeLineup.length === 7 ? 'col-start-2 sm:col-start-auto' : ''}`}
                   >
                      {huckTargetId === player && (
@@ -768,7 +768,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
            <div className="grid grid-cols-4 gap-2">
               <button
                 onClick={() => handleTap('Drop', () => handleStatRecord('Drop'))}
-                disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
+                disabled={activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
                 className={`relative overflow-hidden ${getActionClass("h-14 sm:h-16 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Drop')}`}
               >
                 {huckTargetId === 'Drop' && (
@@ -780,7 +780,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               </button>
               <button
                 onClick={() => handleTap('Throwaway', () => handleStatRecord('Throwaway'))}
-                disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
+                disabled={activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
                 className={`relative overflow-hidden ${getActionClass("h-14 sm:h-16 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Throwaway')}`}
               >
                 {huckTargetId === 'Throwaway' && (
