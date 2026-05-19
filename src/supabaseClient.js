@@ -424,13 +424,12 @@ export const fetchGameStats = async (gameNames, teamIdentifier) => {
       }
     }
 
-    // Merge logic: Add local stats that are not in serverData
-    const serverIds = new Set(serverData.map(s => s.id));
+    // Merge logic: Overwrite server data with unsynced local stats (which contain pending edits like huck upgrades)
+    const serverMap = new Map(serverData.map(s => [s.id, s]));
     for (const ls of localStats) {
-      if (!serverIds.has(ls.id)) {
-        serverData.push(ls);
-      }
+       serverMap.set(ls.id, ls);
     }
+    serverData = Array.from(serverMap.values());
     
     // Re-sort descending
     serverData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
