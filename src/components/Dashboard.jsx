@@ -47,7 +47,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       }
     } catch (err) {
       console.error(err);
-      setLastSaved("Upgrade CRASHED");
+      setLastSaved("CRASH: " + (err.message || String(err)));
     }
   };
 
