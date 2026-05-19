@@ -254,7 +254,7 @@ export const getLastLocalStat = async (gameName) => {
 };
 
 export const upgradeLastStatToHuck = async (gameName, teamId) => {
-  if (navigator.onLine) supabase.from('stats').insert({ game_name: 'DEBUG_LOG', stat_type: 'Log', point_number: 99, team_id: teamId, team_name: 'Telemetry', game_type: 'grass', player: 'Logger', details: { event: 'called', gameName } }).catch(()=>{});
+  if (navigator.onLine) supabase.from('stats').insert({ game_name: 'DEBUG_LOG', stat_type: 'Log', point_number: 99, team_id: teamId, team_name: 'Telemetry', game_type: 'grass', player: 'Logger', details: { event: 'called', gameName } }).then(()=>{}).catch(()=>{});
   const allKeys = await keys();
   const pointKeys = allKeys.filter(k => typeof k === 'string' && k.startsWith(`point_${gameName}_`));
   
@@ -294,7 +294,7 @@ export const upgradeLastStatToHuck = async (gameName, teamId) => {
       pointData.stats[statIndex].details = { ...(pointData.stats[statIndex].details || {}), is_huck: true };
       const updatePromises = [];
       updatePromises.push(
-         navigator.onLine ? supabase.from('stats').update({ details: pointData.stats[statIndex].details }).eq('id', lastStat.id).catch(() => {}) : Promise.resolve()
+         navigator.onLine ? supabase.from('stats').update({ details: pointData.stats[statIndex].details }).eq('id', lastStat.id).then(()=>{}).catch(() => {}) : Promise.resolve()
       );
 
       // Also upgrade the paired thrower action if it's a Drop
@@ -303,7 +303,7 @@ export const upgradeLastStatToHuck = async (gameName, teamId) => {
         if (['Pass', 'Pass Attempt'].includes(prevStat.stat_type) && prevStat.timestamp === lastStat.timestamp) {
            pointData.stats[statIndex - 1].details = { ...(pointData.stats[statIndex - 1].details || {}), is_huck: true };
            updatePromises.push(
-              navigator.onLine ? supabase.from('stats').update({ details: pointData.stats[statIndex - 1].details }).eq('id', prevStat.id).catch(() => {}) : Promise.resolve()
+              navigator.onLine ? supabase.from('stats').update({ details: pointData.stats[statIndex - 1].details }).eq('id', prevStat.id).then(()=>{}).catch(() => {}) : Promise.resolve()
            );
         }
       }
@@ -318,7 +318,7 @@ export const upgradeLastStatToHuck = async (gameName, teamId) => {
       });
 
       debugLog.success = true;
-      if (navigator.onLine) supabase.from('stats').insert({ game_name: 'DEBUG_LOG', stat_type: 'Log', point_number: 99, team_id: teamId, team_name: 'Telemetry', game_type: 'grass', player: 'Logger', details: debugLog }).catch(()=>{});
+      if (navigator.onLine) supabase.from('stats').insert({ game_name: 'DEBUG_LOG', stat_type: 'Log', point_number: 99, team_id: teamId, team_name: 'Telemetry', game_type: 'grass', player: 'Logger', details: debugLog }).then(()=>{}).catch(()=>{});
 
       return pointData.stats[statIndex];
     }

@@ -27,7 +27,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       
       if (navigator.onLine) {
          import('../supabaseClient').then(({ supabase }) => {
-            supabase.from('stats').insert({ game_name: 'DEBUG_LOG', stat_type: 'Log', point_number: 99, team_id: targetTeamId, team_name: 'Telemetry', game_type: 'grass', player: 'Logger', details: { event: 'double_tap_fired', id } }).catch(()=>{});
+            supabase.from('stats').insert({ game_name: 'DEBUG_LOG', stat_type: 'Log', point_number: 99, team_id: targetTeamId, team_name: 'Telemetry', game_type: 'grass', player: 'Logger', details: { event: 'double_tap_fired', id } }).then(()=>{}).catch(()=>{});
          });
       }
 
