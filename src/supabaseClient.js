@@ -41,15 +41,16 @@ export const recordLineup = async (players, pointNumber, gameName, gameType, tea
     team_id: currentTeamId
   }));
 
-  // Queue locally
-  let pointData = await getLocalPoint(gameName || 'Unnamed Game', pointNumber);
-  let statsArray = [];
-  if (pointData) {
-      statsArray = Array.isArray(pointData) ? pointData : (pointData.stats || []);
-  }
+  // Queue locally using thread-safe block
+  const key = `point_${gameName || 'Unnamed Game'}_${pointNumber}`;
+  import('./SyncEngine').then(async ({ getPointKey }) => {
+     // I need to use the pointLocks from SyncEngine. But I can't import pointLocks easily.
+     // So I will just use addStatToLocalPoint in a loop!
+  });
   
-  statsArray.push(...insertData);
-  await savePointLocally(gameName || 'Unnamed Game', pointNumber, statsArray);
+  for (const stat of insertData) {
+     await addStatToLocalPoint(gameName || 'Unnamed Game', pointNumber, stat);
+  }
 
   return insertData;
 };
