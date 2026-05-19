@@ -261,12 +261,17 @@ export const upgradeLastStatToHuck = async (gameName) => {
   for (const key of pointKeys) {
     const pointData = await get(key);
     if (pointData && pointData.stats) {
-      allStats.push(...pointData.stats.filter(s => s.stat_type !== 'Lineup').map(s => ({...s, _key: key})));
+      allStats.push(...pointData.stats.filter(s => s.stat_type !== 'Lineup').map((s, idx) => ({...s, _key: key, _originalIdx: idx})));
     }
   }
   
   if (allStats.length === 0) return null;
-  allStats.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  allStats.sort((a, b) => {
+    const timeDiff = new Date(b.created_at) - new Date(a.created_at);
+    if (timeDiff !== 0) return timeDiff;
+    if (a._key === b._key) return b._originalIdx - a._originalIdx;
+    return 0;
+  });
   
   const lastStat = allStats[0];
   if (!lastStat) return null;
