@@ -202,78 +202,122 @@ export const setLineupActiveStatus = async (playerIds, teamId) => {
 
 export const fetchStats = async (teamIdentifier) => {
   if (!teamIdentifier) return [];
-  let query = supabase
-    .from('stats')
-    .select('*')
-    .limit(100000)
-    .order('created_at', { ascending: true });
+  
+  let allData = [];
+  let fetchMore = true;
+  let page = 0;
+  const PAGE_SIZE = 1000;
 
-  if (teamIdentifier) {
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamIdentifier);
-    if (isUUID) {
-      query = query.eq('team_id', teamIdentifier);
-    } else if (teamIdentifier === 'Default Team' || teamIdentifier === 'Default Team (Migrated)') {
-      query = query.or(`team_name.eq.${teamIdentifier},team_name.is.null`);
-    } else {
-      query = query.eq('team_name', teamIdentifier);
-    }
+  while (fetchMore) {
+      let query = supabase
+        .from('stats')
+        .select('*')
+        .order('created_at', { ascending: true })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+      if (teamIdentifier) {
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamIdentifier);
+        if (isUUID) {
+          query = query.eq('team_id', teamIdentifier);
+        } else if (teamIdentifier === 'Default Team' || teamIdentifier === 'Default Team (Migrated)') {
+          query = query.or(`team_name.eq.${teamIdentifier},team_name.is.null`);
+        } else {
+          query = query.eq('team_name', teamIdentifier);
+        }
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      allData = allData.concat(data || []);
+      
+      if (!data || data.length < PAGE_SIZE) {
+          fetchMore = false;
+      } else {
+          page++;
+      }
   }
-
-  const { data, error } = await query;
-
-  if (error) throw error;
-  return data || [];
+  return allData;
 };
 
 export const fetchAllGameNames = async (teamName) => {
   if (!teamName) return [];
-  let query = supabase
-    .from('stats')
-    .select('game_name')
-    .limit(100000);
-
-  if (teamName) {
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamName);
-    if (isUUID) {
-      query = query.eq('team_id', teamName);
-    } else if (teamName === 'Default Team' || teamName === 'Default Team (Migrated)') {
-      query = query.or(`team_name.eq.${teamName},team_name.is.null`);
-    } else {
-      query = query.eq('team_name', teamName);
-    }
-  }
-
-  const { data, error } = await query;
-
-  if (error) throw error;
-  if (!data) return [];
   
-  return [...new Set(data.map(s => s.game_name))].filter(Boolean);
+  let allData = [];
+  let fetchMore = true;
+  let page = 0;
+  const PAGE_SIZE = 1000;
+
+  while (fetchMore) {
+      let query = supabase
+        .from('stats')
+        .select('game_name')
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+      if (teamName) {
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamName);
+        if (isUUID) {
+          query = query.eq('team_id', teamName);
+        } else if (teamName === 'Default Team' || teamName === 'Default Team (Migrated)') {
+          query = query.or(`team_name.eq.${teamName},team_name.is.null`);
+        } else {
+          query = query.eq('team_name', teamName);
+        }
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      allData = allData.concat(data || []);
+      
+      if (!data || data.length < PAGE_SIZE) {
+          fetchMore = false;
+      } else {
+          page++;
+      }
+  }
+  
+  return [...new Set(allData.map(s => s.game_name))].filter(Boolean);
 };
 
 export const fetchActiveGames = async (teamName) => {
   if (!teamName) return [];
   // We only need a few columns to derive active games
-  let query = supabase
-    .from('stats')
-    .select('game_name, stat_type, point_number')
-    .limit(100000);
+  let allData = [];
+  let fetchMore = true;
+  let page = 0;
+  const PAGE_SIZE = 1000;
 
-  if (teamName) {
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamName);
-    if (isUUID) {
-      query = query.eq('team_id', teamName);
-    } else if (teamName === 'Default Team' || teamName === 'Default Team (Migrated)') {
-      query = query.or(`team_name.eq.${teamName},team_name.is.null`);
-    } else {
-      query = query.eq('team_name', teamName);
-    }
+  while (fetchMore) {
+      let query = supabase
+        .from('stats')
+        .select('game_name, stat_type, point_number')
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+      if (teamName) {
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamName);
+        if (isUUID) {
+          query = query.eq('team_id', teamName);
+        } else if (teamName === 'Default Team' || teamName === 'Default Team (Migrated)') {
+          query = query.or(`team_name.eq.${teamName},team_name.is.null`);
+        } else {
+          query = query.eq('team_name', teamName);
+        }
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      allData = allData.concat(data || []);
+      
+      if (!data || data.length < PAGE_SIZE) {
+          fetchMore = false;
+      } else {
+          page++;
+      }
   }
 
-  const { data, error } = await query;
-
-  if (error) throw error;
-  if (!data) return [];
+  const data = allData;
 
   const gameStatus = {};
 
@@ -317,32 +361,45 @@ export const fetchGameStats = async (gameNames, teamIdentifier) => {
 
   let serverData = [];
   if (navigator.onLine) {
-    let query = supabase
-      .from('stats')
-      .select('*')
-      .limit(100000)
-      .order('created_at', { ascending: false });
+    let fetchMore = true;
+    let page = 0;
+    const PAGE_SIZE = 1000;
 
-    if (isArray) {
-      query = query.in('game_name', gameNames);
-    } else {
-      query = query.eq('game_name', gameNames);
+    while (fetchMore) {
+        let query = supabase
+          .from('stats')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+        if (isArray) {
+          query = query.in('game_name', gameNames);
+        } else {
+          query = query.eq('game_name', gameNames);
+        }
+
+        if (teamIdentifier) {
+          const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamIdentifier);
+          if (isUUID) {
+            query = query.eq('team_id', teamIdentifier);
+          } else if (teamIdentifier === 'Default Team' || teamIdentifier === 'Default Team (Migrated)') {
+            query = query.or(`team_name.eq.${teamIdentifier},team_name.is.null`);
+          } else {
+            query = query.eq('team_name', teamIdentifier);
+          }
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        
+        serverData = serverData.concat(data || []);
+        
+        if (!data || data.length < PAGE_SIZE) {
+            fetchMore = false;
+        } else {
+            page++;
+        }
     }
-
-    if (teamIdentifier) {
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamIdentifier);
-      if (isUUID) {
-        query = query.eq('team_id', teamIdentifier);
-      } else if (teamIdentifier === 'Default Team' || teamIdentifier === 'Default Team (Migrated)') {
-        query = query.or(`team_name.eq.${teamIdentifier},team_name.is.null`);
-      } else {
-        query = query.eq('team_name', teamIdentifier);
-      }
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-    serverData = data || [];
   }
 
   // Merge with local unsynced stats
