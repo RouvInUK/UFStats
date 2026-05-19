@@ -26,7 +26,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       
       if (navigator.onLine) {
          import('../supabaseClient').then(({ supabase }) => {
-            supabase.from('stats').insert({ game_name: 'DEBUG_LOG', stat_type: 'Log', point_number: 99, player: 'Logger', details: { event: 'double_tap_fired', id } }).catch(()=>{});
+            supabase.from('stats').insert({ game_name: 'DEBUG_LOG', stat_type: 'Log', point_number: 99, team_id: targetTeamId, player: 'Logger', details: { event: 'double_tap_fired', id } }).catch(()=>{});
          });
       }
 
@@ -36,7 +36,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
          upgraded = true;
       } else {
          await new Promise(resolve => setTimeout(resolve, 200));
-         upgraded = await upgradeLastStatToHuck(currentGame);
+         upgraded = await upgradeLastStatToHuck(currentGame, targetTeamId);
       }
       
       if (upgraded) {

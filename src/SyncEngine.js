@@ -253,41 +253,33 @@ export const getLastLocalStat = async (gameName) => {
   return allStats[0];
 };
 
-export const upgradeLastStatToHuck = async (gameName) => {
-  if (navigator.onLine) supabase.from('stats').insert({ game_name: 'DEBUG_LOG', stat_type: 'Log', point_number: 99, player: 'Logger', details: { event: 'called', gameName } }).catch(()=>{});
+export const upgradeLastStatToHuck = async (gameName, teamId) => {
+  if (navigator.onLine) supabase.from('stats').insert({ game_name: 'DEBUG_LOG', stat_type: 'Log', point_number: 99, team_id: teamId, player: 'Logger', details: { event: 'called', gameName } }).catch(()=>{});
   const allKeys = await keys();
   const pointKeys = allKeys.filter(k => typeof k === 'string' && k.startsWith(`point_${gameName}_`));
   
-  let allStats = [];
-  for (const key of pointKeys) {
-    const pointData = await get(key);
-    if (pointData && pointData.stats) {
-      allStats.push(...pointData.stats.filter(s => s.stat_type !== 'Lineup').map((s, idx) => ({...s, _key: key, _originalIdx: idx})));
-    }
-  }
-  
-  if (allStats.length === 0) return null;
-  allStats.sort((a, b) => {
-    const timeDiff = new Date(b.created_at) - new Date(a.created_at);
-    if (timeDiff !== 0) return timeDiff;
-    if (a._key === b._key) return b._originalIdx - a._originalIdx;
-    return 0;
-  });
-  
-  // Find the last actual player action, skipping over metadata stats like 'Opponent Point'
-  const validActionTypes = ['Pass', 'Pass Attempt', 'Drop', 'Throwaway', 'Stall Out', 'Defence', 'Block', 'Point'];
-  const lastStat = allStats.find(s => validActionTypes.includes(s.stat_type));
-  if (!lastStat) return null;
-  
-  const debugLog = { event: 'upgrade_start', lastStatId: lastStat.id, type: lastStat.stat_type };
+  // We MUST acquire the lock for the CURRENT POINT before fetching pointData,
+  // otherwise we read IDB *before* the stat we just tapped is actually saved!
+  // To find the current point key, we can sort the keys.
+  const latestPointKey = pointKeys.sort().reverse()[0];
+  if (!latestPointKey) return null;
 
-  while (pointLocks[lastStat._key]) {
+  while (pointLocks[latestPointKey]) {
     await new Promise(resolve => setTimeout(resolve, 10));
   }
-  pointLocks[lastStat._key] = true;
+  pointLocks[latestPointKey] = true;
 
   try {
-    const pointData = await get(lastStat._key);
+    const pointData = await get(latestPointKey);
+    if (!pointData || !pointData.stats) return null;
+    
+    const validActionTypes = ['Pass', 'Pass Attempt', 'Drop', 'Throwaway', 'Stall Out', 'Defence', 'Block', 'Point'];
+    const reversedStats = [...pointData.stats].reverse(); // most recent first
+    const lastStat = reversedStats.find(s => validActionTypes.includes(s.stat_type));
+    if (!lastStat) return null;
+    
+    const debugLog = { event: 'upgrade_start', lastStatId: lastStat.id, type: lastStat.stat_type, pointKey: latestPointKey };
+
     const statIndex = pointData.stats.findIndex(s => s.id === lastStat.id);
     if (statIndex !== -1) {
       pointData.stats[statIndex].details = { ...(pointData.stats[statIndex].details || {}), is_huck: true };
@@ -309,7 +301,7 @@ export const upgradeLastStatToHuck = async (gameName) => {
 
       pointData.last_modified = Date.now();
       pointData.synced = false;
-      await set(lastStat._key, pointData);
+      await set(latestPointKey, pointData);
 
       // Fire off network updates async, don't wait for them
       Promise.all(updatePromises).then(() => {
@@ -317,12 +309,12 @@ export const upgradeLastStatToHuck = async (gameName) => {
       });
 
       debugLog.success = true;
-      if (navigator.onLine) supabase.from('stats').insert({ game_name: 'DEBUG_LOG', stat_type: 'Log', point_number: 99, player: 'Logger', details: debugLog }).catch(()=>{});
+      if (navigator.onLine) supabase.from('stats').insert({ game_name: 'DEBUG_LOG', stat_type: 'Log', point_number: 99, team_id: teamId, player: 'Logger', details: debugLog }).catch(()=>{});
 
       return pointData.stats[statIndex];
     }
   } finally {
-    delete pointLocks[lastStat._key];
+    delete pointLocks[latestPointKey];
   }
   return null;
 };
