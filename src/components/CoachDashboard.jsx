@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { fetchGameStats, fetchAllGameNames, fetchAllTeamNames } from '../supabaseClient';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
-import { Lock, Zap, Target, AlertTriangle, Presentation, Users, ChevronDown, Check, Activity, TrendingUp, TrendingDown, Share2 } from 'lucide-react';
+import { Lock, Zap, Target, AlertTriangle, Presentation, Users, ChevronDown, Check, Activity, TrendingUp, TrendingDown, Share2, Printer } from 'lucide-react';
 import AiAdvisorModule from './AiAdvisorModule';
 
 const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam, players = [] }) => {
@@ -611,6 +611,13 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                   Live Link
                </button>
             )}
+            <button 
+               onClick={() => window.print()}
+               className="px-3 py-1 font-bold text-xs uppercase tracking-widest rounded-full bg-slate-500/20 text-slate-300 border border-slate-500/30 flex items-center gap-1.5 hover:bg-slate-500/30 transition-colors print:hidden"
+            >
+               <Printer className="w-3 h-3" />
+               Export PDF
+            </button>
             <span className="flex items-center gap-1 text-slate-400 text-sm font-medium bg-slate-800/50 px-3 py-1 rounded-full">
               {loading ? (
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>

@@ -586,7 +586,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
                  <div className="w-5 h-5 border-2 border-transparent border-t-white rounded-full animate-spin" />
                  Synchronizing...
                </span>
-            ) : (!isStatsLoaded ? 'Loading...' : (gameType === 'training' ? "Start Session" : "Start Point"))}
+            ) : (!isStatsLoaded ? 'Loading...' : (gameType === 'training' ? "Start Session" : `Start Point (${activeCount})`))}
           </button>
           
           {currentPoint > 0 && (
