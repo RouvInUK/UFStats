@@ -53,6 +53,11 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     const now = Date.now();
     const isDoubleTap = lastTapRef.current.id === id && (now - lastTapRef.current.time) < 350;
     
+    // Immediate tactile feedback for every tap guarantees user gesture recognition
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(30); } catch (e) {}
+    }
+    
     if (isDoubleTap) {
       lastTapRef.current = { id: null, time: 0 };
       setDoubleTapWindow(null);
@@ -60,6 +65,9 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     } else {
       lastTapRef.current = { id, time: now };
       setDoubleTapWindow(id);
+      
+      playClick(); // Play click immediately on button down
+      
       setTimeout(() => {
         setDoubleTapWindow(null);
       }, 350);
