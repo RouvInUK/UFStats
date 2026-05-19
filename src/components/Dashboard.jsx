@@ -25,7 +25,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       setTimeout(() => setHuckTargetId(null), 800);
       
       if (navigator.onLine) {
-         import('./supabaseClient').then(({ supabase }) => {
+         import('../supabaseClient').then(({ supabase }) => {
             supabase.from('stats').insert({ game_name: 'DEBUG_LOG', stat_type: 'Log', point_number: 99, player: 'Logger', details: { event: 'double_tap_fired', id } }).catch(()=>{});
          });
       }
