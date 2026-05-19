@@ -41,15 +41,22 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     }
   };
 
+  const [doubleTapWindow, setDoubleTapWindow] = useState(null);
+
   const handleTap = (id, singleAction) => {
     const now = Date.now();
     const isDoubleTap = lastTapRef.current.id === id && (now - lastTapRef.current.time) < 350;
     
     if (isDoubleTap) {
       lastTapRef.current = { id: null, time: 0 };
+      setDoubleTapWindow(null);
       handleDoubleTap(id);
     } else {
       lastTapRef.current = { id, time: now };
+      setDoubleTapWindow(id);
+      setTimeout(() => {
+        setDoubleTapWindow(null);
+      }, 350);
       singleAction();
     }
   };
@@ -768,7 +775,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
            <div className="grid grid-cols-4 gap-2">
               <button
                 onClick={() => handleTap('Drop', () => handleStatRecord('Drop'))}
-                disabled={activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
+                disabled={activeLineup.length === 0 || !isTrackingActive || (possessionChain.length === 0 && doubleTapWindow !== 'Drop') || isVoiceEnabled}
                 className={`relative overflow-hidden ${getActionClass("h-14 sm:h-16 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Drop')}`}
               >
                 {huckTargetId === 'Drop' && (
@@ -780,7 +787,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               </button>
               <button
                 onClick={() => handleTap('Throwaway', () => handleStatRecord('Throwaway'))}
-                disabled={activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
+                disabled={activeLineup.length === 0 || !isTrackingActive || (possessionChain.length === 0 && doubleTapWindow !== 'Throwaway') || isVoiceEnabled}
                 className={`relative overflow-hidden ${getActionClass("h-14 sm:h-16 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Throwaway')}`}
               >
                 {huckTargetId === 'Throwaway' && (
