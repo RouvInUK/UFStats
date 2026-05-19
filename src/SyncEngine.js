@@ -285,8 +285,8 @@ export const upgradeLastStatToHuck = async (gameName) => {
        navigator.onLine ? supabase.from('stats').update({ details: pointData.stats[statIndex].details }).eq('id', lastStat.id).catch(() => {}) : Promise.resolve()
     );
 
-    // Also upgrade the paired thrower action if it's a Drop/Throwaway
-    if (statIndex > 0) {
+    // Also upgrade the paired thrower action if it's a Drop
+    if (statIndex > 0 && lastStat.stat_type === 'Drop') {
       const prevStat = pointData.stats[statIndex - 1];
       if (['Pass', 'Pass Attempt'].includes(prevStat.stat_type) && prevStat.timestamp === lastStat.timestamp) {
          pointData.stats[statIndex - 1].details = { ...(pointData.stats[statIndex - 1].details || {}), is_huck: true };

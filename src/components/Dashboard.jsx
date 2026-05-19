@@ -29,6 +29,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
          pendingHuckRef.current.add(id);
          upgraded = true;
       } else {
+         await new Promise(resolve => setTimeout(resolve, 200));
          upgraded = await upgradeLastStatToHuck(currentGame);
       }
       
