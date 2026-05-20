@@ -13,9 +13,10 @@ import SpectatorMode from './components/SpectatorMode';
 import LandingPage from './components/LandingPage';
 import DemoFramework from './components/DemoFramework';
 import UpdatePassword from './components/UpdatePassword';
+import SettingsModal from './components/SettingsModal';
 import { fetchPlayers } from './supabaseClient';
 import { useAuth } from './contexts/AuthContext';
-import { ShieldCheck, Star, LogOut, Cloud, CloudOff, CloudUpload, Crown } from 'lucide-react';
+import { ShieldCheck, Star, LogOut, Cloud, CloudOff, CloudUpload, Crown, Settings } from 'lucide-react';
 import { getPendingSyncCount } from './SyncEngine';
 import { unlockAudio } from './utils/audioFeedback';
 
@@ -97,7 +98,7 @@ function App() {
 
   const { user, profile, loading: authLoading, authError, signOut } = useAuth();
   const [currentView, setCurrentView] = useState('dashboard');
-  
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   // Database State
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -467,6 +468,13 @@ function App() {
             Coach Pro ★
           </button>
           <button 
+            onClick={() => setIsSettingsOpen(true)}
+            className="p-2.5 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-all border border-white/10"
+            title="Settings"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
+          <button 
             onClick={() => {
                if (window.confirm("Are you sure you want to sign out?")) {
                   signOut();
@@ -514,6 +522,13 @@ function App() {
             title="Coach Pro"
           >
             <Star className="w-5 h-5" />
+          </button>
+          <button 
+            onClick={() => setIsSettingsOpen(true)}
+            className="p-2 text-slate-400 hover:text-white rounded-lg transition-all"
+            title="Settings"
+          >
+            <Settings className="w-5 h-5" />
           </button>
           <button 
             onClick={() => {
@@ -688,6 +703,13 @@ function App() {
           </>
         )}
       </nav>
+
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)}
+        isVoiceEnabled={isVoiceEnabled}
+        setIsVoiceEnabled={setIsVoiceEnabled}
+      />
     </div>
   );
 }

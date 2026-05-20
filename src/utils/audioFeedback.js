@@ -32,6 +32,7 @@ export const unlockAudio = async () => {
 };
 
 export const playChime = async () => {
+  if (localStorage.getItem('ufstats_audio_enabled') === 'false') return;
   try {
     await initAudio();
     if (!audioCtx) return;
@@ -57,6 +58,7 @@ export const playChime = async () => {
 };
 
 export const playClick = async () => {
+  if (localStorage.getItem('ufstats_audio_enabled') === 'false') return;
   try {
     await initAudio();
     if (!audioCtx) return;
@@ -80,6 +82,7 @@ export const playClick = async () => {
 };
 
 export const playBuzz = async () => {
+  if (localStorage.getItem('ufstats_audio_enabled') === 'false') return;
   try {
     await initAudio();
     if (!audioCtx) return;

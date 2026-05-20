@@ -17,7 +17,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
 
   const handleDoubleTap = async (id) => {
     try {
-      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      if (typeof navigator !== 'undefined' && navigator.vibrate && localStorage.getItem('ufstats_haptic_enabled') !== 'false') {
         navigator.vibrate([30, 50, 30, 50, 30]); // Unique double pulse
       }
       setHuckTargetId(id);
@@ -53,7 +53,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     const isDoubleTap = lastTapRef.current.id === id && (now - lastTapRef.current.time) < 350;
     
     // Immediate tactile feedback for every tap guarantees user gesture recognition
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    if (typeof navigator !== 'undefined' && navigator.vibrate && localStorage.getItem('ufstats_haptic_enabled') !== 'false') {
       try { navigator.vibrate(30); } catch (e) {}
     }
     
@@ -84,7 +84,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     setFlashType(type);
     
     try {
-      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      if (typeof navigator !== 'undefined' && navigator.vibrate && localStorage.getItem('ufstats_haptic_enabled') !== 'false') {
         if (type === 'success') navigator.vibrate([50, 50, 50]);
         else if (type === 'error') navigator.vibrate([100, 50, 100]);
         else navigator.vibrate(40);
