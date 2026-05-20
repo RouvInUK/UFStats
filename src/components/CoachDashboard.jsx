@@ -69,7 +69,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
     setIsDropdownOpen(false);
   };
 
-  const { playerStats, timeline, score, teamSummary, connectionsMap, totalTeamSecondaryAssists, twoGameTrend, isMultiGame } = useMemo(() => {
+  const { playerStats, timeline, score, teamSummary, connectionsMap, twoGameTrend, isMultiGame } = useMemo(() => {
     const isMultiGame = selectedGames.length > 1;
     const playersMap = {};
     const timelineData = [];
@@ -252,7 +252,6 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
 
     let globalHoldsPlayed = 0; let globalHoldsWon = 0;
     let globalBreaksPlayed = 0; let globalBreaksWon = 0;
-    let totalTeamSecondaryAssists = 0;
 
     Object.entries(pointOutcomes).forEach(([ptKey, outcome]) => {
        const turnovers = pointTurnovers[ptKey] || 0;
@@ -340,7 +339,6 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       const oce = parseFloat(oceRaw.toFixed(1));
       
       const ova = (p.cleanHolds * 0.5) + (p.assists * 2.0) + (p.secondaryAssists * 1.5);
-      totalTeamSecondaryAssists += p.secondaryAssists;
 
       let tags = [];
       if (!isMultiGame || p.pointsPlayedSet.size >= 10) {
@@ -436,7 +434,6 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       teamSummary: { totalTouches: teamTouchesCount, totalGoals, totalAssists, totalTurnovers, totalBlocks, totalThrowaways, totalDrops, totalStalls },
       coachInsight: insight,
       connectionsMap,
-      totalTeamSecondaryAssists,
       twoGameTrend,
       isMultiGame
     };

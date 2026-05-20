@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { recordStatToDB, fetchActiveGames, clearActiveLineup, fetchLastStatForGame, deleteStat, fetchGameStats } from '../supabaseClient';
 import { upgradeLastStatToHuck } from '../SyncEngine';
 import { Undo2, ArrowLeftRight, Mic, MicOff } from 'lucide-react';
-import Fuse from 'fuse.js';
 import { playChime, playClick, playBuzz } from '../utils/audioFeedback';
 
 const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, gameType, currentTeam, targetTeamId, opponentName, initialPossession, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers, isVoiceEnabled, setIsVoiceEnabled, isPro, isVoiceBeta }) => {
@@ -374,12 +373,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     
     expectedCommands.push({ text: `opponent score`, action: 'Opponent Point', player: 'Opponent' });
 
-    // Initialize Fuse for full-phrase matching
-    const fuse = new Fuse(expectedCommands, {
-       keys: ['text'],
-       threshold: 0.3, // Tighter fuzziness to prevent matching incorrect numbers
-       includeScore: true
-    });
+
 
     // 2. Build and apply Grammar Hints (Chrome only)
     if (SpeechGrammarList && expectedCommands.length > 0) {

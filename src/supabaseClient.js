@@ -58,9 +58,13 @@ export const recordLineup = async (players, pointNumber, gameName, gameType, tea
 // --- Roster & Lineup API Helpers ---
 
 export const fetchAllTeamNames = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
   const { data, error } = await supabase
     .from('teams')
     .select('name')
+    .eq('owner_id', user.id)
     .order('name', { ascending: true });
 
   if (error) throw error;
@@ -640,6 +644,15 @@ export const deleteClub = async (clubId) => {
     .from('clubs')
     .delete()
     .eq('id', clubId);
+    
+  if (error) throw error;
+};
+
+export const deleteTeam = async (teamId) => {
+  const { error } = await supabase
+    .from('teams')
+    .delete()
+    .eq('id', teamId);
     
   if (error) throw error;
 };

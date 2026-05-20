@@ -245,6 +245,8 @@ function App() {
 
   const effectiveTeamName = shadowTeam?.name || currentTeam?.name || (typeof currentTeam === 'string' ? currentTeam : '');
 
+  const isAdminAndNoShadow = profile?.is_system_admin && !shadowTeam;
+
   useEffect(() => {
     if (!user) return;
     const loadData = async () => {
@@ -318,11 +320,17 @@ function App() {
     localStorage.setItem('ufstats_tracking', isTrackingActive.toString());
   }, [isTrackingActive]);
 
-  // If there's no team selected and we're not in the admin view, force team_selection view
+  // Handle automatic views routing and redirection
   useEffect(() => {
     // Only run this logic if auth has finished loading and we have a profile to avoid premature redirects
-    if (!authLoading && profile && !effectiveTeamName && !shadowTeam && currentView !== 'admin' && currentView !== 'team_selection') {
-      setCurrentView('team_selection');
+    if (!authLoading && profile) {
+      if (profile.is_system_admin && !shadowTeam) {
+        if (!['admin', 'team_selection'].includes(currentView)) {
+          setCurrentView('admin');
+        }
+      } else if (!effectiveTeamName && !shadowTeam && currentView !== 'admin' && currentView !== 'team_selection') {
+        setCurrentView('team_selection');
+      }
     }
   }, [effectiveTeamName, shadowTeam, currentView, authLoading, profile]);
 
@@ -420,7 +428,7 @@ function App() {
       {/* Premium Desktop Header */}
       <div className="hidden sm:flex justify-between items-center px-8 py-4 bg-slate-950/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 shadow-xl">
         <div className="flex items-center gap-6">
-          <div className="text-xl font-black text-white lowercase tracking-widest flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView('dashboard')}>
+          <div className="text-xl font-black text-white lowercase tracking-widest flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView(isAdminAndNoShadow ? 'admin' : 'dashboard')}>
             <img src="/logo.png" alt="ustats.pro logo" className="w-8 h-8 rounded-full" />
             <span>ustats<span className="text-indigo-500 font-light">.pro</span></span>
             <BetaBadge />
@@ -474,7 +482,7 @@ function App() {
       {/* Mobile Header */}
       <div className="sm:hidden flex flex-col px-4 py-3 bg-slate-950/90 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 shadow-md gap-2">
         <div className="flex justify-between items-center w-full">
-          <div className="text-lg font-black text-white lowercase tracking-widest flex items-center gap-1.5 cursor-pointer" onClick={() => setCurrentView('dashboard')}>
+          <div className="text-lg font-black text-white lowercase tracking-widest flex items-center gap-1.5 cursor-pointer" onClick={() => setCurrentView(isAdminAndNoShadow ? 'admin' : 'dashboard')}>
             <img src="/logo.png" alt="ustats.pro logo" className="w-6 h-6 rounded-full" />
             <span>ustats<span className="text-indigo-500 font-light">.pro</span></span>
             {profile?.tier === 'PRO' ? (
@@ -528,7 +536,7 @@ function App() {
         )}
       </div>
 
-      {currentView === 'dashboard' && (
+      {currentView === 'dashboard' && !isAdminAndNoShadow && (
         <Dashboard 
           activeLineup={activeLineup} 
           currentPoint={currentPoint}
@@ -553,11 +561,11 @@ function App() {
         />
       )}
 
-      {currentView === 'analytics' && (
+      {currentView === 'analytics' && !isAdminAndNoShadow && (
         <Analytics targetTeamId={targetTeamId} players={players} />
       )}
       
-      {currentView === 'roster' && (
+      {currentView === 'roster' && !isAdminAndNoShadow && (
         <RosterSetup 
           players={players} 
           setPlayers={setPlayers}
@@ -568,7 +576,7 @@ function App() {
         />
       )}
 
-      {currentView === 'lineup' && (
+      {currentView === 'lineup' && !isAdminAndNoShadow && (
         <LineupSelector 
           players={players} 
           setPlayers={setPlayers}
@@ -591,7 +599,7 @@ function App() {
         />
       )}
 
-      {currentView === 'coach' && (
+      {currentView === 'coach' && !isAdminAndNoShadow && (
         <CoachDashboard 
           currentGame={currentGame}
           currentTeam={effectiveTeamName}
@@ -601,13 +609,30 @@ function App() {
         />
       )}
 
-      {currentView === 'log' && (
+      {currentView === 'log' && !isAdminAndNoShadow && (
         <EventLog 
           currentGame={currentGame}
           currentTeam={effectiveTeamName}
           targetTeamId={targetTeamId}
           onNavigate={setCurrentView} 
         />
+      )}
+
+      {isAdminAndNoShadow && ['dashboard', 'analytics', 'roster', 'lineup', 'coach', 'log'].includes(currentView) && (
+        <div className="flex-1 flex flex-col items-center justify-center min-h-[75vh] p-6 bg-slate-950 text-center">
+          <div className="max-w-md w-full bg-slate-900/60 backdrop-blur-xl border border-indigo-500/20 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+            <div className="flex justify-center mb-6">
+              <div className="p-4 bg-indigo-500/10 rounded-full border border-indigo-500/20">
+                <ShieldCheck className="w-12 h-12 text-indigo-400" />
+              </div>
+            </div>
+            <h2 className="text-2xl font-black text-white mb-3 uppercase tracking-widest">Impersonation Required</h2>
+            <p className="text-slate-400 text-sm leading-relaxed mb-8">You are logged in as a System Administrator. All tracking dashboards are locked until you select a team to impersonate from the Admin Panel.</p>
+            <button onClick={() => setCurrentView('admin')} className="w-full py-4 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-black rounded-2xl shadow-lg uppercase tracking-widest text-sm flex items-center justify-center gap-2">
+              <ShieldCheck className="w-4 h-4" /> Go to Admin Panel
+            </button>
+          </div>
+        </div>
       )}
 
       {currentView === 'admin' && profile?.is_system_admin && (
@@ -620,6 +645,8 @@ function App() {
       {currentView === 'team_selection' && (
         <TeamSelectionScreen 
           allowAutoSelect={false}
+          activeTeamId={currentTeam?.id}
+          onDeleteActiveTeam={() => setCurrentTeam(null)}
           onSelectTeam={(team) => {
             setCurrentTeam(team);
             setCurrentView('dashboard');
@@ -634,22 +661,32 @@ function App() {
           <span className={`text-xl leading-none transition-transform ${currentView === 'team_selection' ? 'scale-125' : 'scale-100'}`}>🛡️</span>
           <span className="text-[10px] uppercase tracking-wider">Teams</span>
         </button>
-        <button onClick={() => setCurrentView('dashboard')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'dashboard' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
-          <span className={`text-xl leading-none transition-transform ${currentView === 'dashboard' ? 'scale-125' : 'scale-100'}`}>🎯</span>
-          <span className="text-[10px] uppercase tracking-wider">Track</span>
-        </button>
-        <button onClick={() => setCurrentView('lineup')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'lineup' || currentView === 'roster' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
-          <span className={`text-xl leading-none transition-transform ${currentView === 'lineup' || currentView === 'roster' ? 'scale-125' : 'scale-100'}`}>👕</span>
-          <span className="text-[10px] uppercase tracking-wider">Lineup</span>
-        </button>
-        <button onClick={() => setCurrentView('log')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'log' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
-          <span className={`text-xl leading-none transition-transform ${currentView === 'log' ? 'scale-125' : 'scale-100'}`}>📜</span>
-          <span className="text-[10px] uppercase tracking-wider">Log</span>
-        </button>
-        <button onClick={() => setCurrentView('analytics')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'analytics' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
-          <span className={`text-xl leading-none transition-transform ${currentView === 'analytics' ? 'scale-125' : 'scale-100'}`}>📊</span>
-          <span className="text-[10px] uppercase tracking-wider">Data</span>
-        </button>
+        {profile?.is_system_admin && (
+          <button onClick={() => setCurrentView('admin')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'admin' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
+            <span className={`text-xl leading-none transition-transform ${currentView === 'admin' ? 'scale-125' : 'scale-100'}`}>⚙️</span>
+            <span className="text-[10px] uppercase tracking-wider">Admin</span>
+          </button>
+        )}
+        {!isAdminAndNoShadow && (
+          <>
+            <button onClick={() => setCurrentView('dashboard')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'dashboard' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
+              <span className={`text-xl leading-none transition-transform ${currentView === 'dashboard' ? 'scale-125' : 'scale-100'}`}>🎯</span>
+              <span className="text-[10px] uppercase tracking-wider">Track</span>
+            </button>
+            <button onClick={() => setCurrentView('lineup')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'lineup' || currentView === 'roster' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
+              <span className={`text-xl leading-none transition-transform ${currentView === 'lineup' || currentView === 'roster' ? 'scale-125' : 'scale-100'}`}>👕</span>
+              <span className="text-[10px] uppercase tracking-wider">Lineup</span>
+            </button>
+            <button onClick={() => setCurrentView('log')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'log' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
+              <span className={`text-xl leading-none transition-transform ${currentView === 'log' ? 'scale-125' : 'scale-100'}`}>📜</span>
+              <span className="text-[10px] uppercase tracking-wider">Log</span>
+            </button>
+            <button onClick={() => setCurrentView('analytics')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'analytics' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
+              <span className={`text-xl leading-none transition-transform ${currentView === 'analytics' ? 'scale-125' : 'scale-100'}`}>📊</span>
+              <span className="text-[10px] uppercase tracking-wider">Data</span>
+            </button>
+          </>
+        )}
       </nav>
     </div>
   );
