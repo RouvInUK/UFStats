@@ -798,3 +798,50 @@ export const restoreLineupForPoint = async (gameName, pointNumber, teamName) => 
 
   return activePlayers;
 };
+
+// ==========================================
+// MANAGED LINES (Line Templates)
+// ==========================================
+
+export const fetchManagedLines = async (teamId) => {
+  if (!navigator.onLine) return null;
+  if (!teamId || !(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamId))) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('teams')
+      .select('managed_lines')
+      .eq('id', teamId)
+      .single();
+
+    if (error) {
+      console.warn("Failed to fetch managed lines:", error);
+      return null;
+    }
+    return data?.managed_lines || [];
+  } catch (err) {
+    console.warn("Exception fetching managed lines:", err);
+    return null;
+  }
+};
+
+export const saveManagedLines = async (teamId, lines) => {
+  if (!navigator.onLine) return false;
+  if (!teamId || !(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teamId))) return false;
+
+  try {
+    const { error } = await supabase
+      .from('teams')
+      .update({ managed_lines: lines })
+      .eq('id', teamId);
+      
+    if (error) {
+      console.error("Failed to save managed lines to cloud:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("Exception saving managed lines:", err);
+    return false;
+  }
+};

@@ -1,4 +1,4 @@
-import { togglePlayerActiveStatus, clearActiveLineup, setLineupActiveStatus, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB, checkIfHalfTimeLogged, fetchActiveGames, deletePoint, fetchGameStats } from '../supabaseClient';
+import { togglePlayerActiveStatus, clearActiveLineup, setLineupActiveStatus, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB, checkIfHalfTimeLogged, fetchActiveGames, deletePoint, fetchGameStats, fetchManagedLines, saveManagedLines } from '../supabaseClient';
 import { useState, useEffect } from 'react';
 import { Undo2, Mic, MicOff, Share2, Users, LayoutList } from 'lucide-react';
 import PullTracker from './PullTracker';
@@ -23,21 +23,37 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
   const [activeLineId, setActiveLineId] = useState(null);
 
   useEffect(() => {
-    if (targetTeamId) {
-      const saved = localStorage.getItem(`lines_${targetTeamId}`);
-      if (saved) {
-        try {
-          setLines(JSON.parse(saved));
-        } catch (e) {
-          console.error("Failed to parse lines");
+    const loadLines = async () => {
+      if (targetTeamId) {
+        // Fallback or Initial Load from LocalStorage
+        const saved = localStorage.getItem(`lines_${targetTeamId}`);
+        if (saved) {
+          try {
+            setLines(JSON.parse(saved));
+          } catch (e) {
+            console.error("Failed to parse lines");
+          }
+        }
+        
+        // Sync from Cloud
+        if (navigator.onLine) {
+           const cloudLines = await fetchManagedLines(targetTeamId);
+           if (cloudLines && cloudLines.length > 0) {
+             setLines(cloudLines);
+             localStorage.setItem(`lines_${targetTeamId}`, JSON.stringify(cloudLines));
+           }
         }
       }
-    }
+    };
+    loadLines();
   }, [targetTeamId]);
 
-  const handleSaveLines = (newLines) => {
+  const handleSaveLines = async (newLines) => {
     setLines(newLines);
     localStorage.setItem(`lines_${targetTeamId}`, JSON.stringify(newLines));
+    if (navigator.onLine) {
+      await saveManagedLines(targetTeamId, newLines);
+    }
   };
 
   const filteredPlayers = players;
