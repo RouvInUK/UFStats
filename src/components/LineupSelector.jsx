@@ -123,8 +123,9 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     }
   };
 
-  const handleStartPoint = async () => {
-    const activeLineupNames = filteredPlayers.filter(p => p.is_active).map(p => p.name);
+  const handleStartPoint = async (e = null, overridePlayers = null) => {
+    const playersToUse = overridePlayers || filteredPlayers;
+    const activeLineupNames = playersToUse.filter(p => p.is_active).map(p => p.name);
     const expectedCount = gameType === 'grass' ? 7 : (gameType === 'beach' || gameType === 'indoor' ? 5 : 0);
     
     if (expectedCount > 0 && activeLineupNames.length !== expectedCount) {
