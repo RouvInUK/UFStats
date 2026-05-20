@@ -339,17 +339,6 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     } catch {
       if (navigator.onLine) alert("Failed to sync line selection to cloud.");
     }
-
-    // Auto-confirm if exact and game is valid
-    if (selectedCount === requiredCount) {
-      if (currentPoint === 0 && (!opponentName || (gameType !== 'training' && !initialPossession))) return;
-      if (!currentGame) return;
-      
-      setTimeout(() => {
-         // Proceed to next step
-         handleStartPoint(null, updatedPlayers);
-      }, 300);
-    }
   };
 
   const activeCount = filteredPlayers.filter(p => p.is_active).length;
