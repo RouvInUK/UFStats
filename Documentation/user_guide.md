@@ -1,5 +1,8 @@
-# UStats Pro – Complete User Guide (v 2026‑05‑20)
-
+<div align="center">
+  <img src="images/logo.png" width="150" alt="UStats Pro Logo">
+  <h1>UStats Pro</h1>
+  <p><b>The Complete User Guide</b> (v 2026‑05‑21)</p>
+</div>
 ---
 
 ## 📖 Introduction
@@ -19,9 +22,9 @@ UStats Pro is a **web‑based, cross‑platform** application for tracking Ult
 ### 1.2 First‑time Onboarding Wizard
 | Step | What you do | Screenshots |
 |------|--------------|-------------|
-| **Create a Club** | Enter a club name (e.g., *Rouvin Ultimate*). Optionally upload a logo. | `![Create Club](placeholder1.png)` |
-| **Create a Team** | Choose the club, give the team a name (e.g., *UStats Pro A*), and select a **team colour** for UI accents. | `![Create Team](placeholder2.png)` |
-| **Add Players** | You’ll be taken to the **Player Roster** screen (see Section 3). | `![Add Players](placeholder3.png)` |
+| **Create a Club** | Enter a club name (e.g., *Rouvin Ultimate*). Optionally upload a logo. | <img src="images/screenshot_1.png" width="120" /> |
+| **Create a Team** | Choose the club, give the team a name (e.g., *UStats Pro A*), and select a **team colour** for UI accents. | <img src="images/screenshot_1.png" width="120" /> |
+| **Add Players** | You’ll be taken to the **Player Roster** screen (see Section 3). | <img src="images/screenshot_1.png" width="120" /> |
 
 Once the wizard finishes you land on the **Dashboard** for the newly created team.
 
