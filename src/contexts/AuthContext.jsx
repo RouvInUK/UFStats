@@ -18,15 +18,34 @@ export const AuthProvider = ({ children }) => {
   const [authError, setAuthError] = useState(null);
   const [sessionTerminated, setSessionTerminated] = useState(false);
 
-  const fetchProfile = async (userId, attempt = 1) => {
+  const fetchProfile = async (userId, attempt = 1, authEvent = 'INITIAL_SESSION') => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('is_system_admin, tier, beta_voice_pro')
+        .select('is_system_admin, tier, beta_voice_pro, current_session_id')
         .eq('id', userId)
         .single();
         
       if (error) throw error;
+      
+      let localSessionId = localStorage.getItem('ufstats_session_id');
+      if (!localSessionId) {
+          localSessionId = crypto.randomUUID();
+          localStorage.setItem('ufstats_session_id', localSessionId);
+      }
+
+      if (authEvent === 'SIGNED_IN' || !data.current_session_id) {
+          // Take ownership
+          await supabase.from('profiles').update({ current_session_id: localSessionId }).eq('id', userId);
+          data.current_session_id = localSessionId;
+      } else if (data.current_session_id !== localSessionId) {
+          // WE HAVE BEEN KICKED OUT BY ANOTHER DEVICE!
+          const isIntentional = sessionStorage.getItem('ufstats_intentional_logout') === 'true';
+          if (!isIntentional) {
+            setSessionTerminated(true);
+            return;
+          }
+      }
       
       setProfile(data);
       localStorage.setItem('ufstats_cached_profile', JSON.stringify(data));
@@ -35,7 +54,7 @@ export const AuthProvider = ({ children }) => {
       console.warn(`AuthContext: Profile fetch failed (Attempt ${attempt})`, err);
       if (err.code === 'PGRST116' && attempt < 3) {
         await new Promise(resolve => setTimeout(resolve, attempt * 1000));
-        return await fetchProfile(userId, attempt + 1);
+        return await fetchProfile(userId, attempt + 1, authEvent);
       }
       setAuthError(`DB Error ${err.code || 'UNKNOWN'}: ${err.message || 'Failed to sync profile.'}`);
     }
@@ -71,7 +90,7 @@ export const AuthProvider = ({ children }) => {
           
           // Fire and forget the profile sync! 
           // AWAITING HERE DEADLOCKS THE SUPABASE AUTH QUEUE IF IT HANGS!
-          fetchProfile(session.user.id).finally(() => {
+          fetchProfile(session.user.id, 1, event).finally(() => {
             if (mounted && !hasCache) setLoading(false);
           });
           
@@ -142,10 +161,14 @@ export const AuthProvider = ({ children }) => {
     let lastRefreshCheck = Date.now();
     
     const forceTokenCheck = async () => {
+      if (!user) return;
       try {
-        const { error } = await supabase.auth.refreshSession();
-        if (error && (error.message.toLowerCase().includes('invalid') || error.message.toLowerCase().includes('revoked') || error.message.toLowerCase().includes('expired'))) {
-          console.warn("AuthContext: Force token check failed - token likely revoked by another device.");
+        const { data, error } = await supabase.from('profiles').select('current_session_id').eq('id', user.id).single();
+        if (error) return;
+        
+        const localSessionId = localStorage.getItem('ufstats_session_id');
+        if (data && data.current_session_id && data.current_session_id !== localSessionId) {
+          console.warn("AuthContext: Force token check failed - session taken by another device.");
           const isIntentional = sessionStorage.getItem('ufstats_intentional_logout') === 'true';
           if (!isIntentional) {
             setSessionTerminated(true);
