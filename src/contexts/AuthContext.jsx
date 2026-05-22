@@ -139,15 +139,31 @@ export const AuthProvider = ({ children }) => {
     }
 
     // Check periodically (every 10 seconds)
-    const intervalId = setInterval(checkInactivity, 10000);
-
+    let lastRefreshCheck = Date.now();
+    
     // Also check immediately when the browser tab becomes visible again
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         checkInactivity();
+        if (Date.now() - lastRefreshCheck > 30000) {
+           lastRefreshCheck = Date.now();
+           supabase.auth.refreshSession().catch(() => {});
+        }
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Check periodically (every 10 seconds for inactivity, every 30 seconds for session validity)
+    let checksCount = 0;
+    const intervalId = setInterval(() => {
+       checkInactivity();
+       checksCount++;
+       if (checksCount >= 3) { // Every 30 seconds
+          checksCount = 0;
+          lastRefreshCheck = Date.now();
+          supabase.auth.refreshSession().catch(() => {});
+       }
+    }, 10000);
 
     const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
     
