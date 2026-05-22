@@ -257,14 +257,11 @@ const Analytics = ({ targetTeamId, players = [] }) => {
               <thead>
                 <tr className="border-b border-slate-700/50 uppercase text-xs tracking-wider text-slate-400 select-none">
                   <th className="p-4 font-bold cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('name')}>Player {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
-                  <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('pointsPlayed')}>PP {sortConfig.key === 'pointsPlayed' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
-                  <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('touches')}>Touches {sortConfig.key === 'touches' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                   <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('goals')}>Goals {sortConfig.key === 'goals' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                   <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('assists')}>Assists {sortConfig.key === 'assists' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                   <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors whitespace-nowrap" onClick={() => handleSort('passes')}>Passes <span className="text-[10px] opacity-70">(C/A)</span> {sortConfig.key === 'passes' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                   <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors whitespace-nowrap" onClick={() => handleSort('compPct')}>Comp % {sortConfig.key === 'compPct' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                   <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('defence')}>Defence {sortConfig.key === 'defence' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
-                  <th className="p-4 font-bold text-center cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('turnovers')}>Turnovers {sortConfig.key === 'turnovers' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
@@ -272,8 +269,6 @@ const Analytics = ({ targetTeamId, players = [] }) => {
                   return (
                     <tr key={row.name} className="hover:bg-slate-700/20 transition-colors">
                       <td className="p-4 text-white font-bold">{row.name}</td>
-                      <td className="p-4 text-center text-indigo-300 font-bold">{row.pointsPlayed}</td>
-                      <td className="p-4 text-center text-slate-300 font-bold">{row.touches}</td>
                       <td className="p-4 text-center">
                         <span className="inline-block w-8 h-8 leading-8 bg-emerald-500/10 text-emerald-400 font-bold rounded-lg text-sm">
                           {row.goals}
@@ -296,14 +291,6 @@ const Analytics = ({ targetTeamId, players = [] }) => {
                         <span className="inline-block w-8 h-8 leading-8 bg-orange-500/10 text-orange-400 font-bold rounded-lg text-sm">
                           {row.defence}
                         </span>
-                      </td>
-                      <td className="p-4 text-center text-sm">
-                        <span className="text-rose-400 font-bold">{row.turnovers}</span>
-                        {row.turnovers > 0 && (
-                          <span className="text-slate-500 text-xs ml-2">
-                            ({row.throwaways}T, {row.drops}D, {row.stallouts}S)
-                          </span>
-                        )}
                       </td>
                     </tr>
                   )
