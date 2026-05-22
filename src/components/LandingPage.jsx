@@ -5,6 +5,7 @@ import StandardFooter from './StandardFooter';
 const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isYearly, setIsYearly] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -210,7 +211,7 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
       <section id="pricing" className="relative py-24 sm:py-32 px-4 sm:px-8">
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-900/40 to-slate-950 pointer-events-none"></div>
         <div className="relative z-10 max-w-5xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full mb-4">
               <Star className="w-3.5 h-3.5 text-indigo-400" />
               <span className="text-xs font-bold text-indigo-300 tracking-widest uppercase">Pricing</span>
@@ -218,8 +219,29 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
             <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-4">
               Simple, <span className="text-indigo-400">Transparent</span> Pricing.
             </h2>
-            <p className="text-slate-400 max-w-xl mx-auto text-lg">Start free. Upgrade when you're ready to go deeper.</p>
+            <p className="text-slate-400 max-w-xl mx-auto text-lg mb-6">Start free. Upgrade when you're ready to go deeper.</p>
           </div>
+
+          {/* Billing Cycle Toggle */}
+          <div className="flex items-center justify-center gap-4 mb-12">
+            <span className={`text-sm font-semibold transition-colors duration-200 ${!isYearly ? 'text-white' : 'text-slate-400'}`}>Monthly</span>
+            <button 
+              onClick={() => setIsYearly(!isYearly)}
+              className="relative w-14 h-8 bg-indigo-950/40 hover:bg-indigo-950/60 border border-indigo-500/30 rounded-full transition-all duration-300 focus:outline-none p-1 flex items-center"
+              aria-label="Toggle billing cycle"
+            >
+              <div 
+                className={`w-6 h-6 bg-indigo-500 rounded-full transition-transform duration-300 shadow-md shadow-indigo-500/30 ${isYearly ? 'translate-x-6' : 'translate-x-0'}`}
+              />
+            </button>
+            <span className={`text-sm font-semibold transition-colors duration-200 flex items-center gap-1.5 ${isYearly ? 'text-white' : 'text-slate-400'}`}>
+              Annually
+              <span className="px-2 py-0.5 text-[10px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full uppercase tracking-wider">
+                Save 17%
+              </span>
+            </span>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Starter */}
             <div className="bg-slate-900/60 border border-white/10 rounded-3xl p-8 flex flex-col">
@@ -245,11 +267,17 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
               </div>
               <div className="mb-6">
                 <div className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-2">Coach Pro</div>
-                <div className="flex items-end gap-2 mb-1">
-                  <span className="text-5xl font-black text-white">$9</span>
-                  <span className="text-slate-400 text-lg mb-2">/month</span>
+                <div className="flex items-end gap-1 mb-1">
+                  <span className="text-5xl font-black text-white transition-all duration-300">
+                    {isYearly ? '£50' : '£5'}
+                  </span>
+                  <span className="text-slate-400 text-lg mb-1 transition-all duration-300">
+                    {isYearly ? '/year' : '/month'}
+                  </span>
                 </div>
-                <div className="text-slate-500 text-sm">Per club. Cancel anytime.</div>
+                <div className="text-slate-500 text-sm">
+                  Per club. {isYearly ? 'Billed annually.' : 'Billed monthly.'}
+                </div>
               </div>
               <div className="space-y-3 flex-1 mb-8">
                 <TierFeature text="Unlimited Clubs & Teams" pro />
