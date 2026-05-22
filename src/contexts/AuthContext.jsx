@@ -141,13 +141,26 @@ export const AuthProvider = ({ children }) => {
     // Check periodically (every 10 seconds)
     let lastRefreshCheck = Date.now();
     
+    const forceTokenCheck = async () => {
+      try {
+        const { error } = await supabase.auth.refreshSession();
+        if (error && (error.message.toLowerCase().includes('invalid') || error.message.toLowerCase().includes('revoked') || error.message.toLowerCase().includes('expired'))) {
+          console.warn("AuthContext: Force token check failed - token likely revoked by another device.");
+          const isIntentional = sessionStorage.getItem('ufstats_intentional_logout') === 'true';
+          if (!isIntentional) {
+            setSessionTerminated(true);
+          }
+        }
+      } catch (err) {}
+    };
+    
     // Also check immediately when the browser tab becomes visible again
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         checkInactivity();
         if (Date.now() - lastRefreshCheck > 30000) {
            lastRefreshCheck = Date.now();
-           supabase.auth.refreshSession().catch(() => {});
+           forceTokenCheck();
         }
       }
     };
@@ -161,7 +174,7 @@ export const AuthProvider = ({ children }) => {
        if (checksCount >= 3) { // Every 30 seconds
           checksCount = 0;
           lastRefreshCheck = Date.now();
-          supabase.auth.refreshSession().catch(() => {});
+          forceTokenCheck();
        }
     }, 10000);
 
