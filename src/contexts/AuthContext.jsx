@@ -16,6 +16,7 @@ export const AuthProvider = ({ children }) => {
   });
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
+  const [sessionTerminated, setSessionTerminated] = useState(false);
 
   const fetchProfile = async (userId, attempt = 1) => {
     try {
@@ -80,7 +81,15 @@ export const AuthProvider = ({ children }) => {
           localStorage.removeItem('ufstats_cached_profile');
           if (mounted) setLoading(false);
         }
-      } else if (event === 'SIGNED_OUT') {
+      } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESH_FAILED') {
+        const isIntentional = sessionStorage.getItem('ufstats_intentional_logout') === 'true';
+        if (!isIntentional && user) {
+          // If we had a user and got signed out unexpectedly (e.g. multi-session limit)
+          setSessionTerminated(true);
+        } else {
+          sessionStorage.removeItem('ufstats_intentional_logout');
+        }
+        
         setUser(null);
         setProfile(null);
         localStorage.removeItem('ufstats_cached_profile');
@@ -117,6 +126,7 @@ export const AuthProvider = ({ children }) => {
       const lastActivity = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
       if (lastActivity && (Date.now() - lastActivity > INACTIVITY_LIMIT)) {
         console.warn("AuthContext: Auto-logging out due to 15m inactivity (background check).");
+        sessionStorage.setItem('ufstats_intentional_logout', 'true');
         signOut();
         return true;
       }
@@ -176,6 +186,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signOut = async () => {
+    sessionStorage.setItem('ufstats_intentional_logout', 'true');
     // Fire and forget the official signout so it doesn't hang the UI
     supabase.auth.signOut().catch(err => {
       console.warn("AuthContext: Background signout error:", err);
@@ -197,6 +208,8 @@ export const AuthProvider = ({ children }) => {
     profile,
     loading,
     authError,
+    sessionTerminated,
+    setSessionTerminated,
     signIn,
     signUp,
     signOut,
