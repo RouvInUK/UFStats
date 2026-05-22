@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Volume2, Vibrate, Mic, Globe, Settings as SettingsIcon } from 'lucide-react';
+import { X, Volume2, Vibrate, Mic, Globe, Settings as SettingsIcon, Sun, Moon } from 'lucide-react';
 
 const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled }) => {
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isHapticEnabled, setIsHapticEnabled] = useState(true);
   const [language, setLanguage] = useState('en');
+  const [theme, setTheme] = useState(() => localStorage.getItem('ufstats_theme') || 'dark');
 
   // Load initial settings
   useEffect(() => {
@@ -12,10 +13,29 @@ const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled }) =
       setIsAudioEnabled(localStorage.getItem('ufstats_audio_enabled') !== 'false');
       setIsHapticEnabled(localStorage.getItem('ufstats_haptic_enabled') !== 'false');
       setLanguage(localStorage.getItem('ufstats_language') || 'en');
+      setTheme(localStorage.getItem('ufstats_theme') || 'dark');
     }
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    localStorage.setItem('ufstats_theme', nextTheme);
+    
+    // Smoothly transition theme
+    document.documentElement.classList.add('theme-transition');
+    if (nextTheme === 'light') {
+      document.documentElement.classList.add('light-mode');
+    } else {
+      document.documentElement.classList.remove('light-mode');
+    }
+    
+    setTimeout(() => {
+      document.documentElement.classList.remove('theme-transition');
+    }, 300);
+  };
 
   const toggleAudio = () => {
     const newValue = !isAudioEnabled;
@@ -70,6 +90,26 @@ const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled }) =
           <div className="space-y-4">
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Preferences</h3>
             
+            {/* Theme Toggle */}
+            <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+              <div className="flex items-center gap-4">
+                <div className={`p-2 rounded-xl bg-indigo-500/20 text-indigo-400`}>
+                  {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-white">Dark Theme</div>
+                  <div className="text-xs text-slate-400">Switch between light and dark grey interface</div>
+                </div>
+              </div>
+              <button 
+                onClick={toggleTheme}
+                aria-label="Toggle dark theme"
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${theme === 'dark' ? 'bg-indigo-500' : 'bg-slate-600'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${theme === 'dark' ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
             {/* Audio Toggle */}
             <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
               <div className="flex items-center gap-4">

@@ -79,6 +79,16 @@ const SyncIndicator = () => {
 function App() {
   const [path, setPath] = useState(window.location.pathname);
 
+  // Initialize theme from localStorage on boot
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('ufstats_theme') || 'dark';
+    if (savedTheme === 'light') {
+      document.documentElement.classList.add('light-mode');
+    } else {
+      document.documentElement.classList.remove('light-mode');
+    }
+  }, []);
+
   // Patch pushState and replaceState globally to synchronize location changes with React state
   useEffect(() => {
     const handleLocationChange = () => {

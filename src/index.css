@@ -2,6 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Default: Premium Dark Charcoal Grey Theme (User preferred) */
+  --color-slate-50: #f9fafb;
+  --color-slate-100: #f3f4f6;
+  --color-slate-200: #e5e7eb;
+  --color-slate-300: #d1d5db;
+  --color-slate-400: #9ca3af;
+  --color-slate-500: #6b7280;
+  --color-slate-600: #4b5563;
+  --color-slate-700: #374151;
+  --color-slate-800: #1f2937; /* Dark Grey Accent/Card Border */
+  --color-slate-900: #111827; /* Dark Grey Card Background */
+  --color-slate-950: #080c14; /* Dark Grey App Background */
+
+  /* Branding Accent colors mapped to Indigo for seamless backward-compatibility */
+  --color-indigo-50: #f0fdf9;
+  --color-indigo-100: #ccfbf0;
+  --color-indigo-200: #99f6e0;
+  --color-indigo-300: #5eead0;
+  --color-indigo-400: #2dd4bc; /* Brand Light Teal */
+  --color-indigo-500: #17B890; /* Brand Teal Accent */
+  --color-indigo-600: #0C2B54; /* Brand Navy Accent */
+  --color-indigo-700: #0a2243;
+  --color-indigo-800: #081a32;
+  --color-indigo-900: #051020;
+  --color-indigo-950: #02070f;
+}
+
+/* Light Theme Mode: Inverse Mapping for instant light layout conversions */
+html.light-mode {
+  --color-slate-50: #090d16;
+  --color-slate-100: #182235;
+  --color-slate-200: #24324d;
+  --color-slate-300: #384c70;
+  --color-slate-400: #526b96;
+  --color-slate-500: #6b82a7;
+  --color-slate-600: #9cb1d1;
+  --color-slate-700: #cbd7ea;
+  --color-slate-800: #e2e8f0; /* Light card borders / accent lines */
+  --color-slate-900: #f3f4f6; /* Light secondary background */
+  --color-slate-950: #ffffff; /* Light page base background */
+
+  /* Make accents pop cleanly on light backgrounds */
+  --color-indigo-600: #17B890; /* Swap to teal for main light CTAs */
+  --color-indigo-500: #0C2B54; /* Swap to navy for brand accent glows */
+}
+
+/* Smooth Theme Transitions */
+.theme-transition,
+.theme-transition body,
+.theme-transition div,
+.theme-transition nav,
+.theme-transition footer,
+.theme-transition button,
+.theme-transition span,
+.theme-transition p,
+.theme-transition h1,
+.theme-transition h2,
+.theme-transition h3,
+.theme-transition h4 {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease !important;
+}
+
 @media print {
   body {
     background-color: #0f172a !important; /* Keep the dark theme for print to match the dashboard aesthetics */
