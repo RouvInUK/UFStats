@@ -155,3 +155,19 @@ html.beach-mode *:focus-visible {
   outline-offset: 3px !important;
 }
 
+/* ==========================================================================
+   Logo Optimization: Soft Tech Glow Accents for Dark & Light Themes
+   ========================================================================== */
+img[src*="logo.png"] {
+  filter: drop-shadow(0 0 10px rgba(23, 184, 144, 0.25));
+  transition: filter 0.25s ease;
+}
+
+html.light-mode img[src*="logo.png"] {
+  filter: drop-shadow(0 2px 6px rgba(12, 43, 84, 0.08));
+}
+
+html.beach-mode img[src*="logo.png"] {
+  filter: contrast(1.5) !important;
+}
+
