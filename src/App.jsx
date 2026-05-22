@@ -83,12 +83,15 @@ function App() {
   useEffect(() => {
     const savedTheme = localStorage.getItem('ufstats_theme') || 'dark';
     const themeColorMetaTags = document.querySelectorAll('meta[name="theme-color"]');
+    const manifestEl = document.getElementById('manifest-link');
     if (savedTheme === 'light') {
       document.documentElement.classList.add('light-mode');
       themeColorMetaTags.forEach(tag => tag.setAttribute('content', '#ffffff'));
+      if (manifestEl) manifestEl.setAttribute('href', '/manifest.json');
     } else {
       document.documentElement.classList.remove('light-mode');
       themeColorMetaTags.forEach(tag => tag.setAttribute('content', '#080c14'));
+      if (manifestEl) manifestEl.setAttribute('href', '/manifest_dark.json');
     }
   }, []);
 

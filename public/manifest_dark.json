@@ -3,12 +3,12 @@
   "short_name": "ustats.pro",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "background_color": "#080c14",
+  "theme_color": "#080c14",
   "description": "Professional Ultimate Frisbee Statistics Tracker",
   "icons": [
     {
-      "src": "logo_light_icon.png",
+      "src": "logo_dark_icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

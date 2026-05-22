@@ -27,12 +27,15 @@ const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled }) =
     // Smoothly transition theme
     document.documentElement.classList.add('theme-transition');
     const themeColorMetaTags = document.querySelectorAll('meta[name="theme-color"]');
+    const manifestEl = document.getElementById('manifest-link');
     if (nextTheme === 'light') {
       document.documentElement.classList.add('light-mode');
       themeColorMetaTags.forEach(tag => tag.setAttribute('content', '#ffffff'));
+      if (manifestEl) manifestEl.setAttribute('href', '/manifest.json');
     } else {
       document.documentElement.classList.remove('light-mode');
       themeColorMetaTags.forEach(tag => tag.setAttribute('content', '#080c14'));
+      if (manifestEl) manifestEl.setAttribute('href', '/manifest_dark.json');
     }
     
     setTimeout(() => {
