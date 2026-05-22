@@ -74,8 +74,8 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
           {/* Logo */}
           <div className="mb-10 flex justify-center">
             <div className="relative">
-              <img src="/logo.png" alt="ustats.pro Scientific Logo" className="w-40 h-40 sm:w-56 sm:h-56 rounded-[2.5rem] shadow-2xl shadow-indigo-500/30" />
-              <div className="absolute inset-0 rounded-[2.5rem] bg-gradient-to-br from-indigo-500/20 to-transparent pointer-events-none"></div>
+              <img src="/logo.png" alt="ustats.pro Scientific Logo" className="w-80 h-80 sm:w-[28rem] sm:h-[28rem] rounded-[4rem] shadow-2xl shadow-indigo-500/30" />
+              <div className="absolute inset-0 rounded-[4rem] bg-gradient-to-br from-indigo-500/20 to-transparent pointer-events-none"></div>
             </div>
           </div>
 
