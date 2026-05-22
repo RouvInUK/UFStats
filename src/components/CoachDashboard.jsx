@@ -9,6 +9,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
   const [loading, setLoading] = useState(false);
   const [visualGameType, setVisualGameType] = useState('beach');
   const [selectedGames, setSelectedGames] = useState(currentGame ? [currentGame] : []);
+  const [pendingSelectedGames, setPendingSelectedGames] = useState(currentGame ? [currentGame] : []);
   const [allGames, setAllGames] = useState([]);
   const [allTeams, setAllTeams] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -23,8 +24,10 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       setAllGames(names);
       if (currentGame && names.includes(currentGame)) {
         setSelectedGames([currentGame]);
+        setPendingSelectedGames([currentGame]);
       } else {
         setSelectedGames([]);
+        setPendingSelectedGames([]);
       }
     });
   }, [targetTeamId, currentGame]);
@@ -62,10 +65,14 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
     loadStats();
   }, [selectedGames, targetTeamId]);
 
-  const toggleGameSelection = (game) => {
-    setSelectedGames(prev => 
+  const togglePendingGame = (game) => {
+    setPendingSelectedGames(prev => 
       prev.includes(game) ? prev.filter(g => g !== game) : [...prev, game]
     );
+  };
+
+  const confirmSelection = () => {
+    setSelectedGames(pendingSelectedGames);
     setIsDropdownOpen(false);
   };
 
@@ -470,7 +477,10 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
           <div className="relative w-full" ref={dropdownRef}>
             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">2. Select Matches to Analyze</label>
             <button 
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              onClick={() => {
+                 if (!isDropdownOpen) setPendingSelectedGames(selectedGames);
+                 setIsDropdownOpen(!isDropdownOpen);
+              }}
               className="w-full flex items-center justify-between px-6 py-4 bg-slate-800 rounded-2xl border border-slate-700 text-left transition-all hover:bg-slate-700"
             >
             <span className="font-bold text-slate-200">Select Matches to Analyze</span>
@@ -478,23 +488,28 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
           </button>
           
           {isDropdownOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-2xl shadow-xl overflow-hidden z-50 max-h-64 flex flex-col">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-2xl shadow-xl overflow-hidden z-50 max-h-80 flex flex-col">
               <div className="flex gap-2 p-3 border-b border-slate-700/50 shrink-0">
-                <button onClick={() => { setSelectedGames(allGames); setIsDropdownOpen(false); }} className="flex-1 px-2 py-2 bg-slate-900 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors border border-slate-700">Select All</button>
-                <button onClick={() => { setSelectedGames(allGames.slice(0, 3)); setIsDropdownOpen(false); }} className="flex-1 px-2 py-2 bg-slate-900 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors border border-slate-700">Select Last 3</button>
+                <button onClick={() => setPendingSelectedGames(allGames)} className="flex-1 px-2 py-2 bg-slate-900 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors border border-slate-700">Select All</button>
+                <button onClick={() => setPendingSelectedGames(allGames.slice(0, 3))} className="flex-1 px-2 py-2 bg-slate-900 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors border border-slate-700">Select Last 3</button>
               </div>
               <div className="overflow-y-auto">
                 {allGames.map(game => (
                   <div 
                     key={game} 
-                    onClick={() => toggleGameSelection(game)}
+                    onClick={() => togglePendingGame(game)}
                     className="flex items-center justify-between px-6 py-3 cursor-pointer hover:bg-slate-700 transition-colors border-b border-slate-700/50 last:border-0 text-slate-200 font-medium"
                   >
-                    {game}
-                    {selectedGames.includes(game) && <Check className="w-5 h-5 text-indigo-500" />}
+                    <span className="truncate pr-2">{game}</span>
+                    <div className="flex items-center justify-center w-5 h-5 rounded border border-slate-500 bg-slate-900">
+                      {pendingSelectedGames.includes(game) && <Check className="w-3.5 h-3.5 text-indigo-400" />}
+                    </div>
                   </div>
                 ))}
                 {allGames.length === 0 && <div className="p-4 text-center text-slate-500 text-sm">No games logged yet.</div>}
+              </div>
+              <div className="p-3 border-t border-slate-700/50 shrink-0">
+                <button onClick={confirmSelection} className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all">Confirm Selection</button>
               </div>
             </div>
           )}
@@ -538,7 +553,10 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
         <div className="w-full sm:w-auto flex flex-wrap items-center gap-4">
           <div className="relative group" ref={dropdownRef}>
             <button 
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              onClick={() => {
+                 if (!isDropdownOpen) setPendingSelectedGames(selectedGames);
+                 setIsDropdownOpen(!isDropdownOpen);
+              }}
               className="flex items-center gap-2 group-hover:opacity-80 transition-opacity"
             >
               <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase">
@@ -547,25 +565,30 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
               <ChevronDown className="w-6 h-6 text-indigo-400 bg-indigo-500/10 rounded-full p-1" />
             </button>
             {isDropdownOpen && (
-            <div className="absolute top-full left-0 mt-4 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-50 max-h-64 flex flex-col">
+            <div className="absolute top-full left-0 mt-4 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-50 max-h-[32rem] flex flex-col">
               <div className="p-3 border-b border-slate-800 flex items-center justify-between">
                 <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Select Matches</span>
               </div>
               <div className="flex gap-2 p-3 border-b border-slate-800 shrink-0">
-                <button onClick={() => { setSelectedGames(allGames); setIsDropdownOpen(false); }} className="flex-1 px-2 py-1.5 bg-slate-800 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors">Select All</button>
-                <button onClick={() => { setSelectedGames(allGames.slice(0, 3)); setIsDropdownOpen(false); }} className="flex-1 px-2 py-1.5 bg-slate-800 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors">Last 3</button>
+                <button onClick={() => setPendingSelectedGames(allGames)} className="flex-1 px-2 py-1.5 bg-slate-800 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors">Select All</button>
+                <button onClick={() => setPendingSelectedGames(allGames.slice(0, 3))} className="flex-1 px-2 py-1.5 bg-slate-800 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-colors">Last 3</button>
               </div>
               <div className="overflow-y-auto">
                 {allGames.map(game => (
                   <div 
                     key={game} 
-                    onClick={() => toggleGameSelection(game)}
+                    onClick={() => togglePendingGame(game)}
                     className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-800 transition-colors border-b border-slate-800/50 last:border-0 text-slate-200 text-sm font-medium"
                   >
                     <span className="truncate pr-2">{game}</span>
-                    {selectedGames.includes(game) && <Check className="w-4 h-4 text-indigo-500 shrink-0" />}
+                    <div className="flex items-center justify-center w-4 h-4 rounded border border-slate-500 bg-slate-950 shrink-0">
+                      {pendingSelectedGames.includes(game) && <Check className="w-3 h-3 text-indigo-400" />}
+                    </div>
                   </div>
                 ))}
+              </div>
+              <div className="p-3 border-t border-slate-800 shrink-0">
+                <button onClick={confirmSelection} className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl transition-all">Confirm Selection</button>
               </div>
             </div>
           )}
