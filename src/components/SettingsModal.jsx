@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { X, Volume2, Vibrate, Mic, Globe, Settings as SettingsIcon, Sun, Moon } from 'lucide-react';
+import { 
+  getLegalPath, 
+  FULL_COMPANY_NAME, 
+  COMPANY_NUMBER, 
+  PLACE_OF_REGISTRATION, 
+  REGISTERED_OFFICE_ADDRESS, 
+  SUPPORT_EMAIL 
+} from '../constants/legal';
 
 const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled }) => {
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
@@ -199,6 +207,52 @@ const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled }) =
               </select>
             </div>
 
+          </div>
+
+          {/* Legal & Disclosures Section */}
+          <div className="space-y-4 pt-4 border-t border-slate-800">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Legal & Disclosures</h3>
+            
+            {/* Compliance Policy Quick Links */}
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <button
+                onClick={() => {
+                  onClose();
+                  window.history.pushState({}, '', getLegalPath('/legal/privacy'));
+                }}
+                className="py-2 px-1 bg-slate-800/40 hover:bg-slate-800/80 active:bg-slate-700/50 rounded-xl border border-slate-700/30 text-[10px] font-bold text-slate-300 hover:text-white transition-all uppercase tracking-wider"
+              >
+                Privacy
+              </button>
+              <button
+                onClick={() => {
+                  onClose();
+                  window.history.pushState({}, '', getLegalPath('/legal/terms'));
+                }}
+                className="py-2 px-1 bg-slate-800/40 hover:bg-slate-800/80 active:bg-slate-700/50 rounded-xl border border-slate-700/30 text-[10px] font-bold text-slate-300 hover:text-white transition-all uppercase tracking-wider"
+              >
+                Terms
+              </button>
+              <button
+                onClick={() => {
+                  onClose();
+                  window.history.pushState({}, '', getLegalPath('/legal/ai'));
+                }}
+                className="py-2 px-1 bg-slate-800/40 hover:bg-slate-800/80 active:bg-slate-700/50 rounded-xl border border-slate-700/30 text-[10px] font-bold text-slate-300 hover:text-white transition-all uppercase tracking-wider"
+              >
+                AI Info
+              </button>
+            </div>
+
+            {/* Corporate Registration Details */}
+            <div className="p-3 bg-slate-950/40 rounded-2xl border border-slate-800/60 space-y-1 text-[9px] leading-relaxed text-slate-500 font-medium">
+              <div className="font-extrabold text-slate-400 uppercase tracking-wider text-[10px]">{FULL_COMPANY_NAME}</div>
+              <div>Company Number: {COMPANY_NUMBER} • {PLACE_OF_REGISTRATION}</div>
+              <div>Registered Office: {REGISTERED_OFFICE_ADDRESS}</div>
+              <div>
+                Contact: <a href={`mailto:${SUPPORT_EMAIL}`} className="text-indigo-400 hover:text-indigo-300 transition-colors underline">{SUPPORT_EMAIL}</a>
+              </div>
+            </div>
           </div>
 
         </div>

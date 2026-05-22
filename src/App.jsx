@@ -775,8 +775,6 @@ function App() {
         />
       )}
 
-      <StandardFooter />
-
       {/* Fixed Bottom Navigation Bar */}
       <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 flex justify-around items-center px-1 py-3 sm:py-4 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] pb-safe print:hidden">
         <button onClick={() => setCurrentView('team_selection')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'team_selection' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
