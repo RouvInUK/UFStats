@@ -23,9 +23,10 @@ uStats Pro is a modern, offline-capable Single Page Application (SPA) designed t
 The core source code of the application.
 
 - **`main.jsx`**: The React entry point. Wraps the app in an `ErrorBoundary` and the `AuthProvider`.
-- **`App.jsx`**: The main controller and router. Handles view switching (`dashboard`, `analytics`, `roster`, `lineup`, etc.) and top-level modals (e.g., Session Terminated).
+- **`App.jsx`**: The main controller and router. Handles view switching (`dashboard`, `analytics`, `roster`, `lineup`, etc.), lazy-loads compliance layouts, and handles top-level modals (e.g., Session Terminated).
 - **`SyncEngine.js`**: The offline synchronization engine. Intercepts database writes, stores them locally, and processes the queue exponentially when the network allows.
 - **`supabaseClient.js`**: Centralized Supabase client initialization and API wrapper functions.
+- **`constants/legal.ts`**: Static verified compliance constants (Full Company Name, CRN, Registered Office, Support Email) as required by the UK Companies Act 2006.
 
 ### `src/contexts/`
 - **`AuthContext.jsx`**: 
@@ -37,6 +38,8 @@ The core source code of the application.
 - **`Analytics.jsx`**: The Free-tier analytics engine. Computes basic stats (Goals, Assists, Pass %, Defence).
 - **`CoachDashboard.jsx`**: The Pro-tier advanced analytics engine. Includes line charts, scatter plots, active player filters, and PDF export functionality.
 - **`RosterSetup.jsx` & `LineupManager.jsx`**: Interfaces for configuring the team roster and the active 7 players on the pitch.
+- **`StandardFooter.jsx`**: Global compliance footer implementing corporate disclosures, support links, and the haptic/visual **Beach Mode** accessibility high-contrast toggle.
+- **`legal/`**: Folder containing lazy-loaded legal modules (`PrivacyPolicy.jsx`, `TermsOfService.jsx`, `AiDisclosure.jsx`, and `LegalLayout.jsx`) using Vite code splitting to isolate heavy text assets from the core stats-tracking code.
 
 ---
 
@@ -75,3 +78,11 @@ The immutable ledger of game events.
 2. Speech is continuously transcribed and checked against an `expectedCommands` array (which contains variations of current player names and actions).
 3. Fuzzy matching and phonetic fallbacks (`soundex`) resolve minor mispronunciations (e.g., "cop" -> "drop").
 4. Recognized commands trigger the same local state updates as manual button presses.
+
+---
+
+## Compliance & Accessibility Architecture
+
+1. **Vite Code Splitting for SEO & Performance**: Standard legal policies are text-heavy. To avoid bloating the critical stats-tracking bundle, `App.jsx` employs dynamic imports (`React.lazy`) for the legal layout and documents. Vite bundles these as standalone JS chunks, which are only requested when a user visits `/legal/*`, whilst remaining fully indexable by search engine bots.
+2. **Beach Mode (High-Contrast Accessibility)**: Conforming to WCAG 2.2 AA and the UK Equality Act 2010, the app implements a system-wide high-contrast toggle. When activated, a `.beach-mode` utility class is applied to the document root, causing style overrides in `index.css` to dynamically map dark colors into extreme high-contrast (pure black background, pure white and yellow text). This completely eliminates glare on direct sunlight beaches and supports impaired vision.
+3. **AI Transparency Pipeline**: Guided by the DMCC 2025/2026 and latest ICO directives, the automated LLM coaching advice dashboard clearly displays the automated, non-human tactical status using dedicated "AI-Generated Tactical Briefing" banners to prevent user deception.

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Play, Pause, FastForward, SkipBack, ShieldCheck, Star, Activity, Crown, Menu, Check } from 'lucide-react';
+import { getLegalPath } from '../constants/legal';
 
 const DEMO_VIDEO_URL = "https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4"; // Placeholder
 
@@ -132,7 +133,9 @@ export default function DemoFramework() {
         
         {/* Header */}
         <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent z-20 flex justify-between items-center">
-           <div className="flex items-center gap-3" onClick={() => window.location.href='/'} style={{cursor: 'pointer'}}>
+           <div className="flex items-center gap-3" onClick={() => {
+             window.history.pushState({}, '', getLegalPath('/'));
+           }} style={{cursor: 'pointer'}}>
             <img src="/logo.png" alt="ustats.pro" className="w-8 h-8 rounded-lg shadow-lg" />
             <span className="text-lg font-black text-white lowercase tracking-widest">
               ustats<span className="text-indigo-400 font-light">.pro</span> demo

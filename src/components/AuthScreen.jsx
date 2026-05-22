@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../supabaseClient';
 import { Target, AlertTriangle, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { getLegalPath } from '../constants/legal';
 
 const AuthScreen = ({ onBack, initialMode = 'login' }) => {
   const { signIn, signUp } = useAuth();
@@ -24,7 +25,7 @@ const AuthScreen = ({ onBack, initialMode = 'login' }) => {
     try {
       if (isForgotPassword) {
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/update-password`,
+          redirectTo: `${window.location.origin}${getLegalPath('/update-password')}`,
         });
         if (resetError) throw resetError;
         setMessage('Check your email for the password reset link.');

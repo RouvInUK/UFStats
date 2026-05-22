@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Zap, Battery, WifiOff, Smartphone, BarChart3, Wind, CloudUpload, Dumbbell, Users, ChevronRight, Menu, X, ArrowRight, Lock, Mic, Check, Star } from 'lucide-react';
+import StandardFooter from './StandardFooter';
 
 const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -328,28 +329,7 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
       </section>
 
       {/* ========== FOOTER ========== */}
-      <footer className="border-t border-white/5 bg-slate-950/80 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-12">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <img src="/logo.png" alt="ustats.pro" className="w-8 h-8 rounded-lg opacity-60" />
-              <span className="text-sm font-bold text-slate-500 lowercase tracking-widest">
-                ustats<span className="text-slate-600">.pro</span>
-              </span>
-            </div>
-
-            <div className="flex items-center gap-6 text-xs font-semibold text-slate-500">
-              <a href="#" className="hover:text-slate-300 transition-colors">Contact</a>
-              <a href="#" className="hover:text-slate-300 transition-colors">Privacy</a>
-              <a href="#" className="hover:text-slate-300 transition-colors">Terms</a>
-            </div>
-
-            <div className="text-xs text-slate-600 font-medium">
-              Copyright 2026 ustats.pro
-            </div>
-          </div>
-        </div>
-      </footer>
+      <StandardFooter />
     </div>
   );
 };

@@ -29,3 +29,66 @@
     touch-action: manipulation;
   }
 }
+
+/* ==========================================================================
+   Beach Mode: Extreme High-Contrast Theme for Sunlight Readability & WCAG AA
+   ========================================================================== */
+html.beach-mode {
+  filter: contrast(1.3) saturate(1.2);
+}
+
+html.beach-mode body {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+html.beach-mode .bg-slate-900,
+html.beach-mode .bg-slate-950,
+html.beach-mode .bg-slate-900\/60,
+html.beach-mode .bg-slate-950\/80,
+html.beach-mode .bg-slate-950\/90 {
+  background-color: #000000 !important;
+}
+
+html.beach-mode .bg-slate-800,
+html.beach-mode .bg-slate-800\/50 {
+  background-color: #1c1917 !important; /* Charcoal black */
+}
+
+html.beach-mode .text-slate-400,
+html.beach-mode .text-slate-500,
+html.beach-mode .text-slate-600 {
+  color: #f8fafc !important; /* Near white for extreme readability */
+  font-weight: 800 !important;
+}
+
+html.beach-mode .text-slate-300,
+html.beach-mode .text-slate-200,
+html.beach-mode .text-slate-100 {
+  color: #ffffff !important;
+  font-weight: 900 !important;
+}
+
+html.beach-mode .text-indigo-400,
+html.beach-mode .text-indigo-500,
+html.beach-mode .text-violet-400,
+html.beach-mode .text-purple-400,
+html.beach-mode .text-amber-400,
+html.beach-mode .text-emerald-400 {
+  color: #fbbf24 !important; /* Pure amber/yellow for active elements and branding */
+  font-weight: 900 !important;
+}
+
+html.beach-mode .border-slate-800,
+html.beach-mode .border-slate-700\/50,
+html.beach-mode .border-white\/5,
+html.beach-mode .border-white\/10 {
+  border-color: #ffffff !important; /* Solid high-contrast borders */
+  border-width: 1.5px !important;
+}
+
+html.beach-mode *:focus-visible {
+  outline: 3px solid #fbbf24 !important;
+  outline-offset: 3px !important;
+}
+

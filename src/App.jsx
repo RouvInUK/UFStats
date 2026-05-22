@@ -1,4 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
+import StandardFooter from './components/StandardFooter';
+import { getLegalPath } from './constants/legal';
+
+const LegalLayout = lazy(() => import('./components/legal/LegalLayout'));
 import Dashboard from './components/Dashboard';
 import RosterSetup from './components/RosterSetup';
 import LineupSelector from './components/LineupSelector';
@@ -73,28 +77,49 @@ const SyncIndicator = () => {
 };
 
 function App() {
-  const [spectatorGameId, setSpectatorGameId] = useState(() => {
-     const path = window.location.pathname;
-     if (path.startsWith('/live/')) {
-        return path.replace('/live/', '');
+  const [path, setPath] = useState(window.location.pathname);
+
+  // Patch pushState and replaceState globally to synchronize location changes with React state
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setPath(window.location.pathname);
+    };
+
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+
+    window.history.pushState = function (...args) {
+      originalPushState.apply(this, args);
+      window.dispatchEvent(new Event('locationchange'));
+    };
+
+    window.history.replaceState = function (...args) {
+      originalReplaceState.apply(this, args);
+      window.dispatchEvent(new Event('locationchange'));
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('locationchange', handleLocationChange);
+
+    return () => {
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('locationchange', handleLocationChange);
+    };
+  }, []);
+
+  const getSpectatorGameId = (currentPath) => {
+     const liveIndex = currentPath.indexOf('/live/');
+     if (liveIndex !== -1) {
+        return currentPath.substring(liveIndex + 6);
      }
      return null;
-  });
+  };
 
-  const [isDemoMode] = useState(() => window.location.pathname === '/demo');
-  const [isUpdatePassword] = useState(() => window.location.pathname === '/update-password');
-
-  if (isUpdatePassword) {
-    return <UpdatePassword onComplete={() => window.location.assign('/')} />;
-  }
-
-  if (isDemoMode) {
-     return <DemoFramework />;
-  }
-
-  if (spectatorGameId) {
-     return <SpectatorMode spectatorGameId={spectatorGameId} />;
-  }
+  const spectatorGameId = getSpectatorGameId(path);
+  const isDemoMode = path.includes('/demo');
+  const isUpdatePassword = path.includes('/update-password');
 
   const { user, profile, loading: authLoading, authError, sessionTerminated, setSessionTerminated, signOut } = useAuth();
   const [currentView, setCurrentView] = useState('dashboard');
@@ -335,6 +360,34 @@ function App() {
     }
   }, [effectiveTeamName, shadowTeam, currentView, authLoading, profile]);
 
+  if (path.includes('/legal/')) {
+    return (
+      <Suspense fallback={
+        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
+          <div className="text-indigo-400 font-black tracking-widest text-sm uppercase animate-pulse">
+            Loading Legal Documents...
+          </div>
+        </div>
+      }>
+        <LegalLayout currentPath={path} />
+      </Suspense>
+    );
+  }
+
+  if (isUpdatePassword) {
+    return <UpdatePassword onComplete={() => {
+      window.history.pushState({}, '', getLegalPath('/'));
+    }} />;
+  }
+
+  if (isDemoMode) {
+     return <DemoFramework />;
+  }
+
+  if (spectatorGameId) {
+     return <SpectatorMode spectatorGameId={spectatorGameId} />;
+  }
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
@@ -362,7 +415,7 @@ function App() {
              <button 
                 onClick={() => {
                    setSessionTerminated(false);
-                   window.location.assign('/login');
+                   window.history.pushState({}, '', getLegalPath('/login'));
                 }}
                 className="w-full bg-rose-600 hover:bg-rose-500 text-white font-black py-4 px-6 rounded-xl transition-all uppercase tracking-widest text-sm shadow-lg shadow-rose-900/50"
              >
@@ -374,33 +427,41 @@ function App() {
     );
   }
 
-  const path = window.location.pathname;
-
   if (!user) {
-    if (path === '/login') {
+    if (path === getLegalPath('/login')) {
       const urlParams = new URLSearchParams(window.location.search);
       const mode = urlParams.get('mode') || 'login';
-      return <AuthScreen initialMode={mode} onBack={() => window.location.assign('/')} />;
+      return <AuthScreen initialMode={mode} onBack={() => {
+        window.history.pushState({}, '', getLegalPath('/'));
+      }} />;
     }
     
     // Redirect unauthenticated /dashboard attempts to login
-    if (path === '/dashboard') {
-      window.location.replace('/login');
+    if (path === getLegalPath('/dashboard')) {
+      window.history.replaceState({}, '', getLegalPath('/login'));
       return null;
     }
 
     return (
       <LandingPage 
-        onLogin={() => window.location.assign('/login?mode=login')}
-        onSignUp={() => window.location.assign('/login?mode=signup')}
-        onDemo={() => window.location.assign('/demo')}
+        onLogin={() => {
+          window.history.pushState({}, '', getLegalPath('/login?mode=login'));
+        }}
+        onSignUp={() => {
+          window.history.pushState({}, '', getLegalPath('/login?mode=signup'));
+        }}
+        onDemo={() => {
+          window.history.pushState({}, '', getLegalPath('/demo'));
+        }}
       />
     );
   }
 
   // If user is authenticated and hits root or login, redirect to dashboard
-  if (path === '/' || path === '/login') {
-    window.history.replaceState({}, '', '/dashboard');
+  if (path === getLegalPath('/') || path === getLegalPath('/login')) {
+    const target = getLegalPath('/dashboard');
+    window.history.replaceState({}, '', target);
+    setPath(target);
   }
 
   if ((authError && !profile) || (user && !profile && !authLoading)) {
@@ -697,6 +758,8 @@ function App() {
           onNavigateToAdmin={() => setCurrentView('admin')}
         />
       )}
+
+      <StandardFooter />
 
       {/* Fixed Bottom Navigation Bar */}
       <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 flex justify-around items-center px-1 py-3 sm:py-4 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] pb-safe print:hidden">
