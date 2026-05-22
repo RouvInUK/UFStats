@@ -345,6 +345,34 @@ function App() {
       </div>
     );
   }
+  
+  if (sessionTerminated) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col font-sans relative">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="bg-slate-900 border border-rose-500/50 p-8 rounded-3xl max-w-md w-full shadow-2xl relative overflow-hidden text-center">
+             <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-rose-600 to-rose-400"></div>
+             <div className="w-16 h-16 bg-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <AlertTriangle className="w-8 h-8 text-rose-500" />
+             </div>
+             <h2 className="text-2xl font-black text-white mb-4 tracking-tight uppercase">Session Terminated</h2>
+             <p className="text-slate-300 font-bold mb-8 leading-relaxed">
+               You have been logged out because a new session was started on another device. Your tier (Free/Pro) supports 1 active device.
+             </p>
+             <button 
+                onClick={() => {
+                   setSessionTerminated(false);
+                   window.location.assign('/login');
+                }}
+                className="w-full bg-rose-600 hover:bg-rose-500 text-white font-black py-4 px-6 rounded-xl transition-all uppercase tracking-widest text-sm shadow-lg shadow-rose-900/50"
+             >
+                Return to Login
+             </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const path = window.location.pathname;
 
@@ -710,30 +738,6 @@ function App() {
         isVoiceEnabled={isVoiceEnabled}
         setIsVoiceEnabled={setIsVoiceEnabled}
       />
-      
-      {sessionTerminated && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-slate-900 border border-rose-500/50 p-8 rounded-3xl max-w-md w-full shadow-2xl relative overflow-hidden text-center">
-             <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-rose-600 to-rose-400"></div>
-             <div className="w-16 h-16 bg-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <AlertTriangle className="w-8 h-8 text-rose-500" />
-             </div>
-             <h2 className="text-2xl font-black text-white mb-4 tracking-tight uppercase">Session Terminated</h2>
-             <p className="text-slate-300 font-bold mb-8 leading-relaxed">
-               You have been logged out because a new session was started on another device. Your tier (Free/Pro) supports 1 active device.
-             </p>
-             <button 
-                onClick={() => {
-                   setSessionTerminated(false);
-                   window.location.reload();
-                }}
-                className="w-full bg-rose-600 hover:bg-rose-500 text-white font-black py-4 px-6 rounded-xl transition-all uppercase tracking-widest text-sm shadow-lg shadow-rose-900/50"
-             >
-                Return to Login
-             </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
