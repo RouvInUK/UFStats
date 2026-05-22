@@ -136,7 +136,7 @@ export default function DemoFramework() {
            <div className="flex items-center gap-3" onClick={() => {
              window.history.pushState({}, '', getLegalPath('/'));
            }} style={{cursor: 'pointer'}}>
-            <img src="/logo.png" alt="ustats.pro" className="w-8 h-8 rounded-lg shadow-lg" />
+            <img src="/logo_icon.png" alt="ustats.pro" className="w-8 h-8 rounded-lg shadow-lg" />
             <span className="text-lg font-black text-white lowercase tracking-widest">
               ustats<span className="text-indigo-400 font-light">.pro</span> demo
             </span>

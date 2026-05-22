@@ -34,6 +34,10 @@ const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled }) =
     document.documentElement.classList.add('theme-transition');
     const themeColorMetaTags = document.querySelectorAll('meta[name="theme-color"]');
     const manifestEl = document.getElementById('manifest-link');
+    const faviconEl = document.getElementById('favicon-link');
+    const appleTouchEl = document.getElementById('apple-touch-link');
+    const themedIcon = nextTheme === 'dark' ? '/logo_dark_icon.png' : '/logo_light_icon.png';
+
     if (nextTheme === 'light') {
       document.documentElement.classList.add('light-mode');
       themeColorMetaTags.forEach(tag => tag.setAttribute('content', '#ffffff'));
@@ -43,6 +47,9 @@ const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled }) =
       themeColorMetaTags.forEach(tag => tag.setAttribute('content', '#080c14'));
       if (manifestEl) manifestEl.setAttribute('href', '/manifest_dark.json');
     }
+    
+    if (faviconEl) faviconEl.setAttribute('href', themedIcon);
+    if (appleTouchEl) appleTouchEl.setAttribute('href', themedIcon);
     
     setTimeout(() => {
       document.documentElement.classList.remove('theme-transition');

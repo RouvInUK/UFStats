@@ -98,3 +98,9 @@ The immutable ledger of game events.
     - **Dual-Purpose PWA Icons**: 
       - **Transparent Standard Icons** (`logo_dark_icon.png` / `logo_light_icon.png`): Configured with `"purpose": "any"` in the manifest to render with high fidelity and transparency on desktop status bars, macOS Docks, and Windows shortcuts.
       - **Solid-Background Maskable Icons** (`logo_dark_maskable.png` / `logo_light_maskable.png`): Configured with `"purpose": "maskable"` in the manifest. These icons include the branding emblem centered inside a 12% safe zone margin on a solid background (`#080c14` for Dark Charcoal, `#FFFFFF` for Light Mode). This prevents Android launchers from painting standard white backup plates when cropping icons to circles/squircles, ensuring a seamless home screen experience.
+6. **Favicon and Top-Left Page Headers Branding**:
+    To present a clean, sophisticated, and premium look, the browser tab's favicon and the top-left navigation headers of the application dynamically render the **textless** brand logo (just the emblem, without "ustats.pro" text) while the main landing page body retains the full text-based logo:
+    - **Fallback Icon Asset**: A dedicated fallback `/logo_icon.png` is placed in the public directory and swapped to `/logo_dark_icon.png` or `/logo_light_icon.png` depending on the active light/dark theme.
+    - **Real-Time Favicon Toggling**: An inline pre-paint script in `index.html` resolved in tandem with `App.jsx` and the preferences modal dynamically swaps the `<link>` tags' `href` attribute on the fly.
+    - **CSS-Powered Image Swapping**: The dynamic theme injection pipeline is extended in `src/index.css` to target `logo_icon.png` and seamlessly replace its contents via CSS `content: url(...)` overrides based on `html.light-mode` state, preventing layout shifts or React render delays.
+

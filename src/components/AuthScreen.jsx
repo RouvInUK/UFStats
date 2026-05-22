@@ -88,7 +88,7 @@ const AuthScreen = ({ onBack, initialMode = 'login' }) => {
       <div className="w-full max-w-md bg-slate-900/50 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl">
         <div className="flex flex-col items-center mb-8">
           <div className="text-3xl font-black text-white lowercase tracking-widest flex items-center gap-3 mb-2">
-            <img src="/logo.png" alt="ustats.pro logo" className="w-10 h-10 rounded-full" />
+            <img src="/logo_icon.png" alt="ustats.pro logo" className="w-10 h-10 rounded-full" />
             <span>ustats<span className="text-indigo-500 font-light">.pro</span></span>
           </div>
           <p className="text-slate-400 text-sm font-medium tracking-wide">

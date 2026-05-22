@@ -67,23 +67,133 @@ For completely hands-free operation, tap the **Microphone** icon at the bottom o
 - Example: *"John caught it, passed to Sarah, she dropped it."* 
 - The system will interpret the chain of events and log them automatically.
 
-### 4.3 Coach Dashboard Analytics (Free & Pro)
-The Coach Dashboard is the central hub for reviewing player and team performance across all synced games.
-- **Filters:** Filter by specific tournaments, individual games, or specific opponents.
-- **Traditional Metrics:**
-  - **O-Pts / D-Pts:** The total number of points played starting on Offense vs. Defense.
-  - **Touches / Pt:** The average number of times the player touches the disc per point played.
-  - **GAD (Goals/Assists/Ds):** The holy trinity of traditional ultimate frisbee stats. Shows total Goals scored, Assists thrown, and Defensive blocks (Ds) generated.
-  - **Turnovers (T/D/S):** A breakdown of total turnovers, displaying Throwaways (T), Drops (D), and Stall Outs (S).
-  - **Completion %:** The percentage of a player's throws that are successfully caught by a teammate.
+### 4.3 Coach Dashboard Analytics & True Impact Master Roster (Free & Pro)
+The Coach Dashboard is the central analytical hub of ustats.pro, compiling sidelined data into rich, actionable insights. Its centerpiece is the **True Impact Master Roster** (Coach Pro Impact Matrix), a sortable analytics table containing 16 key performance indicators. These metrics are divided between traditional volume statistics and advanced efficiency and utility metrics.
 
-- **Advanced System Metrics:** 
-  - **System Impact (On-Off +/-):** Calculates the percentage change in the team's overall scoring efficiency when this player is on the pitch compared to when they are on the sideline. It automatically corrects for O/D starting bias, providing a true measure of a player's value to the team's success.
-  - **OCE (Offensive Conversion Efficiency):** The team's success rate at converting possessions into goals while this player is active on the pitch. A high OCE means the team rarely turns the disc over with this player on the field.
-  - **OVA (Offensive Value Added):** A weighted offensive contribution score that heavily rewards high-value actions. It factors in Assists, Hockey Assists (the throw before the assist), and Clean Holds (points scored without any turnovers).
-  - **Pull Impact:** A weighted average score (0.0 - 5.0) grading a player's pull quality. It is calculated automatically based on field position (e.g., Deep Endzone = 5, Out of Bounds = 0) and the resulting pressure on the opponent.
-  - **Usage Rate:** Represents the percentage of the team's total touches that go through this player when they are on the pitch. Handlers typically have high usage rates (>20%), while cutters have lower, more efficient usage rates.
-  - **NIS (Net Impact Score):** A comprehensive player efficiency rating per point played. It weighs positive actions (Goals, Assists, Ds, Touches) against negative actions (Drops, Throwaways) to provide a single, holistic number indicating the player's overall game impact.
+#### The 16 Impact Matrix Columns Explained
+
+##### 1. Player (Name & On/Off +/-)
+*   **Description:** The player's identity and their raw game-point margin while on the pitch.
+*   **Calculation Formula:**
+    $$\text{On/Off } \pm = (\text{Points Won by Team while Active}) - (\text{Points Lost by Team while Active})$$
+*   **Coaching Rationale:** A simple baseline to track the scoring margin during a player's field time. However, it does not correct for starting line bias (O-line vs. D-line), which is addressed by the *System Impact %* metric.
+
+##### 2. PP (Points Played)
+*   **Description:** Total volume of play-time.
+*   **Calculation Formula:**
+    $$\text{Points Played} = \text{Holds Played} + \text{Breaks Played}$$
+*   **Coaching Rationale:** Represents the player's overall workload and sample size of data.
+
+##### 3. O/D (Offense/Defense Split)
+*   **Description:** The split of points where the team started on Offense (receiving the pull) vs. Defense (pulling).
+*   **Calculation Formula:**
+    $$\text{O/D} = \text{Holds Played (O)} \ \big/ \ \text{Breaks Played (D)}$$
+*   **Coaching Rationale:** Essential for identifying player deployment roles (O-Line vs. D-Line specialists).
+
+##### 4. Touches
+*   **Description:** Total number of times the player possessed the disc during the games analyzed (excluding pulls thrown).
+*   **Calculation Formula:**
+    $$\text{Touches} = \text{Total recorded actions for the player} - \text{Pulls}$$
+*   **Coaching Rationale:** Measures active involvement and possession volume on offense.
+
+##### 5. Touches/Pt (Average Touches per Point)
+*   **Description:** The average offensive workload per point played.
+*   **Calculation Formula:**
+    $$\text{Touches per Point} = \frac{\text{Touches}}{\text{Points Played}}$$
+*   **Coaching Rationale:** Measures how central a player is to the offense when they are on the field. Handlers typically have high Touches/Pt (>3.0), whereas cutters have lower, more efficient numbers.
+
+##### 6. G / A / SA / D (Goals / Assists / Secondary Assists / Blocks)
+*   **Description:** The complete box score of direct scoring and defensive actions.
+*   **Calculations:**
+    *   **Goals (G):** Incremented when the player catches a pass in the endzone.
+    *   **Assists (A):** Incremented for the player who throws the final completed pass of a scoring point.
+    *   **Secondary Assists (SA):** The "hockey assist"—the completed pass immediately preceding the assist. Calculated by tracking the possession chain and identifying the second-to-last thrower in a scoring point.
+    *   **Defensive Blocks (D):** Turnover-inducing blocks, interceptions, or forced errors.
+*   **Coaching Rationale:** Direct impact events. The inclusion of *Secondary Assists* ensures that setup handlers who drive the disc downfield get credit for their crucial role in breaking the defense.
+
+##### 7. Turnovers (T / D / S)
+*   **Description:** Total team possessions lost due to player errors, broken down into specific categories.
+*   **Calculation Formula:**
+    $$\text{Turnovers} = \text{Throwaways (T)} + \text{Drops (D)} + \text{Stalls (S)}$$
+    *   *Throwaways (T):* Errant or incomplete passes.
+    *   *Drops (D):* Dropped catchable passes.
+    *   *Stalls (S):* Stalling out with the disc (10-second count).
+*   **Coaching Rationale:** Identifies the precise nature of offensive breakdowns.
+
+##### 8. Passes (C/A)
+*   **Description:** Completed passes vs. Attempted passes.
+*   **Calculation Formula:**
+    $$\text{Completed Passes (C)} \ \big/ \ \text{Attempted Passes (A)}$$
+    *   *Attempted Passes (A)* is calculated as $\text{Completed Passes} + \text{Throwaways} + \text{Receiver Drops}$ (to capture all throws released by the player).
+*   **Coaching Rationale:** High attempted numbers signify a high-volume distributor.
+
+##### 9. Comp % (Pass Completion Percentage)
+*   **Description:** The safety and accuracy rating of a player's throws.
+*   **Calculation Formula:**
+    $$\text{Completion \%} = \left( \frac{\text{Completed Passes}}{\text{Attempted Passes}} \right) \times 100$$
+*   **Coaching Rationale:** Primary handlers should ideally maintain a completion rate above 90% to provide structural stability.
+
+##### 10. Deep Throws (C/A) (Completed Hucks / Attempted Hucks)
+*   **Description:** High-risk, high-reward huck efficiency tracking.
+*   **Calculation Formula:**
+    $$\text{Hucks Completed} \ \big/ \ \text{Hucks Attempted}$$
+    *   *Huck Attempts* include completed huck passes, huck throwaways, and hucks dropped by the receiver.
+*   **Coaching Rationale:** Isolates deep-throwing efficiency from short-passing statistics. Crucial for assessing deep throwers and decision-making on high-yardage shots.
+
+##### 11. System Impact %
+*   **Description:** The percentage change in team scoring efficiency when this player is on the pitch compared to when they are on the sideline, automatically adjusting for starting O/D line bias.
+*   **Calculation Formula:**
+    For every point played by a player, their impact is calculated against the team's overall tournament average (the baseline):
+    *   If the team started the point on **Offense (O-line)**:
+        $$\text{Impact} = \text{Result} - \text{Global Hold Rate}$$
+        *(where Result is 1 if the team held/scored, and 0 if broken/lost)*
+    *   If the team started the point on **Defense (D-line)**:
+        $$\text{Impact} = (\text{Result} - \text{Global Break Rate}) \times 2.0 \ \text{ (Break Bonus)}$$
+        *(where Result is 1 if the team broke/scored, and 0 if held/lost. The Break Bonus of 2.0 is applied only to positive break impacts)*
+    *   **System Impact %** = $\frac{\sum \text{Weighted Impacts}}{\text{Points Played}} \times 100$
+*   **Coaching Rationale:** In Ultimate, scoring on offense (holding) is significantly easier than scoring on defense (breaking). A simple +/- heavily biases O-line players. *System Impact %* corrects for this by grading each point against baseline expectations. Winning a break-point is rewarded with a **double weight bonus (2.0x)**, while holding simply meets standard expectations. This allows coaches to identify players who make a massive structural impact, regardless of which line they start on.
+
+##### 12. OCE % (Offensive Conversion Efficiency)
+*   **Description:** The team's success rate at converting possessions into goals while this player is on the pitch.
+*   **Calculation Formula:**
+    $$\text{OCE \%} = \left( \frac{\text{Goals Scored on Pitch}}{\text{Possessions Played}} \right) \times 100$$
+    *   *Possessions Played* = Total team turnovers during played points + 1 for each point won.
+    *   *Goals Scored on Pitch* = Team goals scored while the player was active.
+*   **Coaching Rationale:** Measures how clinical the offense is. A high OCE means the team rarely turns the disc over and efficiently converts opportunities with this player active.
+
+##### 13. OVA (Offensive Value Added)
+*   **Description:** A weighted metric highlighting mistake-free offensive production and distribution.
+*   **Calculation Formula & Weighting:**
+    $$\text{OVA} = (\text{Clean Holds} \times 0.5) + (\text{Assists} \times 2.0) + (\text{Secondary Assists} \times 1.5)$$
+    *   *Clean Holds:* Number of O-points won where the team committed **zero** turnovers while the player was active.
+*   **Coaching Rationale:** Heavily rewards facilitators (Assists at 2.0x, Secondary Assists at 1.5x) and places a premium on clean, turnover-free possession flow (Clean Holds at 0.5x). High OVA indicates a highly effective, error-free distributor.
+
+##### 14. Pull Impact
+*   **Description:** Average score grading the quality and depth of a player's pulls.
+*   **Calculation Formula:**
+    $$\text{Pull Impact} = \frac{\sum \text{Individual Pull Scores}}{\text{Total Pulls}}$$
+    *   *Individual Pull Scores* are graded on a 0.0 to 5.0 scale automatically, where a deep pull pinned in the endzone yields a 5.0, and an out-of-bounds pull yields a 0.0.
+*   **Coaching Rationale:** Evaluates defensive field position generation. Excellent pulls allow the D-line maximum time to set up and apply pressure.
+
+##### 15. Usage (Usage Rate)
+*   **Description:** The player's share of team touches while they are on the field.
+*   **Calculation Formula:**
+    $$\text{Usage \%} = \left( \frac{\text{Player Touches}}{\text{Total Team Touches on Played Points}} \right) \times 100$$
+*   **Coaching Rationale:** Helps coaches manage offensive balance. If a single handler has a usage rate >30%, the offense is highly centralized and vulnerable to shutdown defense.
+
+##### 16. NIS (Net Impact Score)
+*   **Description:** A comprehensive, single-number utility metric representing the player's overall efficiency and contribution per point played.
+*   **Calculation Formula & Weighting Coefficients:**
+    $$\text{NIS} = \frac{(G \times 2.0) + (A \times 1.5) + (D \times 2.0) + (P_{\text{comp}} \times 0.3) + (H_{\text{comp}} \times 0.7) - (TO \times 2.0) + (TO_{\text{huck}} \times 0.5)}{\text{Points Played}}$$
+    *   $G$: Goals scored (Weight: **+2.0**)
+    *   $A$: Assists thrown (Weight: **+1.5**)
+    *   $D$: Defensive blocks generated (Weight: **+2.0**)
+    *   $P_{\text{comp}}$: Completed Passes (Weight: **+0.3**)
+    *   $H_{\text{comp}}$: Completed Hucks (Weight: **+0.7** in addition to the +0.3 pass value, totaling **+1.0** per huck)
+    *   $TO$: Turnovers (Throwaways + Drops + Stalls) (Weight: **-2.0**)
+    *   $TO_{\text{huck}}$: Huck Turnovers (Huck Throwaways + Huck Drops) (Weight Adjustment: **+0.5**, resulting in a net turnover penalty of **-1.5** instead of -2.0)
+*   **Coaching Rationale:** Net Impact Score acts as the player efficiency rating (PER) of ustats.pro. By dividing the weighted utility sum by points played, it standardizes performance, allowing fair comparisons across different playtime volumes. Positive actions are rewarded, but turnovers are heavily penalized (-2.0). Notably, a deep turnover (huck turnover) is penalized slightly less (-1.5) because deep throws typically turn over deep in opponent territory, carrying a lower field-position cost than short turnovers.
+
 - **Possession Chain Timeline:** Click on any game to see a detailed, chronologically sorted, play-by-play sequence of every single pass and event in the match.
 
 ---

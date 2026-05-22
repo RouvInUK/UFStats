@@ -68,7 +68,7 @@ const LegalLayout = ({ currentPath }) => {
           <div className="h-6 w-px bg-slate-800 hidden sm:block"></div>
           
           <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="ustats.pro" className="w-7 h-7 rounded-lg" />
+            <img src="/logo_icon.png" alt="ustats.pro" className="w-7 h-7 rounded-lg" />
             <span className="text-base font-black tracking-widest lowercase">
               ustats<span className="text-indigo-400 font-light">.pro</span>
               <span className="text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded ml-2 uppercase tracking-wide">Legal</span>

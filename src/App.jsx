@@ -84,6 +84,10 @@ function App() {
     const savedTheme = localStorage.getItem('ufstats_theme') || 'dark';
     const themeColorMetaTags = document.querySelectorAll('meta[name="theme-color"]');
     const manifestEl = document.getElementById('manifest-link');
+    const faviconEl = document.getElementById('favicon-link');
+    const appleTouchEl = document.getElementById('apple-touch-link');
+    const themedIcon = savedTheme === 'dark' ? '/logo_dark_icon.png' : '/logo_light_icon.png';
+
     if (savedTheme === 'light') {
       document.documentElement.classList.add('light-mode');
       themeColorMetaTags.forEach(tag => tag.setAttribute('content', '#ffffff'));
@@ -93,6 +97,9 @@ function App() {
       themeColorMetaTags.forEach(tag => tag.setAttribute('content', '#080c14'));
       if (manifestEl) manifestEl.setAttribute('href', '/manifest_dark.json');
     }
+
+    if (faviconEl) faviconEl.setAttribute('href', themedIcon);
+    if (appleTouchEl) appleTouchEl.setAttribute('href', themedIcon);
   }, []);
 
   // Patch pushState and replaceState globally to synchronize location changes with React state
@@ -535,7 +542,7 @@ function App() {
       <div className="hidden sm:flex justify-between items-center px-8 py-4 bg-slate-950/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 shadow-xl">
         <div className="flex items-center gap-6">
           <div className="text-xl font-black text-white lowercase tracking-widest flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView(isAdminAndNoShadow ? 'admin' : 'dashboard')}>
-            <img src="/logo.png" alt="ustats.pro logo" className="w-8 h-8 rounded-full" />
+            <img src="/logo_icon.png" alt="ustats.pro logo" className="w-8 h-8 rounded-full" />
             <span>ustats<span className="text-indigo-500 font-light">.pro</span></span>
             <BetaBadge />
             {isProTier ? (
@@ -596,7 +603,7 @@ function App() {
       <div className="sm:hidden flex flex-col px-4 py-3 bg-slate-950/90 backdrop-blur-md border-b border-white/5 sticky top-0 z-40 shadow-md gap-2">
         <div className="flex justify-between items-center w-full">
           <div className="text-lg font-black text-white lowercase tracking-widest flex items-center gap-1.5 cursor-pointer" onClick={() => setCurrentView(isAdminAndNoShadow ? 'admin' : 'dashboard')}>
-            <img src="/logo.png" alt="ustats.pro logo" className="w-6 h-6 rounded-full" />
+            <img src="/logo_icon.png" alt="ustats.pro logo" className="w-6 h-6 rounded-full" />
             <span>ustats<span className="text-indigo-500 font-light">.pro</span></span>
             {profile?.tier === 'PRO' ? (
               <span className="text-[9px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-md"><Crown className="w-3 h-3 inline-block mr-0.5" /> PRO</span>

@@ -173,3 +173,19 @@ html.beach-mode img[src*="logo.png"] {
   filter: contrast(1.5) !important;
 }
 
+/* Textless Logo Icon styling rules */
+img[src*="logo_icon.png"] {
+  content: url("/logo_dark_icon.png");
+  filter: drop-shadow(0 0 8px rgba(23, 184, 144, 0.2));
+  transition: filter 0.25s ease;
+}
+
+html.light-mode img[src*="logo_icon.png"] {
+  content: url("/logo_light_icon.png");
+  filter: drop-shadow(0 1px 4px rgba(12, 43, 84, 0.06));
+}
+
+html.beach-mode img[src*="logo_icon.png"] {
+  filter: contrast(1.5) !important;
+}
+

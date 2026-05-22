@@ -275,7 +275,7 @@ const SpectatorMode = ({ spectatorGameId }) => {
 
       {/* Footer */}
       <footer className="p-6 text-center border-t border-white/10 opacity-50">
-        <img src="/logo.png" alt="logo" className="w-6 h-6 mx-auto mb-2 grayscale opacity-50" />
+        <img src="/logo_icon.png" alt="logo" className="w-6 h-6 mx-auto mb-2 grayscale opacity-50" />
         <span className="text-[9px] uppercase tracking-[0.2em] font-bold">Powered by ustats.pro</span>
         <span className="block text-[8px] tracking-widest mt-1">Professional Ultimate Analytics</span>
       </footer>

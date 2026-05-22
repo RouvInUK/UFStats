@@ -2,8 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/logo.png" />
-    <link rel="apple-touch-icon" href="/logo.png" />
+    <link id="favicon-link" rel="icon" type="image/png" href="/logo_icon.png" />
+    <link id="apple-touch-link" rel="apple-touch-icon" href="/logo_icon.png" />
     <link id="manifest-link" rel="manifest" href="/manifest.json" />
     <script>
       (function() {
@@ -11,6 +11,15 @@
         const manifestEl = document.getElementById('manifest-link');
         if (manifestEl) {
           manifestEl.setAttribute('href', savedTheme === 'dark' ? '/manifest_dark.json' : '/manifest.json');
+        }
+        const themedIcon = savedTheme === 'dark' ? '/logo_dark_icon.png' : '/logo_light_icon.png';
+        const faviconEl = document.getElementById('favicon-link');
+        if (faviconEl) {
+          faviconEl.setAttribute('href', themedIcon);
+        }
+        const appleTouchEl = document.getElementById('apple-touch-link');
+        if (appleTouchEl) {
+          appleTouchEl.setAttribute('href', themedIcon);
         }
       })();
     </script>

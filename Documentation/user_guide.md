@@ -188,6 +188,44 @@ If you experience **no vibration on iOS**, go to **Settings → Safari → Advan
    - All recorded stats in a table format
    - A summary page with totals per player.
 
+### 9.3 True Impact Master Roster & Metrics Reference
+The **True Impact Master Roster** (or Coach Pro Impact Matrix) is a sortable analytical table listing 16 key metrics evaluating individual player efficiency and direct tactical contribution. Below is the detailed calculation reference:
+
+| # | Column | Metric / Description | Calculation Formula | Weighting / Coaching Rationale |
+|---|---|---|---|---|
+| **1** | **Player** | Name & On/Off Net Margin | `(Points Won on Field) - (Points Lost on Field)` | Tracks raw score differential when active. Does not adjust for line starting bias. |
+| **2** | **PP** | Points Played | `Holds Played + Breaks Played` | Measures active playtime volume and sample size. |
+| **3** | **O/D** | Offense/Defense Point Split | `O-Points / D-Points` | Highlights O-Line vs. D-Line deployment. |
+| **4** | **Touches** | Total Disc Possessions | `Total Actions - Pulls` | Measures direct offensive involvement. |
+| **5** | **Touches/Pt** | Workload per Point | `Touches / Points Played` | Handlers average >3.0 (high volume); Cutters average <2.0 (high efficiency). |
+| **6** | **G/A/SA/D** | Direct Box Score events | • **Goals (G):** catching scores<br>• **Assists (A):** throwing final pass of score<br>• **Secondary Assists (SA):** pass before assist<br>• **Blocks (D):** defensive turnovers generated | **Secondary Assists (SA)** rewards setup handlers. Blocks are weighted heavily in utility formulas. |
+| **7** | **Turnovers** | Total offensive errors | `Throwaways (T) + Drops (D) + Stalls (S)` | pinpoints where the offensive execution failed. |
+| **8** | **Passes (C/A)** | Completed/Attempted passes | `Completed Passes / (Completed + Throwaways + Receiver Drops)` | Total distribution attempts by the player. |
+| **9** | **Comp %** | Passing accuracy rate | `(Completed / Attempted) * 100` | Handlers should ideally target >90% completion. |
+| **10** | **Deep Throws** | Huck Completed/Attempted | `Hucks Completed / Hucks Attempted` | Isolates deep-throwing efficiency from short play. |
+| **11** | **System Impact %** | Baseline-adjusted scoring efficiency shift | See **System Impact Formula** below | Corrects for starting line bias. Winning a D-Line break is rewarded with a **2.0x Break Bonus**. |
+| **12** | **OCE %** | Offensive Conversion Efficiency | `(Goals on Pitch / Possessions Played) * 100` | Measures team's ability to score per possession while active. |
+| **13** | **OVA** | Offensive Value Added | `(Clean Holds * 0.5) + (Assists * 2.0) + (Secondary Assists * 1.5)` | Heavy emphasis on play distribution and mistake-free O-points (Clean Holds). |
+| **14** | **Pull Impact** | Average pull quality | `Sum of Pull Scores / Total Pulls` | Pulls graded 0.0–5.0 based on depth and hangtime. |
+| **15** | **Usage** | Touch Share | `(Player Touches / Team Touches) * 100` | Evaluates balance; usage >30% indicates centralized risk. |
+| **16** | **NIS** | Net Impact Score (HOLISTIC RATING) | See **NIS Metric Formula** below | standardizes player efficiency per point. Penalizes turnovers (-2.0) but softens huck turnovers (-1.5). |
+
+---
+
+#### 🧮 Detailed Advanced Formulas
+
+##### 1. System Impact %
+Grades every played point against the team's tournament average (baselines) to remove O/D starting line bias:
+*   **Offense Start (O-line):** $\text{Impact} = \text{Result} - \text{Global Hold Rate}$ *(Result = 1 if team held, 0 if team was broken)*
+*   **Defense Start (D-line):** $\text{Impact} = (\text{Result} - \text{Global Break Rate}) \times 2.0$ *(Result = 1 if team broke, 0 if opponent held. Positive break impact receives a 2.0x Break Bonus)*
+*   **System Impact %** = $\frac{\sum \text{Weighted Impacts}}{\text{Points Played}} \times 100$
+
+##### 2. NIS (Net Impact Score)
+Holistic utility score per point played, heavily weighting positive actions while penalizing turnovers:
+$$\text{NIS} = \frac{(G \times 2.0) + (A \times 1.5) + (D \times 2.0) + (P_{\text{comp}} \times 0.3) + (H_{\text{comp}} \times 0.7) - (TO \times 2.0) + (TO_{\text{huck}} \times 0.5)}{\text{Points Played}}$$
+*   **Huck Completion Bonus:** Huck completions receive $+0.7$ on top of $+0.3$ standard pass, rewarding completed deep looks with a full $+1.0$.
+*   **Huck Turnover Discount:** Huck turnovers (throwaways or drops) receive a $+0.5$ recovery credit, reducing the normal $-2.0$ turnover penalty to a net $-1.5$ due to their lower field position cost.
+
 ---
 
 ## 🔧 Settings & Preferences
