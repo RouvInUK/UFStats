@@ -82,10 +82,13 @@ function App() {
   // Initialize theme from localStorage on boot
   useEffect(() => {
     const savedTheme = localStorage.getItem('ufstats_theme') || 'dark';
+    const themeColorMetaTags = document.querySelectorAll('meta[name="theme-color"]');
     if (savedTheme === 'light') {
       document.documentElement.classList.add('light-mode');
+      themeColorMetaTags.forEach(tag => tag.setAttribute('content', '#ffffff'));
     } else {
       document.documentElement.classList.remove('light-mode');
+      themeColorMetaTags.forEach(tag => tag.setAttribute('content', '#080c14'));
     }
   }, []);
 

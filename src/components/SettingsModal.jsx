@@ -26,10 +26,13 @@ const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled }) =
     
     // Smoothly transition theme
     document.documentElement.classList.add('theme-transition');
+    const themeColorMetaTags = document.querySelectorAll('meta[name="theme-color"]');
     if (nextTheme === 'light') {
       document.documentElement.classList.add('light-mode');
+      themeColorMetaTags.forEach(tag => tag.setAttribute('content', '#ffffff'));
     } else {
       document.documentElement.classList.remove('light-mode');
+      themeColorMetaTags.forEach(tag => tag.setAttribute('content', '#080c14'));
     }
     
     setTimeout(() => {
