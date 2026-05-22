@@ -12,7 +12,6 @@ import {
 const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled }) => {
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isHapticEnabled, setIsHapticEnabled] = useState(true);
-  const [language, setLanguage] = useState('en');
   const [theme, setTheme] = useState(() => localStorage.getItem('ufstats_theme') || 'dark');
 
   // Load initial settings
@@ -20,7 +19,6 @@ const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled }) =
     if (isOpen) {
       setIsAudioEnabled(localStorage.getItem('ufstats_audio_enabled') !== 'false');
       setIsHapticEnabled(localStorage.getItem('ufstats_haptic_enabled') !== 'false');
-      setLanguage(localStorage.getItem('ufstats_language') || 'en');
       setTheme(localStorage.getItem('ufstats_theme') || 'dark');
     }
   }, [isOpen]);
@@ -65,12 +63,6 @@ const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled }) =
 
   const toggleVoice = () => {
     setIsVoiceEnabled(!isVoiceEnabled);
-  };
-
-  const handleLanguageChange = (e) => {
-    const newLang = e.target.value;
-    setLanguage(newLang);
-    localStorage.setItem('ufstats_language', newLang);
   };
 
   return (
@@ -182,29 +174,6 @@ const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled }) =
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isVoiceEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
-            </div>
-
-            {/* Language Selection */}
-            <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
-              <div className="flex items-center gap-4">
-                <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400">
-                  <Globe className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-white">Language</div>
-                  <div className="text-xs text-slate-400">App interface language</div>
-                </div>
-              </div>
-              <select 
-                value={language}
-                onChange={handleLanguageChange}
-                className="bg-slate-900 border border-slate-700 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2 outline-none"
-              >
-                <option value="en">English (Default)</option>
-                <option value="de" disabled>German (Coming Soon)</option>
-                <option value="es" disabled>Spanish (Coming Soon)</option>
-                <option value="fr" disabled>French (Coming Soon)</option>
-              </select>
             </div>
 
           </div>
