@@ -69,10 +69,13 @@ const LegalLayout = ({ currentPath }) => {
           
           <div className="flex items-center gap-2.5">
             <img src="/logo_icon.png" alt="ustats.pro" className="w-7 h-7 rounded-lg" />
-            <span className="text-base font-black tracking-widest lowercase">
-              ustats<span className="text-indigo-400 font-light">.pro</span>
-              <span className="text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded ml-2 uppercase tracking-wide">Legal</span>
-            </span>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-black text-white lowercase tracking-widest leading-none">ustats.pro</span>
+                <span className="text-[9px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-1.5 py-0.5 rounded uppercase tracking-wide leading-none">Legal</span>
+              </div>
+              <span className="text-[6.5px] font-black text-slate-400 uppercase tracking-[0.2em] mt-0.5 leading-none">sideline intelligence</span>
+            </div>
           </div>
         </div>
 

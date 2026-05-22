@@ -137,9 +137,10 @@ export default function DemoFramework() {
              window.history.pushState({}, '', getLegalPath('/'));
            }} style={{cursor: 'pointer'}}>
             <img src="/logo_icon.png" alt="ustats.pro" className="w-8 h-8 rounded-lg shadow-lg" />
-            <span className="text-lg font-black text-white lowercase tracking-widest">
-              ustats<span className="text-indigo-400 font-light">.pro</span> demo
-            </span>
+            <div className="flex flex-col">
+              <span className="text-sm font-black text-white lowercase tracking-widest leading-none">ustats.pro <span className="text-indigo-400 font-light text-xs ml-1">demo</span></span>
+              <span className="text-[7px] font-black text-slate-400 uppercase tracking-[0.2em] mt-0.5 leading-none">sideline intelligence</span>
+            </div>
           </div>
         </div>
 

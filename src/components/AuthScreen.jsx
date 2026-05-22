@@ -87,9 +87,12 @@ const AuthScreen = ({ onBack, initialMode = 'login' }) => {
       )}
       <div className="w-full max-w-md bg-slate-900/50 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl">
         <div className="flex flex-col items-center mb-8">
-          <div className="text-3xl font-black text-white lowercase tracking-widest flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3.5 mb-2">
             <img src="/logo_icon.png" alt="ustats.pro logo" className="w-10 h-10 rounded-full" />
-            <span>ustats<span className="text-indigo-500 font-light">.pro</span></span>
+            <div className="flex flex-col">
+              <span className="text-xl font-black text-white lowercase tracking-widest leading-none">ustats.pro</span>
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.25em] mt-1 leading-none">sideline intelligence</span>
+            </div>
           </div>
           <p className="text-slate-400 text-sm font-medium tracking-wide">
             {isLogin ? 'Welcome back, Coach.' : 'Create your Team Workspace.'}

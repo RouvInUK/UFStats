@@ -24,11 +24,12 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
       {/* ========== STICKY NAV ========== */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-slate-950/95 backdrop-blur-xl border-b border-white/5 shadow-2xl' : 'bg-transparent'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <div className="flex items-center gap-3.5 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <img src="/logo_icon.png" alt="ustats.pro" className="w-9 h-9 rounded-xl shadow-lg shadow-indigo-500/20" />
-            <span className="text-xl font-black text-white lowercase tracking-widest">
-              ustats<span className="text-indigo-400 font-light">.pro</span>
-            </span>
+            <div className="flex flex-col">
+              <span className="text-base font-black text-white lowercase tracking-widest leading-none">ustats.pro</span>
+              <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-[0.25em] mt-1 leading-none">sideline intelligence</span>
+            </div>
           </div>
 
           {/* Desktop Nav */}

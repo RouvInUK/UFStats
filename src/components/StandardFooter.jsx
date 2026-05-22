@@ -38,11 +38,12 @@ const StandardFooter = () => {
         
         {/* Top Row: Links & Brand */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 border-b border-slate-800/60 pb-8">
-          <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="ustats.pro logo" className="w-8 h-8 rounded-lg opacity-75" />
-            <span className="text-base font-black text-white lowercase tracking-widest">
-              ustats<span className="text-indigo-400">.pro</span>
-            </span>
+          <div className="flex items-center gap-3.5">
+            <img src="/logo_icon.png" alt="ustats.pro logo" className="w-8 h-8 rounded-full opacity-75" />
+            <div className="flex flex-col">
+              <span className="text-base font-black text-white lowercase tracking-widest leading-none">ustats.pro</span>
+              <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-[0.25em] mt-1 leading-none">sideline intelligence</span>
+            </div>
           </div>
 
           {/* Navigation Links */}
