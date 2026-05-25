@@ -1,8 +1,6 @@
-# ustats.pro
-## User Manual & Getting Started Guide
-
 <div align="center">
-  <img src="public/logo.png" width="300" alt="ustats.pro Logo" />
+  <img src="public/logo_light.png" width="240" alt="ustats.pro Logo" />
+  <h1 style="font-size: 2.2em; margin-top: 20px;">User Manual & Getting Started Guide</h1>
 </div>
 
 ---
@@ -15,7 +13,7 @@ Welcome to ustats.pro! ustats.pro is a specialized, mobile-optimized Progressive
 ## 2. Getting Started: First Steps
 
 ### 2.1 The Club & Team Hierarchy
-To keep your data organized across different seasons and divisions, UFStats uses a hierarchical system:
+To keep your data organized across different seasons and divisions, ustats.pro uses a hierarchical system:
 1. **Club:** This is your overarching organization (e.g., "Deep Space Ultimate"). Players are added at the Club level, meaning you only ever have to type a player's name and shirt number once.
 2. **Teams:** These sit inside your Club (e.g., "Open Roster 2026", "Mixed Roster", "Development Squad"). You can assign the same Club players to different teams without duplicating their stats.
 
@@ -55,7 +53,7 @@ If you are starting a point on **Defense**, the app will automatically prompt yo
 ## 4. Advanced & Pro Features
 
 ### 4.1 Offline Sync Engine (Free)
-UFStats works flawlessly without an internet connection. 
+ustats.pro works flawlessly without an internet connection. 
 - You will see a small cloud icon indicating how many points are currently waiting to be synced.
 - The app automatically syncs all pending data to the cloud as soon as your device regains cellular or Wi-Fi connectivity.
 - A "Synchronizing..." and "✓ Saved..." indicator will appear at the top of the On-Pitch section to confirm that data is safely stored.
@@ -200,7 +198,7 @@ The Coach Dashboard is the central analytical hub of ustats.pro, compiling sidel
 
 ## 5. Pricing: Free vs. Coach Pro
 
-UFStats is designed to be accessible to grassroots teams while offering elite tools for professional coaches.
+ustats.pro is designed to be accessible to grassroots teams while offering elite tools for professional coaches.
 
 ### 🟢 Free Tier
 Everything you need to track a team for a season.

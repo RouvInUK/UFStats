@@ -412,9 +412,11 @@ function App() {
   }
 
   if (authLoading) {
+    const savedTheme = localStorage.getItem('ufstats_theme') || 'dark';
+    const themedLogo = savedTheme === 'dark' ? '/logo_dark_icon.png' : '/logo_light_icon.png';
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
-        <img src="/logo.png" alt="ustats.pro" className="w-20 h-20 rounded-full mb-6 shadow-[0_0_40px_rgba(99,102,241,0.5)] animate-pulse" />
+        <img src={themedLogo} alt="ustats.pro" className="w-20 h-20 rounded-full mb-6 shadow-[0_0_40px_rgba(99,102,241,0.5)] animate-pulse" />
         <div className="text-indigo-400 font-black tracking-widest text-sm uppercase animate-pulse">
           Initializing Session
         </div>

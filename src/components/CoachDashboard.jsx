@@ -556,6 +556,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
         }
       } else if (stat.stat_type === 'Throwaway') {
         lineSummary.throwaways += 1;
+        lineSummary.passAttempts += 1;
         if (stat.details?.is_huck) {
           lineSummary.huckThrowaways += 1;
           lineSummary.huckAttempts += 1;

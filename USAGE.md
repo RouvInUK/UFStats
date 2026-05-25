@@ -1,4 +1,4 @@
-# UFStats: Sideline Usage Guide
+# ustats.pro: Sideline Usage Guide
 
 Welcome to the ultimate sideline data tracker! This guide will walk you through setting up a game, tracking stats during the chaos of a point, and interpreting your team's analytics.
 

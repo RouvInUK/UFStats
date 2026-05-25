@@ -1,14 +1,13 @@
 <div align="center">
-  <img src="images/logo.png" width="150" alt="UStats Pro Logo">
-  <h1>UStats Pro</h1>
-  <p><b>The Complete User Guide</b> (v 2026‑05‑21)</p>
+  <img src="images/logo_light.png" width="200" alt="ustats.pro Logo">
+  <h1 style="font-size: 2.2em; margin-top: 20px;">The Complete User Guide (v 2026-05-22)</h1>
 </div>
 ---
 
 ## 📖 Introduction
-UStats Pro is a **web‑based, cross‑platform** application for tracking Ultimate Frisbee games. It runs on modern browsers (desktop, iOS, Android) and stores all data in **Supabase**, giving you automatic cloud sync and offline fallback.
+ustats.pro is a **web-based, cross-platform** application for tracking Ultimate Frisbee games. It runs on modern browsers (desktop, iOS, Android) and stores all data in **Supabase**, giving you automatic cloud sync and offline fallback.
 
-> **Note:** The *Voice Pro* feature (advanced voice‑command interface) is **coming soon** – the current voice support is limited to basic start/undo commands.
+> **Note:** The *Voice Pro* feature (advanced voice-command interface) is **coming soon** – the current voice support is limited to basic start/undo commands.
 
 ---
 
@@ -23,7 +22,7 @@ UStats Pro is a **web‑based, cross‑platform** application for tracking Ult
 | Step | What you do | Screenshots |
 |------|--------------|-------------|
 | **Create a Club** | Enter a club name (e.g., *Rouvin Ultimate*). Optionally upload a logo. | <img src="images/create_club.png" width="120" /> |
-| **Create a Team** | Choose the club, give the team a name (e.g., *UStats Pro A*), and select a **team colour** for UI accents. | <img src="images/create_team.png" width="120" /> |
+| **Create a Team** | Choose the club, give the team a name (e.g., *ustats.pro A*), and select a **team colour** for UI accents. | <img src="images/create_team.png" width="120" /> |
 | **Add Players** | You’ll be taken to the **Player Roster** screen (see Section 3). | <img src="images/add_players.png" width="120" /> |
 
 Once the wizard finishes you land on the **Dashboard** for the newly created team.
