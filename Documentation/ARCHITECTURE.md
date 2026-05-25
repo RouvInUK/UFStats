@@ -1,6 +1,6 @@
-# uStats Pro - System Architecture
+# ustats.pro - System Architecture
 
-uStats Pro is a modern, offline-capable Single Page Application (SPA) designed to track Ultimate Frisbee statistics in real-time, even in environments with poor network connectivity. 
+ustats.pro is a modern, offline-capable Single Page Application (SPA) designed to track Ultimate Frisbee statistics in real-time, even in environments with poor network connectivity. 
 
 ## Technology Stack
 - **Frontend Framework**: React 18, built with Vite for rapid HMR and optimized bundling.
@@ -36,7 +36,7 @@ The core source code of the application.
 ### `src/components/`
 - **`Dashboard.jsx`**: The primary live-tracking UI. Handles player selection, action recording, and Voice Tracking integration via the Web Speech API.
 - **`Analytics.jsx`**: The Free-tier analytics engine. Computes basic stats (Goals, Assists, Pass %, Defence).
-- **`CoachDashboard.jsx`**: The Pro-tier advanced analytics engine. Includes line charts, scatter plots, active player filters, and PDF export functionality.
+- **`CoachDashboard.jsx`**: The Pro-tier advanced analytics engine. Includes line charts, scatter plots, active player filters, and PDF export functionality. **Now features the Team & Line-Level Stats Suite, which dynamically attributes point stats to line templates using a majority lineup matching threshold, aggregating Clean O-Holds, Break Conversions, Huck Efficiency, and Pass Completion Rates without database overhead.**
 - **`RosterSetup.jsx` & `LineupManager.jsx`**: Interfaces for configuring the team roster and the active 7 players on the pitch.
 - **`StandardFooter.jsx`**: Global compliance footer implementing corporate disclosures, support links, and the haptic/visual **Beach Mode** accessibility high-contrast toggle.
 - **`legal/`**: Folder containing lazy-loaded legal modules (`PrivacyPolicy.jsx`, `TermsOfService.jsx`, `AiDisclosure.jsx`, and `LegalLayout.jsx`) using Vite code splitting to isolate heavy text assets from the core stats-tracking code.
@@ -53,7 +53,7 @@ Stores user-specific metadata and authorization tiers.
 - `current_session_id` (UUID): Used for the custom anti-account-sharing architecture.
 
 ### `teams` & `clubs`
-Hierarchical organization of teams. A user can create a club and multiple teams within it.
+Hierarchical organization of teams. A user can create a club and multiple teams within it. The `teams` table includes a `managed_lines` JSONB column which stores user-defined lines (Line Name, array of Player IDs) for advanced line-level statistics comparison.
 
 ### `team_players`
 Maps players to specific teams with attributes like `name`, `shirt_number`, and `gender_match`.
@@ -65,6 +65,23 @@ The immutable ledger of game events.
 - `player` (Text): The player who performed the action.
 - `stat_type` (Text): The action (e.g., 'Pass', 'Drop', 'Point', 'Defence').
 - `details` (JSONB): Extended metadata (e.g., `{ isCallahan: true }`, `{ x: 10, y: 20 }`).
+
+---
+
+## Team & Line-Level Stats Architecture
+
+To support granular team and unit (Line) diagnostics for the Coach Pro tier without introducing database schema complexity or migration overhead, the system leverages an **event-sourced frontend aggregation pipeline**:
+
+1. **Predefined Line Templates**: Coaches define strategic lineups (e.g., "O-Line Standard", "D-Line Standard") in the team settings. These are stored as a JSONB array (`managed_lines`) in the `teams` table, consisting of named units and their member player IDs.
+2. **Dynamic Lineup Resolution (Threshold Matching)**: During active game tracking, the recorder logs player entries on a point via `Lineup` events. Within the dashboard's analytics `useMemo` block, the system computes the active players for each point. It then runs a **70% Majority Threshold Matcher** to attribute the point to a predefined line template:
+   * *Beach (5v5)*: attributes the point if $\ge 4$ players on the field belong to the line.
+   * *Grass (7v7)*: attributes the point if $\ge 5$ players on the field belong to the line.
+   * Points not crossing this threshold are safely aggregated under a fallback **"Mixed / Custom Lineup"** category.
+3. **Advanced Performance Indicators**:
+   * **Clean O-Holds**: Points started on Offense (`Start Offense` or receiving a pull) that result in a score (`Point`) with exactly $0$ turnovers.
+   * **Break Conversions**: Points started on Defense (`Start Defense` or pulling) that result in a score (`Point`), measured specifically against D-points where an opponent turnover occurred (Transition Offense).
+   * **Huck Integrity (Deep Throws)**: Success rate of throws marked with `{ is_huck: true }` in their event details.
+   * **Volatility Index**: Turnovers per point played, identifying high-risk vs. clinical playstyles.
 
 ---
 

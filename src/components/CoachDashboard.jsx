@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { fetchGameStats, fetchAllGameNames, fetchAllTeamNames } from '../supabaseClient';
+import { fetchGameStats, fetchAllGameNames, fetchAllTeamNames, fetchManagedLines } from '../supabaseClient';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea } from 'recharts';
 import { Lock, Zap, Target, AlertTriangle, Presentation, Users, ChevronDown, Check, Activity, TrendingUp, TrendingDown, Share2, Printer } from 'lucide-react';
 import AiAdvisorModule from './AiAdvisorModule';
@@ -16,7 +16,19 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
   const [sortField, setSortField] = useState('nis');
   const [sortDirection, setSortDirection] = useState('desc');
   const [highlightedPlayerName, setHighlightedPlayerName] = useState(null);
+  const [teamLines, setTeamLines] = useState([]);
+  const [activeSubTab, setActiveSubTab] = useState('players'); // 'players' | 'team-lines'
   const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    if (targetTeamId) {
+      fetchManagedLines(targetTeamId)
+        .then(lines => setTeamLines(lines || []))
+        .catch(err => console.warn("Failed to fetch managed lines:", err));
+    } else {
+      setTeamLines([]);
+    }
+  }, [targetTeamId]);
 
   useEffect(() => {
     fetchAllTeamNames().then(setAllTeams).catch(console.error);
@@ -76,7 +88,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
     setIsDropdownOpen(false);
   };
 
-  const { playerStats, timeline, score, teamSummary, connectionsMap, twoGameTrend, isMultiGame } = useMemo(() => {
+  const { playerStats, timeline, score, teamSummary, connectionsMap, twoGameTrend, isMultiGame, teamStats, linesStats } = useMemo(() => {
     const isMultiGame = selectedGames.length > 1;
     const playersMap = {};
     const timelineData = [];
@@ -111,6 +123,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
     const pointTurnovers = {};
     const pointPossessions = {};
     const pointCleanHolds = {};
+    const pointPlayersMap = {};
 
     const normalizedStats = stats.map(stat => {
       let normalizedName = stat.player;
@@ -135,6 +148,13 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
 
     normalizedStats.forEach((stat, index) => {
       const pointKey = `${stat.game_name}_${stat.point_number}`;
+
+      if (stat.player && stat.player !== 'System' && stat.player !== 'Opponent') {
+        if (!pointPlayersMap[pointKey]) {
+          pointPlayersMap[pointKey] = new Set();
+        }
+        pointPlayersMap[pointKey].add(stat.player);
+      }
       
       if (!currentLineStatePerGame[stat.game_name]) {
           currentLineStatePerGame[stat.game_name] = 'O';
@@ -433,6 +453,239 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       }
     }
 
+    // ===================================================
+    // TEAM & LINE-LEVEL STATS AGGREGATION (COACH PRO)
+    // ===================================================
+    const lineNameToPlayerNames = {};
+    teamLines.forEach(line => {
+      const names = (line.playerIds || []).map(pid => {
+        const pObj = players.find(p => p.id === pid);
+        return pObj ? pObj.name : null;
+      }).filter(Boolean);
+      lineNameToPlayerNames[line.name] = names;
+    });
+
+    const getLineForPoint = (pointPlayersSet) => {
+      if (!pointPlayersSet || pointPlayersSet.size === 0) return 'Mixed / Custom';
+      
+      const pointPlayersArr = Array.from(pointPlayersSet);
+      let bestLine = 'Mixed / Custom';
+      let bestMatchPercent = 0;
+      
+      // Threshold: at least 70% matching active players must belong to the predefined line
+      const thresholdPercent = 70; 
+
+      Object.entries(lineNameToPlayerNames).forEach(([lineName, linePlayerNames]) => {
+        if (linePlayerNames.length === 0) return;
+        
+        const matchCount = pointPlayersArr.filter(pName => linePlayerNames.includes(pName)).length;
+        const matchPercent = (matchCount / pointPlayersArr.length) * 100;
+        
+        if (matchPercent >= thresholdPercent && matchPercent > bestMatchPercent) {
+          bestMatchPercent = matchPercent;
+          bestLine = lineName;
+        }
+      });
+      
+      return bestLine;
+    };
+
+    const linesStats = {};
+    
+    const ensureLineStats = (lineName) => {
+      if (!linesStats[lineName]) {
+        linesStats[lineName] = {
+          name: lineName,
+          holdsPlayed: 0,
+          holdsWon: 0,
+          cleanHolds: 0,
+          breaksPlayed: 0,
+          breaksWon: 0,
+          breakOpportunities: 0,
+          possessionsPlayed: 0,
+          goalsOnPitch: 0,
+          
+          passesCompleted: 0,
+          passAttempts: 0,
+          throwaways: 0,
+          drops: 0,
+          stalls: 0,
+          
+          huckCompletions: 0,
+          huckAttempts: 0,
+          huckThrowaways: 0,
+          huckDrops: 0,
+          
+          pointsPlayed: 0
+        };
+      }
+      return linesStats[lineName];
+    };
+
+    // First, map each point to its best-matching line template
+    const pointLineMap = {};
+    Object.keys(pointODState).forEach(ptKey => {
+      pointLineMap[ptKey] = getLineForPoint(pointPlayersMap[ptKey]);
+    });
+
+    // Populate lineSummary metrics from individual player actions on each point
+    normalizedStats.forEach((stat, index) => {
+      const pointKey = `${stat.game_name}_${stat.point_number}`;
+      const pointLine = pointLineMap[pointKey] || 'Mixed / Custom';
+      const lineSummary = ensureLineStats(pointLine);
+
+      const SYSTEM_EVENTS = ['Match Metadata', 'Game Completed', 'Start Offense', 'Start Defense', 'Half Time', 'Lineup'];
+      if (stat.player === 'System' || stat.player === 'Opponent' || SYSTEM_EVENTS.includes(stat.stat_type)) return;
+
+      if (stat.stat_type === 'Pass') {
+        const nextStat = normalizedStats[index + 1];
+        if (nextStat && nextStat.game_name === stat.game_name && nextStat.point_number === stat.point_number && nextStat.stat_type === 'Drop') {
+          lineSummary.passAttempts += 1;
+        } else {
+          lineSummary.passesCompleted += 1;
+          lineSummary.passAttempts += 1;
+          if (stat.details?.is_huck || (nextStat && nextStat.details?.is_huck && (nextStat.stat_type === 'Pass' || nextStat.stat_type === 'Point'))) {
+            lineSummary.huckCompletions += 1;
+            lineSummary.huckAttempts += 1;
+          }
+        }
+      } else if (stat.stat_type === 'Pass Attempt') {
+        lineSummary.passAttempts += 1;
+        if (stat.details?.is_huck) {
+          lineSummary.huckAttempts += 1;
+        }
+      } else if (stat.stat_type === 'Throwaway') {
+        lineSummary.throwaways += 1;
+        if (stat.details?.is_huck) {
+          lineSummary.huckThrowaways += 1;
+          lineSummary.huckAttempts += 1;
+        }
+      } else if (stat.stat_type === 'Drop') {
+        lineSummary.drops += 1;
+        if (stat.details?.is_huck) {
+          lineSummary.huckDrops += 1;
+          lineSummary.huckAttempts += 1;
+        }
+      } else if (stat.stat_type === 'Stall Out') {
+        lineSummary.stalls += 1;
+      }
+    });
+
+    // Populate point outcomes per line
+    Object.entries(pointOutcomes).forEach(([ptKey, outcome]) => {
+      const pointLine = pointLineMap[ptKey] || 'Mixed / Custom';
+      const lineSummary = ensureLineStats(pointLine);
+      const turnovers = pointTurnovers[ptKey] || 0;
+
+      lineSummary.pointsPlayed += 1;
+      lineSummary.possessionsPlayed += pointPossessions[ptKey] || 0;
+      if (outcome === 'won') {
+        lineSummary.goalsOnPitch += 1;
+      }
+
+      if (pointODState[ptKey] === 'O') {
+        lineSummary.holdsPlayed += 1;
+        if (outcome === 'won') {
+          lineSummary.holdsWon += 1;
+          if (turnovers === 0) {
+            lineSummary.cleanHolds += 1;
+          }
+        }
+      } else {
+        lineSummary.breaksPlayed += 1;
+        if (outcome === 'won') {
+          lineSummary.breaksWon += 1;
+        }
+        if (turnovers > 0 || outcome === 'won') {
+          lineSummary.breakOpportunities += 1;
+        }
+      }
+    });
+
+    // Create default statistics for active predefined lines even if they haven't played yet
+    teamLines.forEach(line => {
+      ensureLineStats(line.name);
+    });
+    // Ensure "Mixed / Custom" is always visible if we have data
+    if (Object.keys(pointOutcomes).length > 0) {
+      ensureLineStats('Mixed / Custom');
+    }
+
+    // Aggregate Team Level Summary
+    const teamStats = {
+      holdsPlayed: 0,
+      holdsWon: 0,
+      cleanHolds: 0,
+      breaksPlayed: 0,
+      breaksWon: 0,
+      breakOpportunities: 0,
+      possessionsPlayed: 0,
+      goalsOnPitch: 0,
+      
+      passesCompleted: 0,
+      passAttempts: 0,
+      throwaways: 0,
+      drops: 0,
+      stalls: 0,
+      
+      huckCompletions: 0,
+      huckAttempts: 0,
+      huckThrowaways: 0,
+      huckDrops: 0,
+      
+      pointsPlayed: 0
+    };
+
+    Object.values(linesStats).forEach(ls => {
+      teamStats.holdsPlayed += ls.holdsPlayed;
+      teamStats.holdsWon += ls.holdsWon;
+      teamStats.cleanHolds += ls.cleanHolds;
+      teamStats.breaksPlayed += ls.breaksPlayed;
+      teamStats.breaksWon += ls.breaksWon;
+      teamStats.breakOpportunities += ls.breakOpportunities;
+      teamStats.possessionsPlayed += ls.possessionsPlayed;
+      teamStats.goalsOnPitch += ls.goalsOnPitch;
+      
+      teamStats.passesCompleted += ls.passesCompleted;
+      teamStats.passAttempts += ls.passAttempts;
+      teamStats.throwaways += ls.throwaways;
+      teamStats.drops += ls.drops;
+      teamStats.stalls += ls.stalls;
+      
+      teamStats.huckCompletions += ls.huckCompletions;
+      teamStats.huckAttempts += ls.huckAttempts;
+      teamStats.huckThrowaways += ls.huckThrowaways;
+      teamStats.huckDrops += ls.huckDrops;
+      
+      teamStats.pointsPlayed += ls.pointsPlayed;
+    });
+
+    // Compute derived rates for team
+    teamStats.holdRate = teamStats.holdsPlayed > 0 ? (teamStats.holdsWon / teamStats.holdsPlayed) * 100 : 0;
+    teamStats.cleanHoldRate = teamStats.holdsPlayed > 0 ? (teamStats.cleanHolds / teamStats.holdsPlayed) * 100 : 0;
+    teamStats.breakRate = teamStats.breaksPlayed > 0 ? (teamStats.breaksWon / teamStats.breaksPlayed) * 100 : 0;
+    teamStats.breakConversion = teamStats.breakOpportunities > 0 ? (teamStats.breaksWon / teamStats.breakOpportunities) * 100 : 0;
+    teamStats.completionRate = teamStats.passAttempts > 0 ? (teamStats.passesCompleted / teamStats.passAttempts) * 100 : 0;
+    teamStats.huckSuccessRate = teamStats.huckAttempts > 0 ? (teamStats.huckCompletions / teamStats.huckAttempts) * 100 : 0;
+    teamStats.turnoversPerPoint = teamStats.pointsPlayed > 0 ? ((teamStats.throwaways + teamStats.drops + teamStats.stalls) / teamStats.pointsPlayed) : 0;
+    teamStats.oce = teamStats.possessionsPlayed > 0 ? (teamStats.goalsOnPitch / teamStats.possessionsPlayed) * 100 : 0;
+
+    const formattedLinesStats = Object.values(linesStats).map(ls => {
+      const turnovers = ls.throwaways + ls.drops + ls.stalls;
+      return {
+        ...ls,
+        turnovers,
+        holdRate: ls.holdsPlayed > 0 ? parseFloat(((ls.holdsWon / ls.holdsPlayed) * 100).toFixed(1)) : 0,
+        cleanHoldRate: ls.holdsPlayed > 0 ? parseFloat(((ls.cleanHolds / ls.holdsPlayed) * 100).toFixed(1)) : 0,
+        breakRate: ls.breaksPlayed > 0 ? parseFloat(((ls.breaksWon / ls.breaksPlayed) * 100).toFixed(1)) : 0,
+        breakConversion: ls.breakOpportunities > 0 ? parseFloat(((ls.breaksWon / ls.breakOpportunities) * 100).toFixed(1)) : 0,
+        completion: ls.passAttempts > 0 ? parseFloat(((ls.passesCompleted / ls.passAttempts) * 100).toFixed(1)) : 0,
+        huckSuccessRate: ls.huckAttempts > 0 ? parseFloat(((ls.huckCompletions / ls.huckAttempts) * 100).toFixed(1)) : 0,
+        turnoversPerPoint: ls.pointsPlayed > 0 ? parseFloat((turnovers / ls.pointsPlayed).toFixed(2)) : 0,
+        oce: ls.possessionsPlayed > 0 ? parseFloat(((ls.goalsOnPitch / ls.possessionsPlayed) * 100).toFixed(1)) : 0
+      };
+    });
+
     return {
       playerStats: calculatedPlayerStats,
       timeline: timelineData,
@@ -442,9 +695,11 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       coachInsight: insight,
       connectionsMap,
       twoGameTrend,
-      isMultiGame
+      isMultiGame,
+      teamStats,
+      linesStats: formattedLinesStats
     };
-  }, [stats, selectedGames.length, players]);
+  }, [stats, selectedGames.length, players, teamLines]);
 
   if (selectedGames.length === 0) {
     return (
@@ -837,15 +1092,41 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
 
           {/* Master Sortable Analytics Table */}
           <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl overflow-hidden print:overflow-visible mt-6">
-            <div className="p-6 border-b border-white/10 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Lock className="w-5 h-5 text-amber-400" /> True Impact Master Roster
-              </h3>
-              <span className="text-xs bg-slate-950 border border-slate-800 px-3 py-1 rounded-lg text-slate-500 font-medium">
-                Click column headers to sort
-              </span>
+            <div className="p-6 border-b border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Lock className="w-5 h-5 text-amber-400" /> Stats Analytics Suite
+                </h3>
+                {/* Sub-tab toggles */}
+                <div className="flex bg-slate-950 p-1 rounded-xl border border-white/5">
+                  <button
+                    onClick={() => setActiveSubTab('players')}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeSubTab === 'players' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    Individual Stats
+                  </button>
+                  <button
+                    onClick={() => setActiveSubTab('team-lines')}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${activeSubTab === 'team-lines' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    <Users className="w-3.5 h-3.5" /> Team & Line Stats
+                  </button>
+                </div>
+              </div>
+              
+              {activeSubTab === 'players' ? (
+                <span className="text-xs bg-slate-950 border border-slate-800 px-3 py-1 rounded-lg text-slate-500 font-medium">
+                  Click column headers to sort
+                </span>
+              ) : (
+                <span className="text-xs bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-lg text-indigo-400 font-bold uppercase tracking-wider">
+                  Coach Pro Feature
+                </span>
+              )}
             </div>
-            <div className="overflow-x-auto print:overflow-visible w-full">
+
+            {activeSubTab === 'players' ? (
+              <div className="overflow-x-auto print:overflow-visible w-full">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-950/80 text-slate-400 text-[10px] uppercase tracking-widest cursor-pointer select-none">
@@ -1005,6 +1286,134 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                 </tbody>
               </table>
             </div>
+            ) : (
+              <div className="flex flex-col w-full">
+                
+                {/* Team Overview Widgets Grid */}
+                <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 border-b border-white/10 bg-slate-950/40">
+                  
+                  {/* Clean O-Hold Rate card */}
+                  <div className="bg-slate-900/60 border border-white/5 rounded-2xl p-5 shadow-inner">
+                    <div className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Clean O-Hold Rate</div>
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="text-3xl font-black text-emerald-400">{teamStats.cleanHoldRate.toFixed(1)}%</span>
+                      <span className="text-slate-500 text-xs font-bold">({teamStats.cleanHolds}/{teamStats.holdsPlayed})</span>
+                    </div>
+                    <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-white/5">
+                      <div className="bg-emerald-500 h-full rounded-full transition-all" style={{ width: `${teamStats.cleanHoldRate}%` }} />
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-2 font-medium">
+                      Holds without any turnovers.
+                    </div>
+                  </div>
+
+                  {/* Break Conversion card */}
+                  <div className="bg-slate-900/60 border border-white/5 rounded-2xl p-5 shadow-inner">
+                    <div className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Break Conversion</div>
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="text-3xl font-black text-indigo-400">{teamStats.breakConversion.toFixed(1)}%</span>
+                      <span className="text-slate-500 text-xs font-bold">({teamStats.breaksWon}/{teamStats.breakOpportunities})</span>
+                    </div>
+                    <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-white/5">
+                      <div className="bg-indigo-500 h-full rounded-full transition-all" style={{ width: `${teamStats.breakConversion}%` }} />
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-2 font-medium">
+                      Score conversion after forcing opponent turn.
+                    </div>
+                  </div>
+
+                  {/* Pass Completion Rate card */}
+                  <div className="bg-slate-900/60 border border-white/5 rounded-2xl p-5 shadow-inner">
+                    <div className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Pass Completion</div>
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="text-3xl font-black text-blue-400">{teamStats.completionRate.toFixed(1)}%</span>
+                      <span className="text-slate-500 text-xs font-bold">({teamStats.passesCompleted}/{teamStats.passAttempts})</span>
+                    </div>
+                    <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-white/5">
+                      <div className="bg-blue-500 h-full rounded-full transition-all" style={{ width: `${teamStats.completionRate}%` }} />
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-2 font-medium">
+                      Throw completion rate across team.
+                    </div>
+                  </div>
+
+                  {/* Huck Success Rate card */}
+                  <div className="bg-slate-900/60 border border-white/5 rounded-2xl p-5 shadow-inner">
+                    <div className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Huck Success Rate</div>
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="text-3xl font-black text-amber-400">{teamStats.huckSuccessRate.toFixed(1)}%</span>
+                      <span className="text-slate-500 text-xs font-bold">({teamStats.huckCompletions}/{teamStats.huckAttempts})</span>
+                    </div>
+                    <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-white/5">
+                      <div className="bg-amber-500 h-full rounded-full transition-all" style={{ width: `${teamStats.huckSuccessRate}%` }} />
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-2 font-medium">
+                      Deep throw completion efficiency.
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Comparative Line Table */}
+                <div className="overflow-x-auto print:overflow-visible w-full">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-950/80 text-slate-400 text-[10px] uppercase tracking-widest select-none font-bold">
+                        <th className="p-4">Line Template</th>
+                        <th className="p-4 text-center">Points Played</th>
+                        <th className="p-4 text-center">Hold Rate (Holds/Played)</th>
+                        <th className="p-4 text-center">Clean Hold Rate</th>
+                        <th className="p-4 text-center">Break Rate (Breaks/Played)</th>
+                        <th className="p-4 text-center">Break Conversion</th>
+                        <th className="p-4 text-center">Pass Comp %</th>
+                        <th className="p-4 text-center">Huck Comp %</th>
+                        <th className="p-4 text-center" title="Average turnovers per point played">Turnovers / Pt</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {linesStats.length === 0 ? (
+                        <tr>
+                          <td colSpan="9" className="p-8 text-center text-slate-500 font-medium bg-slate-950/20">
+                            No predefined lines found. Configure Lines in team settings.
+                          </td>
+                        </tr>
+                      ) : (
+                        linesStats
+                          .sort((a, b) => b.pointsPlayed - a.pointsPlayed)
+                          .map(line => (
+                            <tr key={line.name} className="border-b border-white/5 hover:bg-slate-800/30 transition-colors font-medium text-slate-300 text-sm">
+                              <td className="p-4 font-black text-white">{line.name}</td>
+                              <td className="p-4 text-center font-bold">{line.pointsPlayed}</td>
+                              <td className="p-4 text-center">
+                                <span className="font-bold text-slate-200">{line.holdRate}%</span>
+                                <span className="text-slate-500 text-xs block">({line.holdsWon}/{line.holdsPlayed})</span>
+                              </td>
+                              <td className="p-4 text-center">
+                                <span className="font-bold text-emerald-400">{line.cleanHoldRate}%</span>
+                                <span className="text-slate-500 text-xs block">({line.cleanHolds}/{line.holdsPlayed})</span>
+                              </td>
+                              <td className="p-4 text-center">
+                                <span className="font-bold text-slate-200">{line.breakRate}%</span>
+                                <span className="text-slate-500 text-xs block">({line.breaksWon}/{line.breaksPlayed})</span>
+                              </td>
+                              <td className="p-4 text-center">
+                                <span className="font-bold text-indigo-400">{line.breakConversion}%</span>
+                                <span className="text-slate-500 text-xs block">({line.breaksWon}/{line.breakOpportunities})</span>
+                              </td>
+                              <td className="p-4 text-center font-bold text-blue-400">{line.completion}%</td>
+                              <td className="p-4 text-center font-bold text-amber-400">{line.huckSuccessRate}%</td>
+                              <td className="p-4 text-center">
+                                <span className="font-black text-rose-500">{line.turnoversPerPoint}</span>
+                              </td>
+                            </tr>
+                          ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+              </div>
+            )}
           </div>
 
         </div>
