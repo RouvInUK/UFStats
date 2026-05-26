@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Volume2, Vibrate, Mic, Globe, Settings as SettingsIcon, Sun, Moon } from 'lucide-react';
+import { X, Volume2, Vibrate, Mic, Globe, Settings as SettingsIcon, Sun, Moon, Crown, Star } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   getLegalPath, 
   FULL_COMPANY_NAME, 
@@ -9,7 +10,9 @@ import {
   SUPPORT_EMAIL 
 } from '../constants/legal';
 
-const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled }) => {
+const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled, onUpgradeClick }) => {
+  const { profile } = useAuth();
+  const isProTier = profile?.tier === 'PRO' || (profile?.pro_expires_at && new Date(profile.pro_expires_at) > new Date());
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isHapticEnabled, setIsHapticEnabled] = useState(true);
   const [theme, setTheme] = useState(() => localStorage.getItem('ufstats_theme') || 'dark');
@@ -183,6 +186,65 @@ const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled }) =
               </button>
             </div>
 
+          </div>
+
+          {/* Premium Tier Section */}
+          <div className="space-y-4 pt-4 border-t border-slate-800">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Subscription & Membership</h3>
+            
+            {isProTier ? (
+              <div className="p-4 bg-gradient-to-br from-amber-500/10 via-slate-900/50 to-slate-900 border border-amber-500/20 rounded-2xl relative overflow-hidden flex items-start gap-4">
+                <div className="p-2.5 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
+                  <Crown className="w-5 h-5 animate-pulse" />
+                </div>
+                <div className="space-y-1 flex-1">
+                  <div className="text-sm font-black text-white flex items-center gap-1.5 uppercase tracking-wide">
+                    Coach Pro Active
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {profile?.pro_expires_at ? (
+                      <span>Promo Active until <strong className="text-slate-200">{new Date(profile.pro_expires_at).toLocaleDateString()}</strong></span>
+                    ) : (
+                      <span>Active via recurring billing (£5/mo or £50/yr)</span>
+                    )}
+                  </div>
+                  {!profile?.pro_expires_at && (
+                    <a 
+                      href={import.meta.env.VITE_PAYPAL_CLIENT_ID === 'sb' || !import.meta.env.VITE_PAYPAL_CLIENT_ID ? "https://www.sandbox.paypal.com/myaccount/autopay/" : "https://www.paypal.com/myaccount/autopay/"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block mt-2 text-[10px] font-black text-rose-400 hover:text-rose-300 hover:underline uppercase tracking-wider transition-colors"
+                    >
+                      Manage / Cancel Subscription ↗
+                    </a>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 bg-gradient-to-br from-indigo-950/40 via-slate-900/50 to-slate-900 border border-indigo-500/20 rounded-2xl relative overflow-hidden">
+                <div className="absolute top-2 right-2">
+                  <span className="text-[9px] font-black bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Coach Pro</span>
+                </div>
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="p-2.5 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
+                    <Star className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-black text-white uppercase tracking-wide">Unlock Coach Pro</div>
+                    <p className="text-xs text-slate-400 leading-relaxed mt-1">Get advanced NIS impact metrics, full pull-quality analysis, dynamic lineup resolution, and unlimited clubs/teams.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => {
+                    onClose();
+                    if (onUpgradeClick) onUpgradeClick();
+                  }}
+                  className="w-full py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-black rounded-xl transition-all shadow-lg shadow-indigo-500/20 uppercase tracking-widest"
+                >
+                  Upgrade for £5/month ★
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Legal & Disclosures Section */}

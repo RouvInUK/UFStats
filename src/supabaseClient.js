@@ -547,6 +547,17 @@ export const updateUserTier = async (userId, tier) => {
   return data[0];
 };
 
+export const updateUserProExpiration = async (userId, pro_expires_at) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ pro_expires_at: pro_expires_at || null })
+    .eq('id', userId)
+    .select();
+
+  if (error) throw error;
+  return data ? data[0] : null;
+};
+
 export const updateUserBetaVoicePro = async (userId, beta_voice_pro) => {
   const { data, error } = await supabase
     .from('profiles')
@@ -583,12 +594,12 @@ export const fetchUserHierarchy = async (userId) => {
 export const checkTierLimits = async (userId) => {
   const { data: profile, error: pError } = await supabase
     .from('profiles')
-    .select('tier')
+    .select('tier, pro_expires_at')
     .eq('id', userId)
     .single();
     
   if (pError) throw pError;
-  const isPro = profile.tier === 'PRO';
+  const isPro = profile.tier === 'PRO' || !!(profile.pro_expires_at && new Date(profile.pro_expires_at) > new Date());
   
   if (isPro) {
     return { canAddClub: true, canAddTeam: true, isPro: true };

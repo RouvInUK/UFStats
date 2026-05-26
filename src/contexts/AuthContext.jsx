@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('is_system_admin, tier, beta_voice_pro, current_session_id')
+        .select('is_system_admin, tier, beta_voice_pro, current_session_id, pro_expires_at')
         .eq('id', userId)
         .single();
         
@@ -265,6 +265,7 @@ export const AuthProvider = ({ children }) => {
     signIn,
     signUp,
     signOut,
+    fetchProfile: (userId) => fetchProfile(userId, 1, 'PROFILE_REFRESH'),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

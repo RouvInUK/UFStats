@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, fetchBetaKeys, generateBetaKey, pruneIncompleteGames, fetchActionsPerDay } from '../supabaseClient';
-import { Shield, ArrowLeft, Users, Activity, Key, Trash2, Crown, LayoutDashboard, Database, RefreshCw, BarChart2 } from 'lucide-react';
+import { Shield, ArrowLeft, Users, Activity, Key, Trash2, Crown, LayoutDashboard, Database, RefreshCw, BarChart2, Calendar } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
@@ -114,6 +114,17 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
     } catch (err) {
       console.error(err);
       alert(`Failed to update tier: ${err.message}`);
+    }
+  };
+
+  const handleUpdateProExpiration = async (userId, expiresAt) => {
+    try {
+      const { updateUserProExpiration } = await import('../supabaseClient');
+      await updateUserProExpiration(userId, expiresAt);
+      setUsers(users.map(u => u.id === userId ? { ...u, pro_expires_at: expiresAt } : u));
+    } catch (err) {
+      console.error(err);
+      alert(`Failed to update pro expiration: ${err.message}`);
     }
   };
 
@@ -258,6 +269,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                         <th className="p-4 font-bold text-center">Clubs / Teams</th>
                         <th className="p-4 font-bold text-center">Games</th>
                         <th className="p-4 font-bold text-center">Tier</th>
+                        <th className="p-4 font-bold text-center text-amber-400">Promo Expiry</th>
                         <th className="p-4 font-bold text-center">Voice Beta</th>
                         <th className="p-4 font-bold text-right">View Data</th>
                       </tr>
@@ -285,6 +297,66 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                                 <option value="FREE">FREE</option>
                                 <option value="PRO">PRO</option>
                               </select>
+                            </td>
+                            <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex flex-col gap-1 items-center">
+                                <select
+                                  value={user.pro_expires_at ? 'custom' : 'none'}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === 'none') {
+                                      handleUpdateProExpiration(user.id, null);
+                                    } else if (val === '1w') {
+                                      const d = new Date();
+                                      d.setDate(d.getDate() + 7);
+                                      handleUpdateProExpiration(user.id, d.toISOString());
+                                    } else if (val === '1m') {
+                                      const d = new Date();
+                                      d.setMonth(d.getMonth() + 1);
+                                      handleUpdateProExpiration(user.id, d.toISOString());
+                                    } else if (val === '6m') {
+                                      const d = new Date();
+                                      d.setMonth(d.getMonth() + 6);
+                                      handleUpdateProExpiration(user.id, d.toISOString());
+                                    }
+                                  }}
+                                  className="bg-slate-900 border border-slate-700 text-[10px] font-bold rounded-lg px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                                >
+                                  <option value="none">No Promo</option>
+                                  <option value="1w">+1 Week</option>
+                                  <option value="1m">+1 Month</option>
+                                  <option value="6m">+6 Months</option>
+                                  <option value="custom">Custom (Select below)</option>
+                                </select>
+                                <div className="relative flex items-center bg-slate-900 border border-slate-700 hover:border-slate-600 rounded-lg px-2 py-1 w-32 focus-within:ring-1 focus-within:ring-indigo-500 cursor-pointer transition-all shadow-inner">
+                                  <Calendar className="w-3.5 h-3.5 text-indigo-400 mr-1.5 flex-shrink-0" />
+                                  <input 
+                                    type="date"
+                                    value={user.pro_expires_at ? new Date(user.pro_expires_at).toISOString().split('T')[0] : ''}
+                                    onChange={(e) => {
+                                      if (e.target.value) {
+                                        const d = new Date(e.target.value);
+                                        d.setHours(23, 59, 59, 999);
+                                        handleUpdateProExpiration(user.id, d.toISOString());
+                                      } else {
+                                        handleUpdateProExpiration(user.id, null);
+                                      }
+                                    }}
+                                    onClick={(e) => {
+                                      try { e.target.showPicker(); } catch (err) {}
+                                    }}
+                                    className="bg-transparent text-xs text-slate-300 font-semibold outline-none w-full cursor-pointer [color-scheme:dark]"
+                                  />
+                                </div>
+                                {user.pro_expires_at && (() => {
+                                  const daysLeft = Math.ceil((new Date(user.pro_expires_at) - new Date()) / (1000 * 60 * 60 * 24));
+                                  if (daysLeft > 0) {
+                                    return <span className="text-[8px] font-black text-amber-400 bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/20">{daysLeft} days left</span>;
+                                  } else {
+                                    return <span className="text-[8px] font-black text-rose-400 bg-rose-500/10 px-1 py-0.5 rounded border border-rose-500/20">Expired</span>;
+                                  }
+                                })()}
+                              </div>
                             </td>
                             <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
                               <input 

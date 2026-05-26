@@ -3,9 +3,10 @@
 ustats.pro is a modern, offline-capable Single Page Application (SPA) designed to track Ultimate Frisbee statistics in real-time, even in environments with poor network connectivity. 
 
 ## Technology Stack
-- **Frontend Framework**: React 18, built with Vite for rapid HMR and optimized bundling.
+- **Frontend Framework**: React 19, built with Vite for rapid HMR and optimized bundling.
 - **Styling**: Tailwind CSS for utility-first, responsive, and highly customizable UI components.
 - **Backend & Database**: Supabase (PostgreSQL). Handles data persistence, authentication, and Row Level Security (RLS).
+- **Payments Integration**: PayPal JavaScript SDK (vault subscriptions) & secure Edge Webhooks (Deno/TypeScript).
 - **Icons**: Lucide React.
 - **Charts**: Recharts (for Pro Analytics).
 - **PDF Generation**: html2pdf.js.
@@ -39,6 +40,7 @@ The core source code of the application.
 - **`CoachDashboard.jsx`**: The Pro-tier advanced analytics engine. Includes line charts, scatter plots, active player filters, and PDF export functionality. **Now features the Team & Line-Level Stats Suite, which dynamically attributes point stats to line templates using a majority lineup matching threshold, aggregating Clean O-Holds, Break Conversions, Huck Efficiency, and Pass Completion Rates without database overhead.**
 - **`RosterSetup.jsx` & `LineupManager.jsx`**: Interfaces for configuring the team roster and the active 7 players on the pitch.
 - **`StandardFooter.jsx`**: Global compliance footer implementing corporate disclosures, support links, and the haptic/visual **Beach Mode** accessibility high-contrast toggle.
+- **`PayPalUpgradeModal.jsx`**: A premium glassmorphic checkout UI dynamically loading the PayPal Subscriptions SDK, managing UK pricing (£5/mo and £50/yr plans), and celebrating success with elegant celebratory layouts.
 - **`legal/`**: Folder containing lazy-loaded legal modules (`PrivacyPolicy.jsx`, `TermsOfService.jsx`, `AiDisclosure.jsx`, and `LegalLayout.jsx`) using Vite code splitting to isolate heavy text assets from the core stats-tracking code.
 
 ---
@@ -48,9 +50,13 @@ The core source code of the application.
 ### `profiles`
 Stores user-specific metadata and authorization tiers.
 - `id` (UUID): Matches Supabase Auth user ID.
-- `tier` (Text): 'free', 'pro', or 'coach'.
+- `tier` (Text): 'FREE' or 'PRO'.
 - `is_system_admin` (Boolean): For administrative overrides.
 - `current_session_id` (UUID): Used for the custom anti-account-sharing architecture.
+- `paypal_subscription_id` (Text, Unique): Matches PayPal active recurring subscriptions.
+- `subscription_status` (Text): e.g. 'active', 'cancelled', 'suspended'.
+- `subscription_period` (Text): 'monthly' or 'yearly'.
+- `pro_expires_at` (Timestamp with Time Zone): Expiration date for manual admin promos/trials.
 
 ### `teams` & `clubs`
 Hierarchical organization of teams. A user can create a club and multiple teams within it. The `teams` table includes a `managed_lines` JSONB column which stores user-defined lines (Line Name, array of Player IDs) for advanced line-level statistics comparison.
@@ -65,6 +71,29 @@ The immutable ledger of game events.
 - `player` (Text): The player who performed the action.
 - `stat_type` (Text): The action (e.g., 'Pass', 'Drop', 'Point', 'Defence').
 - `details` (JSONB): Extended metadata (e.g., `{ isCallahan: true }`, `{ x: 10, y: 20 }`).
+
+---
+
+## Payment & Admin Promo Architecture
+
+To support premium membership tiers (£5/mo and £50/yr) securely and flexibly, the system utilizes a **double-check access pipeline** combining automated PayPal recurring billing and manual administrative promotional grants:
+
+1. **Dual Activation Logic**:
+   A profile has Pro access unlocked dynamically if *either* perpetual tier status is `'PRO'`, OR they have a valid, unexpired administrative promotion:
+   $$\text{Is Pro} = (\text{tier} = \text{'PRO'}) \lor (\text{pro\_expires\_at} \neq \text{null} \land \text{pro\_expires\_at} > \text{NOW()})$$
+   This decouples recurring billing state from direct promotional override capability, preventing user lockout on plan updates.
+
+2. **Secure Webhook Verification**:
+   - **Client Checkout**: Loads the PayPal JS SDK with `vault=true` and `intent=subscription` in GBP. On checkout approval, we pass the user's ID as `custom_id` to PayPal.
+   - **Server Webhook Verification**: Set up a Supabase Edge Function (`paypal-webhook`) listening for events from PayPal.
+   - **Cryptographic Signature Verification**: To prevent fraud, the Edge Function makes a secure callback POST to PayPal (`/v1/notifications/verify-webhook-signature`) transmitting raw headers (`paypal-transmission-sig`, `paypal-cert-url`, etc.) letting PayPal's API securely verify event authenticity before any DB changes are applied.
+   - **Automated Upgrades/Downgrades**:
+     - `BILLING.SUBSCRIPTION.ACTIVATED` / `BILLING.SUBSCRIPTION.RENEWED`: set profile `tier = 'PRO'`, update subscription Period and ID.
+     - `BILLING.SUBSCRIPTION.CANCELLED` / `BILLING.SUBSCRIPTION.EXPIRED` / `BILLING.SUBSCRIPTION.PAYMENT.FAILED`: demote profile `tier = 'FREE'`.
+
+3. **Admin Promo Expiration Manager**:
+   - Built directly into the **Admin Panel** (`AdminDashboard.jsx`), this interface enables global administrators to grant time-limited trials (+1 week, +1 month, +6 months) or custom calendar expiration dates.
+   - Saves `pro_expires_at` via `updateUserProExpiration` in `supabaseClient.js`, with the client calculating real-time visual countdown badges (e.g. *"Promo: 12 days left"*).
 
 ---
 
@@ -87,7 +116,8 @@ To support granular team and unit (Line) diagnostics for the Coach Pro tier with
 
 ## Security & Authorization
 - **Row Level Security (RLS)**: PostgreSQL RLS policies ensure that users can only read, update, and delete data associated with their own `auth.uid()`.
-- **Tier Gating**: The frontend checks the `tier` property on the `profile` object to conditionally render the Coach Dashboard or enable Voice Tracking.
+- **Column-Level Tamper Protection**: Implements a PostgreSQL `BEFORE UPDATE` trigger on the `profiles` table. If a non-admin client tries to modify columns like `tier`, `pro_expires_at`, `beta_voice_pro`, or `is_system_admin` directly from client-side JS, the database intercepts the request and automatically reverts those columns to their previously verified database state, completely neutralizing front-end console injections.
+- **Tier Gating**: The frontend checks the Boolean `isProTier` state computed globally to conditionally render the Coach Dashboard or enable Voice Tracking.
 - **Session Termination**: Enforced via the 30-second `AuthContext` database heartbeat.
 
 ## Voice Tracking Pipeline
@@ -120,4 +150,3 @@ To support granular team and unit (Line) diagnostics for the Coach Pro tier with
     - **Fallback Icon Asset**: A dedicated fallback `/logo_icon.png` is placed in the public directory and swapped to `/logo_dark_icon.png` or `/logo_light_icon.png` depending on the active light/dark theme.
     - **Real-Time Favicon Toggling**: An inline pre-paint script in `index.html` resolved in tandem with `App.jsx` and the preferences modal dynamically swaps the `<link>` tags' `href` attribute on the fly.
     - **CSS-Powered Image Swapping**: The dynamic theme injection pipeline is extended in `src/index.css` to target `logo_icon.png` and seamlessly replace its contents via CSS `content: url(...)` overrides based on `html.light-mode` state, preventing layout shifts or React render delays.
-

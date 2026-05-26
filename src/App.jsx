@@ -18,6 +18,7 @@ import LandingPage from './components/LandingPage';
 import DemoFramework from './components/DemoFramework';
 import UpdatePassword from './components/UpdatePassword';
 import SettingsModal from './components/SettingsModal';
+import PayPalUpgradeModal from './components/PayPalUpgradeModal';
 import { fetchPlayers } from './supabaseClient';
 import { useAuth } from './contexts/AuthContext';
 import { ShieldCheck, Star, LogOut, Cloud, CloudOff, CloudUpload, Crown, Settings, AlertTriangle } from 'lucide-react';
@@ -147,6 +148,7 @@ function App() {
   const { user, profile, loading: authLoading, authError, sessionTerminated, setSessionTerminated, signOut } = useAuth();
   const [currentView, setCurrentView] = useState('dashboard');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
   // Database State
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -526,7 +528,9 @@ function App() {
   // Derive active lineup (array of strings) for Dashboard compatibility
   const activeLineup = players.filter(p => p.is_active).map(p => p.name);
 
-  const isProTier = shadowTeam ? shadowTeam.tier === 'PRO' : profile?.tier === 'PRO';
+  const isProTier = shadowTeam 
+    ? shadowTeam.tier === 'PRO' 
+    : (profile?.tier === 'PRO' || !!(profile?.pro_expires_at && new Date(profile.pro_expires_at) > new Date()));
   const isVoiceBetaTier = shadowTeam ? shadowTeam.beta_voice_pro : profile?.beta_voice_pro;
 
   return (
@@ -829,6 +833,11 @@ function App() {
         onClose={() => setIsSettingsOpen(false)}
         isVoiceEnabled={isVoiceEnabled}
         setIsVoiceEnabled={setIsVoiceEnabled}
+        onUpgradeClick={() => setIsUpgradeOpen(true)}
+      />
+      <PayPalUpgradeModal
+        isOpen={isUpgradeOpen}
+        onClose={() => setIsUpgradeOpen(false)}
       />
     </div>
   );
