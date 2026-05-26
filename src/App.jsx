@@ -3,6 +3,7 @@ import StandardFooter from './components/StandardFooter';
 import { getLegalPath } from './constants/legal';
 
 const LegalLayout = lazy(() => import('./components/legal/LegalLayout'));
+const HelpLayout = lazy(() => import('./components/help/HelpLayout'));
 import Dashboard from './components/Dashboard';
 import RosterSetup from './components/RosterSetup';
 import LineupSelector from './components/LineupSelector';
@@ -383,6 +384,20 @@ function App() {
       }
     }
   }, [effectiveTeamName, shadowTeam, currentView, authLoading, profile]);
+
+  if (path === getLegalPath('/guide') || path === getLegalPath('/help')) {
+    return (
+      <Suspense fallback={
+        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
+          <div className="text-indigo-400 font-black tracking-widest text-sm uppercase animate-pulse">
+            Loading User Manual...
+          </div>
+        </div>
+      }>
+        <HelpLayout currentPath={path} />
+      </Suspense>
+    );
+  }
 
   if (path.includes('/legal/')) {
     return (

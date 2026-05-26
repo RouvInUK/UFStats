@@ -308,17 +308,19 @@ const TeamSelectionScreen = ({ onSelectTeam, onNavigateToAdmin, allowAutoSelect 
             </div>
             <h2 className="text-2xl font-black text-white text-center mb-2 uppercase tracking-widest">Upgrade to Pro</h2>
             <p className="text-slate-300 text-center mb-6 leading-relaxed">
-              You've reached the limit of the Free tier (1 Club, 3 Teams). Upgrade to Coach Pro to create unlimited clubs and teams.
+              {limits?.isPro 
+                ? "You've reached the Pro Tier limits (1 Club, 5 Teams)."
+                : "You've reached the Free Tier limits (1 Club, 2 Teams). Upgrade to Coach Pro to expand your team limits and unlock advanced side-line intelligence!"}
             </p>
             <div className="space-y-3 mb-8">
               <div className="flex items-center gap-3 text-sm text-slate-400 font-medium bg-slate-950 p-3 rounded-lg border border-slate-800">
-                <Shield className="w-4 h-4 text-emerald-500" /> Unlimited Clubs
+                <Shield className="w-4 h-4 text-indigo-400" /> 1 Club maximum capacity
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-400 font-medium bg-slate-950 p-3 rounded-lg border border-slate-800">
-                <Shield className="w-4 h-4 text-emerald-500" /> Unlimited Teams
+                <Shield className="w-4 h-4 text-emerald-500" /> Up to 5 Teams (Free tier: 2 Teams)
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-400 font-medium bg-slate-950 p-3 rounded-lg border border-slate-800">
-                <Shield className="w-4 h-4 text-amber-500" /> Advanced Analytics
+                <Shield className="w-4 h-4 text-amber-500" /> Advanced Coach's Dashboard & Analytics
               </div>
             </div>
             <button 

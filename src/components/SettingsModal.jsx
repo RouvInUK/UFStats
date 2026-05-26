@@ -236,7 +236,7 @@ const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled, onU
                   </div>
                   <div>
                     <div className="text-sm font-black text-white uppercase tracking-wide">Unlock Coach Pro</div>
-                    <p className="text-xs text-slate-400 leading-relaxed mt-1">Get advanced NIS impact metrics, full pull-quality analysis, dynamic lineup resolution, and unlimited clubs/teams.</p>
+                    <p className="text-xs text-slate-400 leading-relaxed mt-1">Get advanced NIS impact metrics, full pull-quality analysis, dynamic lineup resolution, and up to 5 teams.</p>
                   </div>
                 </div>
                 <button 
@@ -256,34 +256,43 @@ const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled, onU
           <div className="space-y-4 pt-4 border-t border-slate-800">
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Legal & Disclosures</h3>
             
-            {/* Compliance Policy Quick Links */}
-            <div className="grid grid-cols-3 gap-2 text-center">
+            {/* Compliance Policy & Manual Quick Links */}
+            <div className="grid grid-cols-2 gap-2 text-center">
               <button
                 onClick={() => {
                   onClose();
-                  window.history.pushState({}, '', getLegalPath('/legal/privacy'));
+                  window.history.pushState({}, '', getLegalPath('/guide'));
                 }}
-                className="py-2 px-1 bg-slate-800/40 hover:bg-slate-800/80 active:bg-slate-700/50 rounded-xl border border-slate-700/30 text-[10px] font-bold text-slate-300 hover:text-white transition-all uppercase tracking-wider"
+                className="py-2.5 px-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-xl text-[10px] font-black transition-all uppercase tracking-wider shadow-md shadow-indigo-600/10 flex items-center justify-center gap-1"
               >
-                Privacy
-              </button>
-              <button
-                onClick={() => {
-                  onClose();
-                  window.history.pushState({}, '', getLegalPath('/legal/terms'));
-                }}
-                className="py-2 px-1 bg-slate-800/40 hover:bg-slate-800/80 active:bg-slate-700/50 rounded-xl border border-slate-700/30 text-[10px] font-bold text-slate-300 hover:text-white transition-all uppercase tracking-wider"
-              >
-                Terms
+                📖 User Manual
               </button>
               <button
                 onClick={() => {
                   onClose();
                   window.history.pushState({}, '', getLegalPath('/legal/ai'));
                 }}
-                className="py-2 px-1 bg-slate-800/40 hover:bg-slate-800/80 active:bg-slate-700/50 rounded-xl border border-slate-700/30 text-[10px] font-bold text-slate-300 hover:text-white transition-all uppercase tracking-wider"
+                className="py-2.5 px-2 bg-slate-800/40 hover:bg-slate-800/80 active:bg-slate-700/50 rounded-xl border border-slate-700/30 text-[10px] font-bold text-slate-300 hover:text-white transition-all uppercase tracking-wider"
               >
-                AI Info
+                🤖 AI Info
+              </button>
+              <button
+                onClick={() => {
+                  onClose();
+                  window.history.pushState({}, '', getLegalPath('/legal/privacy'));
+                }}
+                className="py-2.5 px-2 bg-slate-800/40 hover:bg-slate-800/80 active:bg-slate-700/50 rounded-xl border border-slate-700/30 text-[10px] font-bold text-slate-300 hover:text-white transition-all uppercase tracking-wider"
+              >
+                🔒 Privacy
+              </button>
+              <button
+                onClick={() => {
+                  onClose();
+                  window.history.pushState({}, '', getLegalPath('/legal/terms'));
+                }}
+                className="py-2.5 px-2 bg-slate-800/40 hover:bg-slate-800/80 active:bg-slate-700/50 rounded-xl border border-slate-700/30 text-[10px] font-bold text-slate-300 hover:text-white transition-all uppercase tracking-wider"
+              >
+                📄 Terms
               </button>
             </div>
 

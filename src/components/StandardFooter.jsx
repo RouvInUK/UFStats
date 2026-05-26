@@ -49,6 +49,13 @@ const StandardFooter = () => {
           {/* Navigation Links */}
           <nav className="flex flex-wrap justify-center gap-6 text-sm font-bold" aria-label="Legal navigation">
             <a 
+              href={getLegalPath('/guide')}
+              onClick={(e) => navigateToLegal(e, '/guide')}
+              className="hover:text-white transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-md px-2 py-1 border-r border-slate-800 pr-6 mr-1"
+            >
+              How-to Guide
+            </a>
+            <a 
               href={getLegalPath('/legal/privacy')}
               onClick={(e) => navigateToLegal(e, '/legal/privacy')}
               className="hover:text-white transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-md px-2 py-1"

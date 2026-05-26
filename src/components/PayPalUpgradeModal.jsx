@@ -168,7 +168,7 @@ const PayPalUpgradeModal = ({ isOpen, onClose }) => {
               <div className="space-y-2">
                 <h3 className="text-2xl font-black text-white uppercase tracking-wider">Welcome to Coach Pro!</h3>
                 <p className="text-slate-400 text-sm max-w-xs mx-auto leading-relaxed">
-                  Your payment was completed successfully. All advanced sidelines intelligence, NIS stats, and unlimited clubs/teams are unlocked!
+                  Your payment was completed successfully. All advanced sidelines intelligence, NIS stats, and 1 Club / 5 Teams capacity are unlocked!
                 </p>
               </div>
 
@@ -237,7 +237,7 @@ const PayPalUpgradeModal = ({ isOpen, onClose }) => {
               <div className="space-y-3">
                 <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Included Features:</h4>
                 <div className="grid grid-cols-1 gap-2 text-xs font-medium text-slate-300">
-                  <BenefitItem text="Unlimited Clubs & Teams creation" />
+                  <BenefitItem text="Up to 5 Teams (Free tier: 2 Teams)" />
                   <BenefitItem text="Advanced NIS (Net Impact Score) player metrics" />
                   <BenefitItem text="Sideline Pull Quality tracking & grading dashboard" />
                   <BenefitItem text="Dynamic Lineup resolution & majority attribution" />

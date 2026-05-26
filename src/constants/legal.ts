@@ -8,6 +8,8 @@ export const getLegalPath = (subPath: string): string => {
   const pathname = window.location.pathname;
   const markers = [
     '/legal/', 
+    '/guide',
+    '/help',
     '/login', 
     '/demo', 
     '/live/', 

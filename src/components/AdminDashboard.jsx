@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, pruneIncompleteGames, fetchActionsPerDay } from '../supabaseClient';
-import { Shield, ArrowLeft, Users, Activity, Trash2, Crown, LayoutDashboard, Database, RefreshCw, BarChart2, Calendar } from 'lucide-react';
+import { Shield, ArrowLeft, Users, Activity, Trash2, Crown, LayoutDashboard, Database, RefreshCw, BarChart2, Calendar, ChevronDown, ChevronUp, Search, Download } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
@@ -12,6 +12,11 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
   const [actionLoading, setActionLoading] = useState(false);
   const [deletingUser, setDeletingUser] = useState(null);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+
+  // Sorting & Filtering States
+  const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [tierFilter, setTierFilter] = useState('ALL');
 
   const fetchAdminData = async () => {
     setLoading(true);
@@ -90,8 +95,6 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
     fetchAdminData();
   }, []);
 
-
-
   const handleUpdateTier = async (userId, tier) => {
     try {
       const { updateUserTier } = await import('../supabaseClient');
@@ -125,6 +128,17 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
     }
   };
 
+  const handleUpdateIsTestAccount = async (userId, is_test_account) => {
+    try {
+      const { updateUserIsTestAccount } = await import('../supabaseClient');
+      await updateUserIsTestAccount(userId, is_test_account);
+      setUsers(users.map(u => u.id === userId ? { ...u, is_test_account } : u));
+    } catch (err) {
+      console.error(err);
+      alert(`Failed to update test account flag: ${err.message}`);
+    }
+  };
+
   const handlePruneGames = async () => {
     if (!window.confirm("Are you sure you want to PRUNE all incomplete games older than 48 hours? This deletes dead data directly from the database.")) return;
     setActionLoading(true);
@@ -143,7 +157,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
   const handleDeleteUser = async (userId) => {
     setActionLoading(true);
     try {
-      const { data, error } = await supabase.rpc('delete_user_by_admin', { target_user_id: userId });
+      const { error } = await supabase.rpc('delete_user_by_admin', { target_user_id: userId });
       if (error) throw error;
       alert("User account and all linked data permanently deleted.");
       setDeletingUser(null);
@@ -157,7 +171,114 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
     }
   };
 
-  const totalGamesTracked = users.reduce((acc, u) => acc + u.gamesTracked, 0);
+  // Sorting Handler
+  const requestSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // CSV Export Utility
+  const handleExportCSV = () => {
+    const headers = ['Email', 'User ID', 'Signed Up', 'Clubs Count', 'Teams Count', 'Games Tracked', 'Tier', 'Promo Expiry', 'Voice Beta Enabled', 'Is Test Account'];
+    const rows = filteredUsers.map(u => [
+      u.email || '',
+      u.id || '',
+      u.created_at ? new Date(u.created_at).toISOString() : '',
+      u.clubs?.length || 0,
+      u.teams?.length || 0,
+      u.gamesTracked || 0,
+      u.tier || 'FREE',
+      u.pro_expires_at || '',
+      u.beta_voice_pro ? 'Yes' : 'No',
+      u.is_test_account ? 'Yes' : 'No'
+    ]);
+    
+    const csvContent = [headers, ...rows]
+      .map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+      
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `ufstats_users_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Sorting Pipeline
+  const sortedUsers = React.useMemo(() => {
+    let sortableUsers = [...users];
+    if (sortConfig !== null) {
+      sortableUsers.sort((a, b) => {
+        let aVal, bVal;
+        
+        switch (sortConfig.key) {
+          case 'email':
+            aVal = (a.email || '').toLowerCase();
+            bVal = (b.email || '').toLowerCase();
+            break;
+          case 'created_at':
+            aVal = new Date(a.created_at || 0);
+            bVal = new Date(b.created_at || 0);
+            break;
+          case 'clubs_teams':
+            aVal = (a.clubs?.length || 0) + (a.teams?.length || 0);
+            bVal = (b.clubs?.length || 0) + (b.teams?.length || 0);
+            break;
+          case 'games':
+            aVal = a.gamesTracked || 0;
+            bVal = b.gamesTracked || 0;
+            break;
+          case 'tier':
+            aVal = a.tier || 'FREE';
+            bVal = b.tier || 'FREE';
+            break;
+          case 'pro_expires_at':
+            aVal = a.pro_expires_at ? new Date(a.pro_expires_at) : new Date(0);
+            bVal = b.pro_expires_at ? new Date(b.pro_expires_at) : new Date(0);
+            break;
+          default:
+            return 0;
+        }
+
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableUsers;
+  }, [users, sortConfig]);
+
+  // Filtering Pipeline
+  const filteredUsers = React.useMemo(() => {
+    return sortedUsers.filter(user => {
+      const matchesSearch = 
+        (user.email || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (user.id || '').toLowerCase().includes(searchTerm.toLowerCase());
+      
+      let matchesTier = true;
+      if (tierFilter === 'FREE') {
+        matchesTier = user.tier === 'FREE';
+      } else if (tierFilter === 'PRO') {
+        matchesTier = user.tier === 'PRO';
+      } else if (tierFilter === 'PROMO') {
+        matchesTier = !!user.pro_expires_at;
+      }
+      
+      return matchesSearch && matchesTier;
+    });
+  }, [sortedUsers, searchTerm, tierFilter]);
+
+  // Global Health Calculations (Excluding QA / Test Accounts and Admins)
+  const activeRegularUsers = users.filter(u => !u.is_test_account);
+  const totalGamesTracked = activeRegularUsers.reduce((acc, u) => acc + u.gamesTracked, 0);
+  const paidProCount = activeRegularUsers.filter(u => u.tier === 'PRO' && !u.pro_expires_at).length;
+  const activePromoCount = activeRegularUsers.filter(u => u.pro_expires_at && new Date(u.pro_expires_at) > new Date()).length;
 
   return (
     <div className="min-h-screen bg-slate-950 p-4 sm:p-8 pb-32">
@@ -172,7 +293,16 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
               <p className="text-slate-400 text-sm font-medium">Cross-Tenant Global Overview</p>
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+             {activeTab === 'users' && (
+               <button 
+                 onClick={handleExportCSV}
+                 className="flex items-center gap-2 px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/20 font-bold rounded-xl transition-all"
+                 title="Export Filtered Users to CSV"
+               >
+                 <Download className="w-4 h-4" /> Export CSV
+               </button>
+             )}
              <button 
                onClick={fetchAdminData}
                className="flex items-center gap-2 px-4 py-2 bg-slate-800/50 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition-all border border-white/5"
@@ -215,20 +345,42 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
             {/* OVERVIEW TAB */}
             {activeTab === 'overview' && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <p className="text-xs text-slate-500 font-medium italic -mb-3">* Test accounts are automatically excluded from global health telemetry.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {/* Total Users */}
                   <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl flex items-center justify-between">
                     <div>
-                      <p className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-1">Total Active Users</p>
-                      <h2 className="text-4xl font-black text-white">{users.length}</h2>
+                      <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-slate-400">Total Active Users</p>
+                      <h2 className="text-4xl font-black text-white">{activeRegularUsers.length}</h2>
                     </div>
-                    <Users className="w-12 h-12 text-indigo-500/20" />
+                    <Users className="w-10 h-10 text-indigo-500/20" />
                   </div>
+                  
+                  {/* Paid Pro Members */}
                   <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl flex items-center justify-between">
                     <div>
-                      <p className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-1">Lifetime Games</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-indigo-400">Paid Pro Coaches</p>
+                      <h2 className="text-4xl font-black text-indigo-400">{paidProCount}</h2>
+                    </div>
+                    <Crown className="w-10 h-10 text-indigo-500/20" />
+                  </div>
+                  
+                  {/* Active Trials / Promos */}
+                  <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-amber-400">Active Trials/Promos</p>
+                      <h2 className="text-4xl font-black text-amber-400">{activePromoCount}</h2>
+                    </div>
+                    <Calendar className="w-10 h-10 text-amber-500/20" />
+                  </div>
+
+                  {/* Lifetime Games */}
+                  <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-emerald-400">Lifetime Games</p>
                       <h2 className="text-4xl font-black text-white">{totalGamesTracked}</h2>
                     </div>
-                    <Activity className="w-12 h-12 text-emerald-500/20" />
+                    <Activity className="w-10 h-10 text-emerald-500/20" />
                   </div>
                 </div>
 
@@ -256,179 +408,308 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
 
             {/* USERS & TIERS TAB */}
             {activeTab === 'users' && (
-              <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl overflow-hidden">
-                <div className="p-6 border-b border-white/10 flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Users className="w-5 h-5 text-indigo-400" /> Registered Users
-                  </h3>
-                </div>
+              <div className="space-y-6">
                 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-950/80 text-slate-400 text-xs uppercase tracking-widest">
-                        <th className="p-4 font-bold">User Email</th>
-                        <th className="p-4 font-bold text-center">Clubs / Teams</th>
-                        <th className="p-4 font-bold text-center">Games</th>
-                        <th className="p-4 font-bold text-center">Tier</th>
-                        <th className="p-4 font-bold text-center text-amber-400">Promo Expiry</th>
-                        <th className="p-4 font-bold text-center">Voice Beta</th>
-                        <th className="p-4 font-bold text-right">View Data</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-sm">
-                      {users.map((user, i) => (
-                        <React.Fragment key={user.id}>
-                          <tr className={`border-b border-white/5 ${i % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-950/30'} hover:bg-slate-800 transition-colors cursor-pointer`} onClick={() => setExpandedUser(expandedUser === user.id ? null : user.id)}>
-                            <td className="p-4">
-                              <span className="font-bold text-white">{user.email}</span>
-                              <div className="text-[10px] text-slate-500 font-mono mt-1">{user.id}</div>
-                            </td>
-                            <td className="p-4 text-center text-slate-300 font-bold">
-                              {user.clubs.length} / {user.teams.length}
-                            </td>
-                            <td className="p-4 text-center text-slate-300 font-bold">
-                              {user.gamesTracked}
-                            </td>
-                            <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
-                              <select 
-                                value={user.tier || 'FREE'} 
-                                onChange={(e) => handleUpdateTier(user.id, e.target.value)}
-                                className="bg-slate-900 border border-slate-700 text-xs font-bold rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-indigo-500"
-                              >
-                                <option value="FREE">FREE</option>
-                                <option value="PRO">PRO</option>
-                              </select>
-                            </td>
-                            <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex flex-col gap-1 items-center">
-                                <select
-                                  value={user.pro_expires_at ? 'custom' : 'none'}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val === 'none') {
-                                      handleUpdateProExpiration(user.id, null);
-                                    } else if (val === '1w') {
-                                      const d = new Date();
-                                      d.setDate(d.getDate() + 7);
-                                      handleUpdateProExpiration(user.id, d.toISOString());
-                                    } else if (val === '1m') {
-                                      const d = new Date();
-                                      d.setMonth(d.getMonth() + 1);
-                                      handleUpdateProExpiration(user.id, d.toISOString());
-                                    } else if (val === '6m') {
-                                      const d = new Date();
-                                      d.setMonth(d.getMonth() + 6);
-                                      handleUpdateProExpiration(user.id, d.toISOString());
-                                    }
-                                  }}
-                                  className="bg-slate-900 border border-slate-700 text-[10px] font-bold rounded-lg px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                                >
-                                  <option value="none">No Promo</option>
-                                  <option value="1w">+1 Week</option>
-                                  <option value="1m">+1 Month</option>
-                                  <option value="6m">+6 Months</option>
-                                  <option value="custom">Custom (Select below)</option>
-                                </select>
-                                <div className="relative flex items-center bg-slate-900 border border-slate-700 hover:border-slate-600 rounded-lg px-2 py-1 w-32 focus-within:ring-1 focus-within:ring-indigo-500 cursor-pointer transition-all shadow-inner">
-                                  <Calendar className="w-3.5 h-3.5 text-indigo-400 mr-1.5 flex-shrink-0" />
-                                  <input 
-                                    type="date"
-                                    value={user.pro_expires_at ? new Date(user.pro_expires_at).toISOString().split('T')[0] : ''}
-                                    onChange={(e) => {
-                                      if (e.target.value) {
-                                        const d = new Date(e.target.value);
-                                        d.setHours(23, 59, 59, 999);
-                                        handleUpdateProExpiration(user.id, d.toISOString());
-                                      } else {
-                                        handleUpdateProExpiration(user.id, null);
-                                      }
-                                    }}
-                                    onClick={(e) => {
-                                      try { e.target.showPicker(); } catch (err) {}
-                                    }}
-                                    className="bg-transparent text-xs text-slate-300 font-semibold outline-none w-full cursor-pointer [color-scheme:dark]"
-                                  />
-                                </div>
-                                {user.pro_expires_at && (() => {
-                                  const daysLeft = Math.ceil((new Date(user.pro_expires_at) - new Date()) / (1000 * 60 * 60 * 24));
-                                  if (daysLeft > 0) {
-                                    return <span className="text-[8px] font-black text-amber-400 bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/20">{daysLeft} days left</span>;
-                                  } else {
-                                    return <span className="text-[8px] font-black text-rose-400 bg-rose-500/10 px-1 py-0.5 rounded border border-rose-500/20">Expired</span>;
-                                  }
-                                })()}
-                              </div>
-                            </td>
-                            <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
-                              <input 
-                                type="checkbox"
-                                checked={user.beta_voice_pro || false}
-                                onChange={(e) => handleUpdateBetaVoicePro(user.id, e.target.checked)}
-                                className="w-4 h-4 text-indigo-600 rounded bg-slate-900 border-slate-700 focus:ring-indigo-500 cursor-pointer"
-                              />
-                            </td>
-                            <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center justify-end gap-3">
-                                <button
-                                  onClick={() => setDeletingUser(user)}
-                                  className="p-1.5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded-lg transition-all"
-                                  title="Permanently Delete User Account"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => setExpandedUser(expandedUser === user.id ? null : user.id)}
-                                  className="text-xs text-indigo-400 hover:text-indigo-300 font-bold transition-colors"
-                                >
-                                  {expandedUser === user.id ? 'Hide Details' : 'Show Details'}
-                                </button>
-                              </div>
+                {/* Search and Filters Controls */}
+                <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-900/40 border border-white/5 p-4 rounded-2xl">
+                  {/* Search Input */}
+                  <div className="relative w-full md:w-80">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search email or user ID..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-white/10 rounded-xl text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 transition-all"
+                    />
+                  </div>
+                  
+                  {/* Tier Filter Segmented Controller */}
+                  <div className="flex gap-1.5 p-1 bg-slate-950/60 border border-white/10 rounded-xl w-full md:w-auto">
+                    {[
+                      { id: 'ALL', label: 'All Users' },
+                      { id: 'FREE', label: 'Free' },
+                      { id: 'PRO', label: 'Pro' },
+                      { id: 'PROMO', label: 'Promos' }
+                    ].map(f => (
+                      <button
+                        key={f.id}
+                        onClick={() => setTierFilter(f.id)}
+                        className={`flex-1 md:flex-none px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${tierFilter === f.id ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl overflow-hidden">
+                  <div className="p-6 border-b border-white/10 flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                      <Users className="w-5 h-5 text-indigo-400" /> Registered Users ({filteredUsers.length})
+                    </h3>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-950/80 text-slate-400 text-xs uppercase tracking-widest selection:bg-transparent">
+                          <th className="p-4 font-bold select-none cursor-pointer hover:text-white transition-colors" onClick={() => requestSort('email')}>
+                            <div className="flex items-center gap-1.5">
+                              User Email
+                              {sortConfig.key === 'email' && (
+                                sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-indigo-400" /> : <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
+                              )}
+                            </div>
+                          </th>
+                          <th className="p-4 font-bold select-none cursor-pointer hover:text-white transition-colors" onClick={() => requestSort('created_at')}>
+                            <div className="flex items-center gap-1.5">
+                              Signed Up
+                              {sortConfig.key === 'created_at' && (
+                                sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-indigo-400" /> : <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
+                              )}
+                            </div>
+                          </th>
+                          <th className="p-4 font-bold text-center select-none cursor-pointer hover:text-white transition-colors" onClick={() => requestSort('clubs_teams')}>
+                            <div className="flex items-center justify-center gap-1.5">
+                              Clubs / Teams
+                              {sortConfig.key === 'clubs_teams' && (
+                                sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-indigo-400" /> : <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
+                              )}
+                            </div>
+                          </th>
+                          <th className="p-4 font-bold text-center select-none cursor-pointer hover:text-white transition-colors" onClick={() => requestSort('games')}>
+                            <div className="flex items-center justify-center gap-1.5">
+                              Games
+                              {sortConfig.key === 'games' && (
+                                sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-indigo-400" /> : <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
+                              )}
+                            </div>
+                          </th>
+                          <th className="p-4 font-bold text-center select-none cursor-pointer hover:text-white transition-colors" onClick={() => requestSort('tier')}>
+                            <div className="flex items-center justify-center gap-1.5">
+                              Tier
+                              {sortConfig.key === 'tier' && (
+                                sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-indigo-400" /> : <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
+                              )}
+                            </div>
+                          </th>
+                          <th className="p-4 font-bold text-center text-amber-400 select-none cursor-pointer hover:text-amber-300 transition-colors" onClick={() => requestSort('pro_expires_at')}>
+                            <div className="flex items-center justify-center gap-1.5">
+                              Promo Expiry
+                              {sortConfig.key === 'pro_expires_at' && (
+                                sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-amber-400" /> : <ChevronDown className="w-3.5 h-3.5 text-amber-400" />
+                              )}
+                            </div>
+                          </th>
+                          <th className="p-4 font-bold text-center select-none">Test Account</th>
+                          <th className="p-4 font-bold text-center select-none">Voice Beta</th>
+                          <th className="p-4 font-bold text-right select-none">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-sm">
+                        {filteredUsers.length === 0 ? (
+                          <tr>
+                            <td colSpan={9} className="p-12 text-center text-slate-500 font-medium">
+                              No matching registered coaches found.
                             </td>
                           </tr>
-                          {expandedUser === user.id && (
-                            <tr className="bg-slate-950/50">
-                              <td colSpan={5} className="p-6 border-b border-white/5">
-                                <h4 className="text-slate-300 font-bold mb-4 uppercase tracking-widest text-xs">Clubs & Teams Hierarchy</h4>
-                                {user.clubs.length === 0 && <p className="text-slate-500 text-sm">No clubs created.</p>}
-                                <div className="space-y-4">
-                                  {user.clubs.map(club => (
-                                    <div key={club.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-                                      <h5 className="font-black text-white text-lg mb-3">{club.name}</h5>
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {user.teams.filter(t => t.club_id === club.id).map(team => (
-                                          <div key={team.id} className="flex items-center justify-between bg-slate-950 p-3 rounded-lg border border-slate-800">
-                                            <span className="font-bold text-slate-300">{team.name}</span>
-                                            <button 
-                                              onClick={() => {
-                                                onShadowTeam({ id: team.id, name: team.name, tier: user.tier, beta_voice_pro: user.beta_voice_pro });
-                                                onNavigate('dashboard');
-                                              }}
-                                              className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 font-bold rounded-lg border border-indigo-500/20 transition-all text-[10px] flex items-center justify-center gap-1 uppercase tracking-widest"
-                                            >
-                                              <Shield className="w-3 h-3" /> Shadow Team
-                                            </button>
-                                          </div>
-                                        ))}
-                                        {user.teams.filter(t => t.club_id === club.id).length === 0 && (
-                                          <div className="text-slate-500 text-sm font-medium">No teams in this club.</div>
-                                        )}
-                                      </div>
+                        ) : (
+                          filteredUsers.map((user, i) => (
+                            <React.Fragment key={user.id}>
+                              <tr 
+                                className={`border-b border-white/5 ${i % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-950/30'} hover:bg-slate-800 transition-colors cursor-pointer`} 
+                                onClick={() => setExpandedUser(expandedUser === user.id ? null : user.id)}
+                              >
+                                <td className="p-4">
+                                  <span className="font-bold text-white">{user.email}</span>
+                                  {user.is_test_account && (
+                                    <span className="text-[8px] font-black text-rose-450 bg-rose-500/10 px-1 py-0.5 rounded border border-rose-500/20 uppercase tracking-wider ml-2.5 inline-block">Test Account</span>
+                                  )}
+                                  <div className="text-[10px] text-slate-500 font-mono mt-1">{user.id}</div>
+                                </td>
+                                <td className="p-4">
+                                  <div className="text-slate-300 font-medium" title={user.created_at ? new Date(user.created_at).toLocaleString() : 'N/A'}>
+                                    {user.created_at ? new Date(user.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}
+                                  </div>
+                                  {user.created_at && (() => {
+                                    const signupDate = new Date(user.created_at);
+                                    const now = new Date();
+                                    const diffTime = Math.abs(now - signupDate);
+                                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                    if (diffDays <= 7) {
+                                      return <span className="text-[8px] font-black text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded border border-teal-500/20 uppercase tracking-wider mt-1.5 inline-block">New</span>;
+                                    }
+                                  })()}
+                                </td>
+                                <td className="p-4 text-center text-slate-300 font-bold">
+                                  {user.clubs?.length || 0} / {user.teams?.length || 0}
+                                </td>
+                                <td className="p-4 text-center text-slate-300 font-bold">
+                                  {user.gamesTracked}
+                                </td>
+                                <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                  <select 
+                                    value={user.tier || 'FREE'} 
+                                    onChange={(e) => handleUpdateTier(user.id, e.target.value)}
+                                    className="bg-slate-900 border border-slate-700 text-xs font-bold rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                                  >
+                                    <option value="FREE">FREE</option>
+                                    <option value="PRO">PRO</option>
+                                  </select>
+                                </td>
+                                <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex flex-col gap-1 items-center">
+                                    <select
+                                      value={user.pro_expires_at ? 'custom' : 'none'}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val === 'none') {
+                                          handleUpdateProExpiration(user.id, null);
+                                        } else if (val === '1w') {
+                                          const d = new Date();
+                                          d.setDate(d.getDate() + 7);
+                                          handleUpdateProExpiration(user.id, d.toISOString());
+                                        } else if (val === '1m') {
+                                          const d = new Date();
+                                          d.setMonth(d.getMonth() + 1);
+                                          handleUpdateProExpiration(user.id, d.toISOString());
+                                        } else if (val === '6m') {
+                                          const d = new Date();
+                                          d.setMonth(d.getMonth() + 6);
+                                          handleUpdateProExpiration(user.id, d.toISOString());
+                                        }
+                                      }}
+                                      className="bg-slate-900 border border-slate-700 text-[10px] font-bold rounded-lg px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                                    >
+                                      <option value="none">No Promo</option>
+                                      <option value="1w">+1 Week</option>
+                                      <option value="1m">+1 Month</option>
+                                      <option value="6m">+6 Months</option>
+                                      <option value="custom">Custom (Select below)</option>
+                                    </select>
+                                    <div className="relative flex items-center bg-slate-900 border border-slate-700 hover:border-slate-600 rounded-lg px-2 py-1 w-32 focus-within:ring-1 focus-within:ring-indigo-500 cursor-pointer transition-all shadow-inner">
+                                      <Calendar className="w-3.5 h-3.5 text-indigo-400 mr-1.5 flex-shrink-0" />
+                                      <input 
+                                        type="date"
+                                        value={user.pro_expires_at ? new Date(user.pro_expires_at).toISOString().split('T')[0] : ''}
+                                        onChange={(e) => {
+                                          if (e.target.value) {
+                                            const d = new Date(e.target.value);
+                                            d.setHours(23, 59, 59, 999);
+                                            handleUpdateProExpiration(user.id, d.toISOString());
+                                          } else {
+                                            handleUpdateProExpiration(user.id, null);
+                                          }
+                                        }}
+                                        onClick={(e) => {
+                                          try { e.target.showPicker(); } catch {
+                                            // Fallback for browsers that do not support showPicker
+                                          }
+                                        }}
+                                        className="bg-transparent text-xs text-slate-300 font-semibold outline-none w-full cursor-pointer [color-scheme:dark]"
+                                      />
                                     </div>
-                                  ))}
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </React.Fragment>
-                      ))}
-                    </tbody>
-                  </table>
+                                    {user.pro_expires_at && (() => {
+                                      const daysLeft = Math.ceil((new Date(user.pro_expires_at) - new Date()) / (1000 * 60 * 60 * 24));
+                                      if (daysLeft > 0) {
+                                        return <span className="text-[8px] font-black text-amber-400 bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/20">{daysLeft} days left</span>;
+                                      } else {
+                                        return <span className="text-[8px] font-black text-rose-400 bg-rose-500/10 px-1 py-0.5 rounded border border-rose-500/20">Expired</span>;
+                                      }
+                                    })()}
+                                  </div>
+                                </td>
+                                <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                  <input 
+                                    type="checkbox"
+                                    checked={user.is_test_account || false}
+                                    onChange={(e) => handleUpdateIsTestAccount(user.id, e.target.checked)}
+                                    className="w-4 h-4 text-indigo-650 rounded bg-slate-900 border-slate-700 focus:ring-indigo-500 cursor-pointer"
+                                  />
+                                </td>
+                                <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                  <input 
+                                    type="checkbox"
+                                    checked={user.beta_voice_pro || false}
+                                    onChange={(e) => handleUpdateBetaVoicePro(user.id, e.target.checked)}
+                                    className="w-4 h-4 text-indigo-600 rounded bg-slate-900 border-slate-700 focus:ring-indigo-500 cursor-pointer animate-none"
+                                  />
+                                </td>
+                                <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex items-center justify-end gap-2.5">
+                                    {user.teams?.length === 1 && (
+                                      <button
+                                        onClick={() => {
+                                          const team = user.teams[0];
+                                          onShadowTeam({ id: team.id, name: team.name, tier: user.tier, beta_voice_pro: user.beta_voice_pro });
+                                          onNavigate('dashboard');
+                                        }}
+                                        className="px-2.5 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 hover:border-indigo-500/40 font-bold rounded-lg transition-all text-[10px] flex items-center justify-center gap-1 uppercase tracking-widest"
+                                        title={`Direct Shadow: ${user.teams[0].name}`}
+                                      >
+                                        <Shield className="w-3 h-3" /> Shadow
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => setDeletingUser(user)}
+                                      className="p-1.5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded-lg transition-all"
+                                      title="Permanently Delete User Account"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => setExpandedUser(expandedUser === user.id ? null : user.id)}
+                                      className="text-xs text-indigo-400 hover:text-indigo-300 font-bold transition-colors"
+                                    >
+                                      {expandedUser === user.id ? 'Hide Details' : 'Show Details'}
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                              {expandedUser === user.id && (
+                                <tr className="bg-slate-950/50">
+                                  <td colSpan={9} className="p-6 border-b border-white/5">
+                                    <h4 className="text-slate-300 font-bold mb-4 uppercase tracking-widest text-xs">Clubs & Teams Hierarchy</h4>
+                                    {(!user.clubs || user.clubs.length === 0) && <p className="text-slate-500 text-sm">No clubs created.</p>}
+                                    <div className="space-y-4">
+                                      {user.clubs?.map(club => (
+                                        <div key={club.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                                          <h5 className="font-black text-white text-lg mb-3">{club.name}</h5>
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {user.teams?.filter(t => t.club_id === club.id).map(team => (
+                                              <div key={team.id} className="flex items-center justify-between bg-slate-950 p-3 rounded-lg border border-slate-800">
+                                                <span className="font-bold text-slate-300">{team.name}</span>
+                                                <button 
+                                                  onClick={() => {
+                                                    onShadowTeam({ id: team.id, name: team.name, tier: user.tier, beta_voice_pro: user.beta_voice_pro });
+                                                    onNavigate('dashboard');
+                                                  }}
+                                                  className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 font-bold rounded-lg border border-indigo-500/20 transition-all text-[10px] flex items-center justify-center gap-1 uppercase tracking-widest"
+                                                >
+                                                  <Shield className="w-3 h-3" /> Shadow Team
+                                                </button>
+                                              </div>
+                                            ))}
+                                            {(!user.teams || user.teams.filter(t => t.club_id === club.id).length === 0) && (
+                                              <div className="text-slate-500 text-sm font-medium">No teams in this club.</div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
-
-
 
             {/* DATA HYGIENE TAB */}
             {activeTab === 'data' && (
@@ -440,7 +721,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                   <div>
                     <h3 className="text-xl font-bold text-white mb-2">Prune Incomplete Games</h3>
                     <p className="text-slate-400 text-sm leading-relaxed">
-                      This utility scans the entire database for "Ghost Games". A ghost game is any Match Name that contains <strong className="text-slate-300">only Lineup or Setup metadata</strong>, but zero actual point actions (Passes, Goals, Turnovers), and is older than 48 hours.
+                      This utility scans the entire database for "Ghost Games". A ghost game is any Match Name that contains <strong>only Lineup or Setup metadata</strong>, but zero actual point actions (Passes, Goals, Turnovers), and is older than 48 hours.
                     </p>
                   </div>
                 </div>

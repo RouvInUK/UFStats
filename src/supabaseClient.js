@@ -569,6 +569,17 @@ export const updateUserBetaVoicePro = async (userId, beta_voice_pro) => {
   return data ? data[0] : null;
 };
 
+export const updateUserIsTestAccount = async (userId, is_test_account) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ is_test_account })
+    .eq('id', userId)
+    .select();
+
+  if (error) throw error;
+  return data ? data[0] : null;
+};
+
 export const fetchUserHierarchy = async (userId) => {
   if (!userId) return { clubs: [], teams: [] };
   
@@ -601,10 +612,6 @@ export const checkTierLimits = async (userId) => {
   if (pError) throw pError;
   const isPro = profile.tier === 'PRO' || !!(profile.pro_expires_at && new Date(profile.pro_expires_at) > new Date());
   
-  if (isPro) {
-    return { canAddClub: true, canAddTeam: true, isPro: true };
-  }
-  
   const { count: clubCount, error: cError } = await supabase
     .from('clubs')
     .select('*', { count: 'exact', head: true })
@@ -617,16 +624,24 @@ export const checkTierLimits = async (userId) => {
     
   if (cError || tError) throw new Error("Failed to check tier limits");
   
+  if (isPro) {
+    return {
+      canAddClub: clubCount < 1,
+      canAddTeam: teamCount < 5,
+      isPro: true
+    };
+  }
+
   return {
     canAddClub: clubCount < 1,
-    canAddTeam: teamCount < 3,
+    canAddTeam: teamCount < 2,
     isPro: false
   };
 };
 
 export const createClub = async (name, ownerId) => {
   const limits = await checkTierLimits(ownerId);
-  if (!limits.canAddClub) throw new Error("Free Tier Limit Reached: Maximum 1 Club allowed.");
+  if (!limits.canAddClub) throw new Error("Limit Reached: Maximum 1 Club allowed.");
   
   const { data, error } = await supabase
     .from('clubs')
@@ -639,7 +654,9 @@ export const createClub = async (name, ownerId) => {
 
 export const createTeam = async (name, clubId, ownerId) => {
   const limits = await checkTierLimits(ownerId);
-  if (!limits.canAddTeam) throw new Error("Free Tier Limit Reached: Maximum 3 Teams allowed.");
+  if (!limits.canAddTeam) {
+    throw new Error(`Limit Reached: Maximum ${limits.isPro ? 5 : 2} Teams allowed.`);
+  }
   
   const { data, error } = await supabase
     .from('teams')

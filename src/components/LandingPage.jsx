@@ -37,6 +37,7 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
             <button onClick={() => scrollTo('features')} className="text-sm text-slate-400 hover:text-white font-semibold tracking-wide transition-colors">Features</button>
             <button onClick={() => scrollTo('pwa')} className="text-sm text-slate-400 hover:text-white font-semibold tracking-wide transition-colors">Why PWA</button>
             <button onClick={() => scrollTo('pricing')} className="text-sm text-slate-400 hover:text-white font-semibold tracking-wide transition-colors">Pricing</button>
+            <button onClick={() => window.history.pushState({}, '', '/guide')} className="text-sm text-slate-400 hover:text-white font-semibold tracking-wide transition-colors">Guide</button>
             <div className="h-5 w-px bg-slate-700"></div>
             <button onClick={onLogin} className="text-sm font-bold text-indigo-400 hover:text-indigo-300 transition-colors tracking-wide">Login</button>
             <button onClick={onSignUp} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-black rounded-xl transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 active:scale-95 tracking-wider uppercase">
@@ -56,6 +57,7 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
             <button onClick={() => scrollTo('features')} className="block w-full text-left text-slate-300 hover:text-white font-semibold py-2">Features</button>
             <button onClick={() => scrollTo('pwa')} className="block w-full text-left text-slate-300 hover:text-white font-semibold py-2">Why PWA</button>
             <button onClick={() => scrollTo('pricing')} className="block w-full text-left text-slate-300 hover:text-white font-semibold py-2">Pricing</button>
+            <button onClick={() => window.history.pushState({}, '', '/guide')} className="block w-full text-left text-slate-300 hover:text-white font-semibold py-2">Guide</button>
             <div className="h-px bg-slate-800 my-2"></div>
             <button onClick={onLogin} className="block w-full text-left text-indigo-400 font-bold py-2">Login</button>
             <button onClick={onSignUp} className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl transition-all uppercase tracking-widest text-sm">
@@ -252,7 +254,7 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
                 <div className="text-slate-500 text-sm">Includes 7-day Coach Pro trial.</div>
               </div>
               <div className="space-y-3 flex-1 mb-8">
-                <TierFeature text="1 Club / up to 3 Teams" />
+                <TierFeature text="1 Club / up to 2 Teams" />
                 <TierFeature text="Basic Points & Score Tracking" />
                 <TierFeature text="Implicit Flow — 50% fewer taps" />
                 <TierFeature text="Smart-Sync — Universal offline reliability" />
@@ -281,7 +283,7 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
                 </div>
               </div>
               <div className="space-y-3 flex-1 mb-8">
-                <TierFeature text="Unlimited Clubs & Teams" pro />
+                <TierFeature text="1 Club / up to 5 Teams" pro />
                 <TierFeature text="Advanced NIS (Net Impact Score) Analytics" pro />
                 <TierFeature text="Pull Quality Tracking & Pressure Reports" pro />
                 <TierFeature text="Coach Pro Data Analytics Page" pro />
