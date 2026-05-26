@@ -55,9 +55,9 @@ export default async function handler(req, res) {
       Point-by-Point Play Log (newest first): ${JSON.stringify(cleanRawStats)}
     `;
 
-    // 4. Configure Generative AI Model targeting gemini-2.0-flash
+    // 4. Configure Generative AI Model targeting gemini-3.5-flash
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3.5-flash',
       generationConfig: {
         responseMimeType: 'application/json',
         temperature: 0.25
