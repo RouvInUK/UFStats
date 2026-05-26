@@ -117,6 +117,7 @@ To support granular team and unit (Line) diagnostics for the Coach Pro tier with
 ## Security & Authorization
 - **Row Level Security (RLS)**: PostgreSQL RLS policies ensure that users can only read, update, and delete data associated with their own `auth.uid()`.
 - **Column-Level Tamper Protection**: Implements a PostgreSQL `BEFORE UPDATE` trigger on the `profiles` table. If a non-admin client tries to modify columns like `tier`, `pro_expires_at`, `beta_voice_pro`, or `is_system_admin` directly from client-side JS, the database intercepts the request and automatically reverts those columns to their previously verified database state, completely neutralizing front-end console injections.
+- **Secure Admin User Deletion**: Implements a highly secure `delete_user_by_admin(target_user_id)` database function marked as `SECURITY DEFINER` (running as superuser). The function strictly verifies that the executing caller is a validated global System Administrator in the database before wiping the target record from `auth.users`. Because the schema uses full cascading constraints (`ON DELETE CASCADE`), deleting a user automatically, cleanly, and safely purges all of their profiles, clubs, teams, roster players, and game stats, leaving zero orphan database records.
 - **Tier Gating**: The frontend checks the Boolean `isProTier` state computed globally to conditionally render the Coach Dashboard or enable Voice Tracking.
 - **Session Termination**: Enforced via the 30-second `AuthContext` database heartbeat.
 

@@ -11,6 +11,8 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
   const [actionsData, setActionsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [deletingUser, setDeletingUser] = useState(null);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
 
   const fetchAdminData = async () => {
     setLoading(true);
@@ -149,6 +151,23 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
     } catch (err) {
       console.error(err);
       alert("Failed to prune games.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    setActionLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('delete_user_by_admin', { target_user_id: userId });
+      if (error) throw error;
+      alert("User account and all linked data permanently deleted.");
+      setDeletingUser(null);
+      setDeleteConfirmationText('');
+      await fetchAdminData();
+    } catch (err) {
+      console.error(err);
+      alert(`Failed to delete user: ${err.message}`);
     } finally {
       setActionLoading(false);
     }
@@ -366,10 +385,22 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                                 className="w-4 h-4 text-indigo-600 rounded bg-slate-900 border-slate-700 focus:ring-indigo-500 cursor-pointer"
                               />
                             </td>
-                            <td className="p-4 text-right">
-                              <span className="text-xs text-indigo-400 font-bold">
-                                {expandedUser === user.id ? 'Hide Details' : 'Show Details'}
-                              </span>
+                            <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-3">
+                                <button
+                                  onClick={() => setDeletingUser(user)}
+                                  className="p-1.5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded-lg transition-all"
+                                  title="Permanently Delete User Account"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => setExpandedUser(expandedUser === user.id ? null : user.id)}
+                                  className="text-xs text-indigo-400 hover:text-indigo-300 font-bold transition-colors"
+                                >
+                                  {expandedUser === user.id ? 'Hide Details' : 'Show Details'}
+                                </button>
+                              </div>
                             </td>
                           </tr>
                           {expandedUser === user.id && (
@@ -493,6 +524,63 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
               </div>
             )}
 
+          </div>
+        )}
+
+        {/* Secure Deletion Modal */}
+        {deletingUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <div className="bg-slate-900 border border-rose-500/30 p-8 rounded-3xl max-w-md w-full shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-rose-600 to-rose-400"></div>
+              
+              <div className="flex justify-center mb-6">
+                <div className="p-4 bg-rose-500/10 rounded-full border border-rose-500/20">
+                  <Trash2 className="w-10 h-10 text-rose-500" />
+                </div>
+              </div>
+              
+              <h2 className="text-xl font-black text-center text-white mb-3 uppercase tracking-wider">🚨 Delete User Account?</h2>
+              
+              <div className="p-4 bg-rose-950/20 border border-rose-500/20 rounded-2xl text-xs text-rose-300 leading-relaxed space-y-2 mb-6">
+                <p className="font-extrabold uppercase tracking-widest text-[10px] text-rose-400">Warning — Critical Action</p>
+                <p>You are about to permanently delete the user account <strong className="text-white">{deletingUser.email}</strong>.</p>
+                <p>This will **immediately and permanently wipe** all of their Clubs, Teams, Rostered Players, Game Events, and Synced Stats from the database. This action is completely irreversible.</p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">
+                    Type user email to confirm:
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmationText}
+                    onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                    placeholder={deletingUser.email}
+                    className="w-full bg-slate-950 border border-slate-800 text-sm font-semibold rounded-xl px-4 py-3 text-slate-300 placeholder-slate-700 outline-none focus:border-rose-500/50 transition-all text-center"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <button
+                    onClick={() => {
+                      setDeletingUser(null);
+                      setDeleteConfirmationText('');
+                    }}
+                    className="py-3 px-4 bg-slate-850 hover:bg-slate-800 text-slate-300 font-bold rounded-xl transition-all uppercase tracking-wider text-xs border border-white/5"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleDeleteUser(deletingUser.id)}
+                    disabled={deleteConfirmationText !== deletingUser.email || actionLoading}
+                    className="py-3 px-4 bg-rose-600 hover:bg-rose-500 disabled:bg-rose-950/20 text-white disabled:text-rose-900/50 font-black rounded-xl transition-all shadow-lg shadow-rose-900/10 disabled:shadow-none uppercase tracking-wider text-xs disabled:border disabled:border-rose-950/40"
+                  >
+                    {actionLoading ? 'Deleting...' : 'Delete User'}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
