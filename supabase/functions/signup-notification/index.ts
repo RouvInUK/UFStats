@@ -1,8 +1,21 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
+import { writeAll, readAll } from "https://deno.land/std@0.168.0/streams/conversion.ts";
+
+// Polyfill Deno.writeAll and Deno.readAll which were removed in modern Deno runtimes but are used by deno-smtp std dependency
+Object.defineProperty(Deno, "writeAll", {
+  value: writeAll,
+  writable: true,
+  configurable: true,
+});
+Object.defineProperty(Deno, "readAll", {
+  value: readAll,
+  writable: true,
+  configurable: true,
+});
 
 serve(async (req) => {
   try {
+    const { SmtpClient } = await import("https://deno.land/x/smtp@v0.7.0/mod.ts");
     // 1. Parse the incoming webhook payload from Supabase
     const { record } = await req.json();
     const userEmail = record.email;
