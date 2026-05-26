@@ -59,15 +59,6 @@ export default async function handler(req, res) {
       Point-by-Point Play Log (newest first): ${JSON.stringify(cleanRawStats)}
     `;
 
-    // 4. Configure Generative AI Model targeting gemini-3.5-flash
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-3.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.25
-      }
-    });
-
     const prompt = `
       System Instruction: You are 'Antigravity Coach Pro', an elite, highly analytical, and motivational Ultimate Frisbee coach. Deliver technical, encouraging huddle briefings and diagnostic suggestions. Focus on:
       1. Offensive hold patterns, disc preservation, dump-swing movements, and huck decisions.
@@ -94,8 +85,34 @@ export default async function handler(req, res) {
       ${teamStateSummary}
     `;
 
-    // 5. Generate content
-    const result = await model.generateContent(prompt);
+    // 4. Configure Generative AI Model targeting gemini-3.5-flash with automatic cascading fallback
+    const modelsToTry = ['gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
+    let result = null;
+    let lastError = null;
+
+    for (const modelName of modelsToTry) {
+      try {
+        console.log(`[generate-insights] Attempting generation with model: ${modelName}`);
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.25
+          }
+        });
+        result = await model.generateContent(prompt);
+        console.log(`[generate-insights] Successfully generated content using model: ${modelName}`);
+        break;
+      } catch (err) {
+        console.error(`[generate-insights] Failed with model ${modelName}:`, err.message);
+        lastError = err;
+      }
+    }
+
+    if (!result) {
+      throw new Error(`All generative models failed. Last error: ${lastError?.message}`);
+    }
+
     const textResponse = result.response.text();
     console.log("[generate-insights] Raw Gemini response:", textResponse);
 
