@@ -21,16 +21,13 @@ serve(async (req) => {
     }
 
     // 3. Initialize secure SMTP Connection
-    const client = new SmtpClient({
-      connection: {
-        hostname: smtpHost,
-        port: smtpPort,
-        tls: true,
-        auth: {
-          username: smtpUsername,
-          password: smtpPassword,
-        },
-      },
+    const client = new SmtpClient();
+
+    await client.connectTLS({
+      hostname: smtpHost,
+      port: smtpPort,
+      username: smtpUsername,
+      password: smtpPassword,
     });
 
     // 4. Send the notification email to admin@ustats.pro
