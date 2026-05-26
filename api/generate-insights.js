@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 
+// Cache-buster to force fresh Vercel serverless dependency bundle installation (V2)
 // Initialize the Google Gen AI SDK securely using the server environment key.
 // Vercel server environment variables are mapped to process.env
 const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_KEY;
