@@ -203,7 +203,12 @@ const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled, onU
                   </div>
                   <div className="text-xs text-slate-400">
                     {profile?.pro_expires_at ? (
-                      <span>Promo Active until <strong className="text-slate-200">{new Date(profile.pro_expires_at).toLocaleDateString()}</strong></span>
+                      <span>
+                        {profile?.created_at && (new Date(profile.pro_expires_at) - new Date(profile.created_at) <= 8 * 24 * 60 * 60 * 1000)
+                          ? "Free Trial Active"
+                          : "Promo Active"
+                        } until <strong className="text-slate-200">{new Date(profile.pro_expires_at).toLocaleDateString()}</strong>
+                      </span>
                     ) : (
                       <span>Active via recurring billing (£5/mo or £50/yr)</span>
                     )}

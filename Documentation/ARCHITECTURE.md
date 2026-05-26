@@ -56,7 +56,8 @@ Stores user-specific metadata and authorization tiers.
 - `paypal_subscription_id` (Text, Unique): Matches PayPal active recurring subscriptions.
 - `subscription_status` (Text): e.g. 'active', 'cancelled', 'suspended'.
 - `subscription_period` (Text): 'monthly' or 'yearly'.
-- `pro_expires_at` (Timestamp with Time Zone): Expiration date for manual admin promos/trials.
+- `pro_expires_at` (Timestamp with Time Zone): Expiration date for time-limited active promotions or the initial 7-day free trial.
+- `created_at` (Timestamp with Time Zone): The timestamp when the profile was generated, used for trial timeline calculations.
 
 ### `teams` & `clubs`
 Hierarchical organization of teams. A user can create a club and multiple teams within it. The `teams` table includes a `managed_lines` JSONB column which stores user-defined lines (Line Name, array of Player IDs) for advanced line-level statistics comparison.
@@ -74,16 +75,22 @@ The immutable ledger of game events.
 
 ---
 
-## Payment & Admin Promo Architecture
+## Payment, Trial, & Admin Promo Architecture
 
-To support premium membership tiers (£5/mo and £50/yr) securely and flexibly, the system utilizes a **double-check access pipeline** combining automated PayPal recurring billing and manual administrative promotional grants:
+To support premium membership tiers (£5/mo and £50/yr) securely and flexibly, the system utilizes a **triple-check access pipeline** combining automated PayPal recurring billing, manual administrative promotional grants, and an automated 7-day free trial:
 
 1. **Dual Activation Logic**:
-   A profile has Pro access unlocked dynamically if *either* perpetual tier status is `'PRO'`, OR they have a valid, unexpired administrative promotion:
+   A profile has Pro access unlocked dynamically if *either* perpetual tier status is `'PRO'`, OR they have a valid, unexpired trial/promotion:
    $$\text{Is Pro} = (\text{tier} = \text{'PRO'}) \lor (\text{pro\_expires\_at} \neq \text{null} \land \text{pro\_expires\_at} > \text{NOW()})$$
    This decouples recurring billing state from direct promotional override capability, preventing user lockout on plan updates.
 
-2. **Secure Webhook Verification**:
+2. **7-Day Free Coach Pro Trial (New Signups)**:
+   - On signup, the database trigger `public.handle_new_user()` automatically sets `pro_expires_at` to `NOW() + INTERVAL '7 days'`.
+   - This unlocks full Coach Pro capability immediately for the first week of usage.
+   - The application header displays `PRO TRIAL` if the user's `pro_expires_at` is active and is within 8 days of their `created_at` timestamp.
+   - The settings modal dynamically checks this difference to output "Free Trial Active until [date]" instead of "Promo Active".
+
+3. **Secure Webhook Verification**:
    - **Client Checkout**: Loads the PayPal JS SDK with `vault=true` and `intent=subscription` in GBP. On checkout approval, we pass the user's ID as `custom_id` to PayPal.
    - **Server Webhook Verification**: Set up a Supabase Edge Function (`paypal-webhook`) listening for events from PayPal.
    - **Cryptographic Signature Verification**: To prevent fraud, the Edge Function makes a secure callback POST to PayPal (`/v1/notifications/verify-webhook-signature`) transmitting raw headers (`paypal-transmission-sig`, `paypal-cert-url`, etc.) letting PayPal's API securely verify event authenticity before any DB changes are applied.
@@ -91,7 +98,7 @@ To support premium membership tiers (£5/mo and £50/yr) securely and flexibly, 
      - `BILLING.SUBSCRIPTION.ACTIVATED` / `BILLING.SUBSCRIPTION.RENEWED`: set profile `tier = 'PRO'`, update subscription Period and ID.
      - `BILLING.SUBSCRIPTION.CANCELLED` / `BILLING.SUBSCRIPTION.EXPIRED` / `BILLING.SUBSCRIPTION.PAYMENT.FAILED`: demote profile `tier = 'FREE'`.
 
-3. **Admin Promo Expiration Manager**:
+4. **Admin Promo Expiration Manager**:
    - Built directly into the **Admin Panel** (`AdminDashboard.jsx`), this interface enables global administrators to grant time-limited trials (+1 week, +1 month, +6 months) or custom calendar expiration dates.
    - Saves `pro_expires_at` via `updateUserProExpiration` in `supabaseClient.js`, with the client calculating real-time visual countdown badges (e.g. *"Promo: 12 days left"*).
 

@@ -9,7 +9,6 @@ import LineupSelector from './components/LineupSelector';
 import Analytics from './components/Analytics';
 import EventLog from './components/EventLog';
 import CoachDashboard from './components/CoachDashboard';
-import BetaBadge from './components/BetaBadge';
 import AuthScreen from './components/AuthScreen';
 import AdminDashboard from './components/AdminDashboard';
 import TeamSelectionScreen from './components/TeamSelectionScreen';
@@ -532,6 +531,7 @@ function App() {
     ? shadowTeam.tier === 'PRO' 
     : (profile?.tier === 'PRO' || !!(profile?.pro_expires_at && new Date(profile.pro_expires_at) > new Date()));
   const isVoiceBetaTier = shadowTeam ? shadowTeam.beta_voice_pro : profile?.beta_voice_pro;
+  const isTrial = !shadowTeam && !!(profile?.pro_expires_at && new Date(profile.pro_expires_at) - new Date(profile.created_at || Date.now()) <= 8 * 24 * 60 * 60 * 1000);
 
   return (
     <div onClick={unlockAudio} onTouchStart={unlockAudio} className="min-h-screen bg-slate-900 selection:bg-indigo-500 selection:text-white pb-24">
@@ -553,9 +553,8 @@ function App() {
               <span className="text-base font-black text-white lowercase tracking-widest leading-none">ustats.pro</span>
               <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-[0.25em] mt-1 leading-none">sideline intelligence</span>
             </div>
-            <BetaBadge />
             {isProTier ? (
-              <span className="text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-md flex items-center gap-1"><Crown className="w-3 h-3" /> PRO</span>
+              <span className="text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-md flex items-center gap-1"><Crown className="w-3 h-3" /> {isTrial ? "PRO TRIAL" : "PRO"}</span>
             ) : (
               <span className="text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">FREE</span>
             )}

@@ -84,7 +84,7 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full mb-6">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-xs font-bold text-indigo-300 tracking-widest uppercase">Beta — Invite Only</span>
+            <span className="text-xs font-bold text-indigo-300 tracking-widest uppercase">7-Day Free Coach Pro Trial</span>
           </div>
 
           {/* Headline */}
@@ -249,7 +249,7 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
               <div className="mb-6">
                 <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Starter</div>
                 <div className="text-5xl font-black text-white mb-1">Free</div>
-                <div className="text-slate-500 text-sm">No credit card required.</div>
+                <div className="text-slate-500 text-sm">Includes 7-day Coach Pro trial.</div>
               </div>
               <div className="space-y-3 flex-1 mb-8">
                 <TierFeature text="1 Club / up to 3 Teams" />
@@ -277,7 +277,7 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
                   </span>
                 </div>
                 <div className="text-slate-500 text-sm">
-                  Per club. {isYearly ? 'Billed annually.' : 'Billed monthly.'}
+                  Per club. 7-day free trial on signup!
                 </div>
               </div>
               <div className="space-y-3 flex-1 mb-8">

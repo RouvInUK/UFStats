@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, fetchBetaKeys, generateBetaKey, pruneIncompleteGames, fetchActionsPerDay } from '../supabaseClient';
-import { Shield, ArrowLeft, Users, Activity, Key, Trash2, Crown, LayoutDashboard, Database, RefreshCw, BarChart2, Calendar } from 'lucide-react';
+import { supabase, pruneIncompleteGames, fetchActionsPerDay } from '../supabaseClient';
+import { Shield, ArrowLeft, Users, Activity, Trash2, Crown, LayoutDashboard, Database, RefreshCw, BarChart2, Calendar } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [users, setUsers] = useState([]);
   const [expandedUser, setExpandedUser] = useState(null);
-  const [betaKeys, setBetaKeys] = useState([]);
   const [actionsData, setActionsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -76,11 +75,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
 
       setUsers(enrichedUsers);
 
-      // 3. Fetch Beta Keys
-      const keys = await fetchBetaKeys();
-      setBetaKeys(keys);
-
-      // 4. Fetch Actions Per Day
+      // 3. Fetch Actions Per Day
       const actions = await fetchActionsPerDay();
       setActionsData(actions);
 
@@ -95,18 +90,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
     fetchAdminData();
   }, []);
 
-  const handleGenerateKey = async () => {
-    setActionLoading(true);
-    try {
-      await generateBetaKey();
-      const keys = await fetchBetaKeys();
-      setBetaKeys(keys);
-    } catch (err) {
-      alert("Failed to generate beta key.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
+
 
   const handleUpdateTier = async (userId, tier) => {
     try {
@@ -209,7 +193,6 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
           {[
             { id: 'overview', icon: LayoutDashboard, label: 'Global Health' },
             { id: 'users', icon: Users, label: 'Users & Tiers' },
-            { id: 'beta', icon: Key, label: 'Beta Keys' },
             { id: 'data', icon: Database, label: 'Data Hygiene' }
           ].map(tab => (
             <button
@@ -445,59 +428,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
               </div>
             )}
 
-            {/* BETA KEYS TAB */}
-            {activeTab === 'beta' && (
-              <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl overflow-hidden">
-                <div className="p-6 border-b border-white/10 flex items-center justify-between flex-wrap gap-4">
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Key className="w-5 h-5 text-amber-400" /> Beta Access Keys
-                  </h3>
-                  <button 
-                    onClick={handleGenerateKey}
-                    disabled={actionLoading}
-                    className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-amber-950 font-black rounded-xl transition-all shadow-[0_0_15px_rgba(245,158,11,0.2)] disabled:opacity-50"
-                  >
-                    + Generate New Key
-                  </button>
-                </div>
-                
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-950/80 text-slate-400 text-xs uppercase tracking-widest">
-                        <th className="p-4 font-bold">Key Code</th>
-                        <th className="p-4 font-bold text-center">Status</th>
-                        <th className="p-4 font-bold text-right">Generated At</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-sm">
-                      {betaKeys.map((k, i) => (
-                        <tr key={k.id} className={`border-b border-white/5 ${i % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-950/30'} hover:bg-slate-800 transition-colors`}>
-                          <td className="p-4 font-mono font-bold text-lg tracking-widest text-white">
-                            {k.key}
-                          </td>
-                          <td className="p-4 text-center">
-                            {k.is_used ? (
-                              <span className="px-2 py-1 bg-rose-500/10 text-rose-400 text-xs font-bold rounded border border-rose-500/20">CLAIMED</span>
-                            ) : (
-                              <span className="px-2 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded border border-emerald-500/20">AVAILABLE</span>
-                            )}
-                          </td>
-                          <td className="p-4 text-right font-mono text-slate-500 text-xs">
-                            {new Date(k.created_at).toLocaleString()}
-                          </td>
-                        </tr>
-                      ))}
-                      {betaKeys.length === 0 && (
-                        <tr>
-                          <td colSpan={3} className="p-8 text-center text-slate-500 font-medium">No beta keys generated yet.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
+
 
             {/* DATA HYGIENE TAB */}
             {activeTab === 'data' && (
