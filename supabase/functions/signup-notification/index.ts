@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { SMTPClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
+import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
 
 serve(async (req) => {
   try {
@@ -21,7 +21,7 @@ serve(async (req) => {
     }
 
     // 3. Initialize secure SMTP Connection
-    const client = new SMTPClient({
+    const client = new SmtpClient({
       connection: {
         hostname: smtpHost,
         port: smtpPort,
