@@ -35,7 +35,7 @@ serve(async (req) => {
 
     // 4. Send the notification email to admin@ustats.pro
     await client.send({
-      from: `ustats.pro Alert <${smtpUsername}>`,
+      from: smtpUsername,
       to: adminEmail,
       subject: "🚀 New ustats.pro Coach Signup!",
       content: `A new coach signed up: ${userEmail}. Workspace created at ${new Date(createdAt).toLocaleString()}`,
