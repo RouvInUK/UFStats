@@ -1,9 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Initialize the standard Google Generative AI SDK using the server key.
-const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_KEY;
-const genAI = new GoogleGenerativeAI(apiKey);
-
+// Initialize the standard Google Generative AI SDK dynamically inside the handler.
 export default async function handler(req, res) {
   // 1. Enforce secure CORS and request methods
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -23,12 +20,19 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { playerStats, rawStats, gameType, score } = req.body;
+    const resolvedApiKey = process.env.GEMINI_API_KEY ||
+                           process.env.GEmini_API_Key ||
+                           process.env.Gemini_API_Key ||
+                           process.env.gemini_api_key ||
+                           process.env.VITE_GEMINI_KEY;
 
-    if (!apiKey) {
-      console.error("[generate-insights] Missing GEMINI_API_KEY environment variable.");
+    if (!resolvedApiKey) {
+      console.error("[generate-insights] Missing Gemini API Key environment variable.");
       return res.status(500).json({ error: "Gemini API key is not configured on the server." });
     }
+
+    const genAI = new GoogleGenerativeAI(resolvedApiKey);
+    const { playerStats, rawStats, gameType, score } = req.body;
 
     // 2. Aggregate and truncate data to fit the context
     const cleanPlayerStats = playerStats ? playerStats.map(p => ({
