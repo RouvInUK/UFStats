@@ -923,6 +923,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
         gameType={visualGameType} 
         score={score} 
         isMultiGame={isMultiGame}
+        teamStats={teamStats}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">

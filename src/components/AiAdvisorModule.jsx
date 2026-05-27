@@ -16,7 +16,7 @@ const FormatText = ({ text }) => {
   );
 };
 
-const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame }) => {
+const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame, teamStats }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [insights, setInsights] = useState(null);
   const [dataChanged, setDataChanged] = useState(false);
@@ -323,7 +323,7 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame }
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ playerStats, rawStats, gameType, score, isMultiGame }),
+        body: JSON.stringify({ playerStats, rawStats, gameType, score, isMultiGame, teamStats }),
       });
 
       if (!response.ok) {

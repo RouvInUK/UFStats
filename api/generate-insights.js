@@ -32,7 +32,7 @@ export default async function handler(req, res) {
     }
 
     const genAI = new GoogleGenerativeAI(resolvedApiKey);
-    const { playerStats, rawStats, gameType, score, isMultiGame } = req.body;
+    const { playerStats, rawStats, gameType, score, isMultiGame, teamStats } = req.body;
 
     // 2. Aggregate and truncate data to fit the context
     const cleanPlayerStats = playerStats ? playerStats.map(p => ({
@@ -129,13 +129,23 @@ export default async function handler(req, res) {
     const oHuckIntegrityPct = oHuckAttempts > 0 ? (oHuckCompletions / oHuckAttempts) * 100 : 0;
     const dHuckIntegrityPct = dHuckAttempts > 0 ? (dHuckCompletions / dHuckAttempts) * 100 : 0;
 
+    // Use pre-calculated frontend telemetry if available to guarantee 100% exact alignment
+    const cleanHoldRateVal = teamStats && teamStats.cleanHoldRate !== undefined ? teamStats.cleanHoldRate : cleanHoldRate;
+    const breakRateVal = teamStats && teamStats.breakRate !== undefined ? teamStats.breakRate : breakRate;
+    const oHuckRateVal = teamStats && teamStats.huckSuccessRate !== undefined ? teamStats.huckSuccessRate : oHuckIntegrityPct;
+    const dHuckRateVal = teamStats && teamStats.dHuckSuccessRate !== undefined ? teamStats.dHuckSuccessRate : dHuckIntegrityPct;
+
     const advancedMetricsSummary = {
-      cleanHoldRate: `${cleanHoldRate.toFixed(0)}%`,
-      breakRate: `${breakRate.toFixed(0)}%`,
+      cleanHoldRate: `${cleanHoldRateVal.toFixed(0)}%`,
+      breakRate: `${breakRateVal.toFixed(0)}%`,
       passToScoreRatio: passToScoreRatio.toFixed(1),
-      offensiveHuckIntegrity: `${oHuckIntegrityPct.toFixed(0)}% (${oHuckCompletions}/${oHuckAttempts})`,
-      defensiveHuckIntegrity: `${dHuckIntegrityPct.toFixed(0)}% (${dHuckCompletions}/${dHuckAttempts})`
+      offensiveHuckIntegrity: `${oHuckRateVal.toFixed(0)}%`,
+      defensiveHuckIntegrity: `${dHuckRateVal.toFixed(0)}%`
     };
+
+    if (teamStats && teamStats.completionRate !== undefined) {
+      advancedMetricsSummary.passCompletionRate = `${teamStats.completionRate.toFixed(0)}%`;
+    }
 
     // 4. Build dense match state payload
     const teamStateSummary = `
