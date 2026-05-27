@@ -51,16 +51,109 @@ export default async function handler(req, res) {
       details: s.details || null
     })) : [];
 
-    // 3. Build dense match state payload
+    // 3. Compute Advanced Telemetry Metrics to Feed the LLM Prompt
+    let oPointsPlayed = 0;
+    let cleanHolds = 0;
+    let dPointsPlayed = 0;
+    let breaks = 0;
+    let scoringPointsCount = 0;
+    let passesInScoringPoints = 0;
+    let oHuckAttempts = 0;
+    let oHuckCompletions = 0;
+    let dHuckAttempts = 0;
+    let dHuckCompletions = 0;
+
+    let currentPointPasses = 0;
+    let currentPointTurnovers = 0;
+    let isDPoint = false;
+    let isFirstEvent = true;
+
+    if (rawStats && rawStats.length > 0) {
+      // Process chronologically (original rawStats is newest first, so we reverse it)
+      const chronologicalStats = [...rawStats].reverse();
+
+      chronologicalStats.forEach(stat => {
+        if (stat.stat_type === 'Start Defense') {
+          isDPoint = true;
+        } else if (stat.stat_type === 'Start Offense') {
+          isDPoint = false;
+        }
+
+        const realActions = ['Pull', 'Pass', 'Opponent Turnover', 'Throwaway', 'Drop', 'Stall Out', 'Defence', 'Block'];
+        if (isFirstEvent && realActions.includes(stat.stat_type)) {
+          if (stat.stat_type === 'Pull') {
+            isDPoint = true;
+          }
+          if (isDPoint) dPointsPlayed++;
+          else oPointsPlayed++;
+          isFirstEvent = false;
+        }
+
+        if (stat.details?.is_huck) {
+          if (isDPoint) {
+            dHuckAttempts++;
+            if (['Pass', 'Point'].includes(stat.stat_type)) dHuckCompletions++;
+          } else {
+            oHuckAttempts++;
+            if (['Pass', 'Point'].includes(stat.stat_type)) oHuckCompletions++;
+          }
+        }
+
+        if (['Pass', 'Point'].includes(stat.stat_type)) {
+          currentPointPasses++;
+          if (stat.stat_type === 'Point') {
+            scoringPointsCount++;
+            passesInScoringPoints += currentPointPasses;
+            if (isDPoint) breaks++;
+            else if (currentPointTurnovers === 0) cleanHolds++;
+
+            currentPointPasses = 0;
+            currentPointTurnovers = 0;
+            isFirstEvent = true;
+            isDPoint = true;
+          }
+        } else if (['Throwaway', 'Drop', 'Stall Out'].includes(stat.stat_type)) {
+          currentPointTurnovers++;
+        } else if (stat.stat_type === 'Opponent Point') {
+          currentPointPasses = 0;
+          currentPointTurnovers = 0;
+          isFirstEvent = true;
+          isDPoint = false;
+        }
+      });
+    }
+
+    const cleanHoldRate = oPointsPlayed > 0 ? (cleanHolds / oPointsPlayed) * 100 : 0;
+    const breakRate = dPointsPlayed > 0 ? (breaks / dPointsPlayed) * 100 : 0;
+    const passToScoreRatio = scoringPointsCount > 0 ? (passesInScoringPoints / scoringPointsCount) : 0;
+    const oHuckIntegrityPct = oHuckAttempts > 0 ? (oHuckCompletions / oHuckAttempts) * 100 : 0;
+    const dHuckIntegrityPct = dHuckAttempts > 0 ? (dHuckCompletions / dHuckAttempts) * 100 : 0;
+
+    const advancedMetricsSummary = {
+      cleanHoldRate: `${cleanHoldRate.toFixed(0)}%`,
+      breakRate: `${breakRate.toFixed(0)}%`,
+      passToScoreRatio: passToScoreRatio.toFixed(1),
+      offensiveHuckIntegrity: `${oHuckIntegrityPct.toFixed(0)}% (${oHuckCompletions}/${oHuckAttempts})`,
+      defensiveHuckIntegrity: `${dHuckIntegrityPct.toFixed(0)}% (${dHuckCompletions}/${dHuckAttempts})`
+    };
+
+    // 4. Build dense match state payload
     const teamStateSummary = `
       Match Format: ${gameType || 'grass'}
       Current Score: Us ${score?.us || 0} - Them ${score?.them || 0}
+      Advanced Match Metrics (Calculated): ${JSON.stringify(advancedMetricsSummary)}
       Roster Performance Summary: ${JSON.stringify(cleanPlayerStats)}
       Point-by-Point Play Log (newest first): ${JSON.stringify(cleanRawStats)}
     `;
 
     const prompt = `
-      System Instruction: You are 'Antigravity Coach Pro', an elite, highly analytical, and motivational Ultimate Frisbee coach. Deliver technical, encouraging huddle briefings and diagnostic suggestions. Focus on:
+      System Instruction: You are 'Antigravity Coach Pro', an elite, highly analytical, and motivational Ultimate Frisbee coach. 
+      Deliver technical, encouraging huddle briefings and diagnostic suggestions. 
+      
+      CRITICAL INSTRUCTION: You MUST naturally and explicitly weave the calculated "Advanced Match Metrics" (like Clean Hold Rate, Break Rate, Pass-to-Score ratio, and Huck Integrity) into your narratives. Do not just list them; incorporate them into your sentences to back up your coaching insights with hard numeric proof. 
+      Example: "Our offense is running clinical patterns with a clinical 3.2 Pass-to-Score ratio and a 75% Clean Hold Rate..." or "Our transition unit has been ruthless, converting at a 50% Break Rate..."
+      
+      Focus on:
       1. Offensive hold patterns, disc preservation, dump-swing movements, and huck decisions.
       2. Defensive transition conversion, block counts, defensive brackets, and counter-attacks.
       3. 2-3 specific tactical suggestions (e.g. timeout execution, drill focus, defensive adjustments) written in direct, encouraging markdown.
