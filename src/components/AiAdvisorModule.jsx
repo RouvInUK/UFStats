@@ -390,35 +390,28 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame }
           </div>
         </div>
         
-        <button 
-          onClick={generateInsights}
-          disabled={isAnalyzing}
-          className={`flex items-center gap-2 px-6 py-3 border text-sm font-bold rounded-xl transition-all disabled:opacity-50 shrink-0 uppercase tracking-wider ${
-            dataChanged 
-              ? 'bg-amber-500 hover:bg-amber-400 border-amber-300 text-slate-950 shadow-lg shadow-amber-500/30 animate-pulse' 
-              : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-200 shadow-md'
-          }`}
-        >
-          <RefreshCw className={`w-4 h-4 ${isAnalyzing ? 'animate-spin' : ''}`} />
-          {isAnalyzing ? 'Processing...' : dataChanged ? 'Update Briefing' : 'Generate Briefing'}
-        </button>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0">
+          {dataChanged && insights && !isAnalyzing && (
+            <span className="text-amber-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest animate-pulse border border-amber-500/30 bg-amber-500/10 px-3 py-2 rounded-xl">
+              ⚠️ Stats changed
+            </span>
+          )}
+          <button 
+            onClick={generateInsights}
+            disabled={isAnalyzing}
+            className={`flex items-center gap-2 px-6 py-3 border text-sm font-bold rounded-xl transition-all disabled:opacity-50 shrink-0 uppercase tracking-wider ${
+              dataChanged 
+                ? 'bg-amber-500 hover:bg-amber-400 border-amber-300 text-slate-950 shadow-lg shadow-amber-500/30 animate-pulse' 
+                : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-200 shadow-md'
+            }`}
+          >
+            <RefreshCw className={`w-4 h-4 ${isAnalyzing ? 'animate-spin' : ''}`} />
+            {isAnalyzing ? 'Processing...' : dataChanged ? 'Update Briefing' : 'Generate Briefing'}
+          </button>
+        </div>
       </div>
 
       <div className="relative z-10 bg-slate-950/60 border border-slate-800 rounded-2xl p-6 sm:p-10 shadow-inner">
-        {dataChanged && insights && (
-          <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm font-bold flex items-center justify-between animate-pulse">
-            <div className="flex items-center gap-2">
-              <RefreshCw className="w-4 h-4 text-amber-400 animate-spin" />
-              <span>Match selection changed. Regenerate to update your AI coaching briefings!</span>
-            </div>
-            <button 
-              onClick={generateInsights}
-              className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg text-xs font-black uppercase tracking-wider transition-all"
-            >
-              Regenerate
-            </button>
-          </div>
-        )}
 
         {insights ? (
           <div className="space-y-8">
