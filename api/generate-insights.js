@@ -180,8 +180,8 @@ export default async function handler(req, res) {
       ${teamStateSummary}
     `;
 
-    // 4. Configure Generative AI Model targeting gemini-3.5-flash with automatic cascading fallback
-    const modelsToTry = ['gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
+    // 4. Configure Generative AI Model targeting gemini-2.0-flash with automatic cascading fallback
+    const modelsToTry = ['gemini-2.0-flash', 'gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-lite'];
     let result = null;
     let lastError = null;
 
