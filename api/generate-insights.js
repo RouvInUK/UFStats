@@ -44,7 +44,7 @@ export default async function handler(req, res) {
       pointsPlayed: p.pp || p.pointsPlayed || 0
     })) : [];
 
-    const cleanRawStats = rawStats ? rawStats.slice(0, 150).map(s => ({
+    const cleanRawStats = rawStats ? rawStats.slice(-150).map(s => ({
       player: s.player,
       action: s.stat_type,
       point: s.point_number,
@@ -69,8 +69,8 @@ export default async function handler(req, res) {
     let isFirstEvent = true;
 
     if (rawStats && rawStats.length > 0) {
-      // Process chronologically (original rawStats is newest first, so we reverse it)
-      const chronologicalStats = [...rawStats].reverse();
+      // Process chronologically (already sorted oldest first)
+      const chronologicalStats = rawStats;
 
       chronologicalStats.forEach(stat => {
         if (stat.stat_type === 'Start Defense') {
