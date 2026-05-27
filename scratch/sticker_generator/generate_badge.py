@@ -27,7 +27,7 @@ def download_font(url, dest_path):
 def generate_sticker():
     # 1. Paths & Setup
     base_dir = "/Users/rouven/Documents/UFStats"
-    logo_path = os.path.join(base_dir, "public/logo_dark_icon.png")
+    logo_path = os.path.join(base_dir, "public/logo_dark.png")
     output_dir = os.path.join(base_dir, "scratch/sticker_generator")
     os.makedirs(output_dir, exist_ok=True)
     
@@ -67,25 +67,31 @@ def generate_sticker():
         width=border_thick
     )
     
-    # 3. Process & Paste Logo Icon
+    # 3. Process & Paste Logo Icon (Crop pure shield from logo_dark.png and make it bigger)
     if os.path.exists(logo_path):
-        print(f"Loading website logo: {logo_path}")
-        logo = Image.open(logo_path).convert("RGBA")
+        print(f"Loading website logo from: {logo_path}")
+        full_logo = Image.open(logo_path).convert("RGBA")
         
-        # Resize logo to fit height (target 210px height to leave breathing room)
-        logo_h = 210
-        aspect = logo.width / logo.height
+        # Extract pure shield logo by cropping rows 10 to 404
+        shield_crop = full_logo.crop((10, 10, 707, 404))
+        shield_bbox = shield_crop.getbbox()
+        shield = shield_crop.crop(shield_bbox)
+        print(f"Extracted pure shield emblem. Original cropped size: {shield_crop.size}, active size: {shield.size}")
+        
+        # Resize shield to fit height (target 260px height for a larger, bolder presence)
+        logo_h = 260
+        aspect = shield.width / shield.height
         logo_w = int(logo_h * aspect)
-        logo_resized = logo.resize((logo_w, logo_h), Image.Resampling.LANCZOS)
+        logo_resized = shield.resize((logo_w, logo_h), Image.Resampling.LANCZOS)
         
-        # Position logo: 75px from left, centered vertically
-        logo_x = 75
+        # Position logo: 55px from left, centered vertically
+        logo_x = 55
         logo_y = (height - logo_h) // 2
         sticker_img.alpha_composite(logo_resized, (logo_x, logo_y))
     else:
         print("Warning: Website logo not found, skipping logo paste.")
         logo_w = 0
-        logo_x = 75
+        logo_x = 55
         
     # 4. Generate & Paste Functional QR Code pointing to https://ustats.pro
     print("Generating functional QR code for https://ustats.pro...")
@@ -105,20 +111,20 @@ def generate_sticker():
     qr_size = 210
     qr_resized = qr_img.resize((qr_size, qr_size), Image.Resampling.LANCZOS)
     
-    # Position QR code: 75px from right, centered vertically
-    qr_x = width - 75 - qr_size
+    # Position QR code: 55px from right (balanced with the logo margin), centered vertically
+    qr_x = width - 55 - qr_size
     qr_y = (height - qr_size) // 2
     sticker_img.alpha_composite(qr_resized, (qr_x, qr_y))
     
     # 5. Render Text Elements (ustats.pro and SIDELINE INTELLIGENCE)
-    # Centered in the middle space between logo and QR code
-    content_left = logo_x + logo_w + 50
-    content_right = qr_x - 50
+    # Centered in the middle space between the large logo and QR code
+    content_left = logo_x + logo_w + 35
+    content_right = qr_x - 35
     center_x = content_left + (content_right - content_left) // 2
     
-    # Load fonts
-    font_title_size = 85
-    font_tag_size = 22
+    # Load fonts (adjusted sizes to balance visual hierarchy with larger logo)
+    font_title_size = 80
+    font_tag_size = 20
     font_title = ImageFont.truetype(font_bold_path, font_title_size)
     font_tag = ImageFont.truetype(font_medium_path, font_tag_size)
     
