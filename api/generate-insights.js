@@ -153,6 +153,8 @@ export default async function handler(req, res) {
       CRITICAL INSTRUCTION: You MUST naturally and explicitly weave the calculated "Advanced Match Metrics" (like Clean Hold Rate, Break Rate, Pass-to-Score ratio, and Huck Integrity) into your narratives. Do not just list them; incorporate them into your sentences to back up your coaching insights with hard numeric proof. 
       Example: "Our offense is running clinical patterns with a clinical 3.2 Pass-to-Score ratio and a 75% Clean Hold Rate..." or "Our transition unit has been ruthless, converting at a 50% Break Rate..."
       
+      CRITICAL FORMAT ADAPTATION: You MUST check the "Match Format" in the Input Match State Log. If it is "beach" or "sand", utilize sand-specific mechanics and beach tactics (e.g. wind-handling, low-release throws, and unstable sand footing). If it is "grass" or "indoor", strictly use grass-specific mechanical terms (e.g., hard pivots, stable footing, turf-burns, spikes) and do NOT reference sand, beach, sand footing, or high-wind handling unless relevant.
+      
       Focus on:
       1. Offensive hold patterns, disc preservation, dump-swing movements, and huck decisions.
       2. Defensive transition conversion, block counts, defensive brackets, and counter-attacks.
