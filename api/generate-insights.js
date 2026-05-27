@@ -68,11 +68,20 @@ export default async function handler(req, res) {
     let isDPoint = false;
     let isFirstEvent = true;
 
+    let lastGameName = null;
     if (rawStats && rawStats.length > 0) {
       // Process chronologically (already sorted oldest first)
       const chronologicalStats = rawStats;
 
       chronologicalStats.forEach(stat => {
+        if (lastGameName && stat.game_name !== lastGameName) {
+          isDPoint = false;
+          isFirstEvent = true;
+          currentPointPasses = 0;
+          currentPointTurnovers = 0;
+        }
+        lastGameName = stat.game_name;
+
         if (stat.stat_type === 'Start Defense') {
           isDPoint = true;
         } else if (stat.stat_type === 'Start Offense') {

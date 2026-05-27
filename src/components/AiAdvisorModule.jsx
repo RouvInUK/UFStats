@@ -69,8 +69,17 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame, 
          };
       });
 
+      let lastGameName = null;
       if (rawStats && rawStats.length > 0) {
           rawStats.forEach(stat => {
+             if (lastGameName && stat.game_name !== lastGameName) {
+                 isDPoint = false;
+                 isFirstEvent = true;
+                 currentPointPasses = 0;
+                 currentPointTurnovers = 0;
+             }
+             lastGameName = stat.game_name;
+
              if (stat.stat_type === 'Start Defense') {
                  isDPoint = true;
              } else if (stat.stat_type === 'Start Offense') {
@@ -148,11 +157,11 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame, 
           });
       }
 
-      const cleanHoldRate = oPointsPlayed > 0 ? (cleanHolds / oPointsPlayed) * 100 : 0;
-      const breakRate = dPointsPlayed > 0 ? (breaks / dPointsPlayed) * 100 : 0;
+      const cleanHoldRate = teamStats && teamStats.cleanHoldRate !== undefined ? teamStats.cleanHoldRate : (oPointsPlayed > 0 ? (cleanHolds / oPointsPlayed) * 100 : 0);
+      const breakRate = teamStats && teamStats.breakRate !== undefined ? teamStats.breakRate : (dPointsPlayed > 0 ? (breaks / dPointsPlayed) * 100 : 0);
       const passToScoreRatio = scoringPointsCount > 0 ? (passesInScoringPoints / scoringPointsCount) : 0;
-      const oHuckIntegrityPct = oHuckAttempts > 0 ? (oHuckCompletions / oHuckAttempts) * 100 : 0;
-      const dHuckIntegrityPct = dHuckAttempts > 0 ? (dHuckCompletions / dHuckAttempts) * 100 : 0;
+      const oHuckIntegrityPct = teamStats && teamStats.huckSuccessRate !== undefined ? teamStats.huckSuccessRate : (oHuckAttempts > 0 ? (oHuckCompletions / oHuckAttempts) * 100 : 0);
+      const dHuckIntegrityPct = teamStats && teamStats.dHuckSuccessRate !== undefined ? teamStats.dHuckSuccessRate : (dHuckAttempts > 0 ? (dHuckCompletions / dHuckAttempts) * 100 : 0);
 
       let p1 = `**Offensive Execution:** The Active Unit is currently operating with a **${cleanHoldRate.toFixed(0)}% Clean Hold Rate** on offense. `;
       if (cleanHoldRate >= 60) {
