@@ -112,6 +112,13 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       setLoading(true);
       try {
         const rawStats = await fetchGameStats(selectedGames, targetTeamId);
+        
+        // Auto-detect game format (grass vs beach/sand) from stats rows
+        const detectedType = rawStats.find(s => s.game_type)?.game_type;
+        if (detectedType) {
+          setVisualGameType(detectedType);
+        }
+
         // fetchGameStats returns desc, we want chronological for the timeline
         setStats(rawStats.reverse());
       } catch (err) {
