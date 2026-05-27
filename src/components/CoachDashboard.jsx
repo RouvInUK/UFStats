@@ -8,8 +8,30 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [visualGameType, setVisualGameType] = useState('beach');
-  const [selectedGames, setSelectedGames] = useState(currentGame ? [currentGame] : []);
-  const [pendingSelectedGames, setPendingSelectedGames] = useState(currentGame ? [currentGame] : []);
+  const selectedGamesKey = `ufstats_coach_selected_games_${targetTeamId || 'global'}`;
+
+  const [selectedGames, setSelectedGames] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`ufstats_coach_selected_games_${targetTeamId || 'global'}`);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+    return currentGame ? [currentGame] : [];
+  });
+  const [pendingSelectedGames, setPendingSelectedGames] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`ufstats_coach_selected_games_${targetTeamId || 'global'}`);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+    return currentGame ? [currentGame] : [];
+  });
   const [allGames, setAllGames] = useState([]);
   const [allTeams, setAllTeams] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -19,6 +41,14 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
   const [teamLines, setTeamLines] = useState([]);
   const [activeSubTab, setActiveSubTab] = useState('players'); // 'players' | 'team-lines'
   const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    if (selectedGames && selectedGames.length > 0) {
+      localStorage.setItem(selectedGamesKey, JSON.stringify(selectedGames));
+    } else {
+      localStorage.removeItem(selectedGamesKey);
+    }
+  }, [selectedGames, selectedGamesKey]);
 
   useEffect(() => {
     if (targetTeamId) {
@@ -34,6 +64,22 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
     fetchAllTeamNames().then(setAllTeams).catch(console.error);
     fetchAllGameNames(currentTeam).then(names => {
       setAllGames(names);
+      
+      const saved = localStorage.getItem(selectedGamesKey);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          const valid = parsed.filter(g => names.includes(g));
+          if (valid.length > 0) {
+            setSelectedGames(valid);
+            setPendingSelectedGames(valid);
+            return;
+          }
+        } catch (e) {
+          console.warn("Failed to restore saved games selection:", e);
+        }
+      }
+
       if (currentGame && names.includes(currentGame)) {
         setSelectedGames([currentGame]);
         setPendingSelectedGames([currentGame]);
@@ -42,7 +88,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
         setPendingSelectedGames([]);
       }
     });
-  }, [targetTeamId, currentGame]);
+  }, [targetTeamId, currentGame, currentTeam, selectedGamesKey]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -924,6 +970,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
         score={score} 
         isMultiGame={isMultiGame}
         teamStats={teamStats}
+        targetTeamId={targetTeamId}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">

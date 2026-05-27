@@ -16,11 +16,35 @@ const FormatText = ({ text }) => {
   );
 };
 
-const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame, teamStats }) => {
+const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame, teamStats, targetTeamId }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [insights, setInsights] = useState(null);
-  const [dataChanged, setDataChanged] = useState(false);
-  const [isFirstLoad, setIsFirstLoad] = useState(true);
+
+  // Generate a unique value-based hash of the current stats data
+  const gameNames = rawStats && rawStats.length > 0 
+    ? Array.from(new Set(rawStats.map(s => s.game_name))).sort().join(',') 
+    : '';
+  const currentHash = `${gameType}_${score?.us || 0}_${score?.them || 0}_${rawStats?.length || 0}_${playerStats?.length || 0}_${gameNames}`;
+
+  const insightsKey = `ufstats_coach_ai_insights_${targetTeamId || 'global'}`;
+  const hashKey = `ufstats_coach_ai_hash_${targetTeamId || 'global'}`;
+
+  const [lastGeneratedHash, setLastGeneratedHash] = useState(() => {
+    return localStorage.getItem(hashKey) || null;
+  });
+
+  const [insights, setInsights] = useState(() => {
+    try {
+      const saved = localStorage.getItem(insightsKey);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn("Failed to parse saved AI insights:", e);
+    }
+    return null;
+  });
+
+  const dataChanged = lastGeneratedHash !== currentHash;
 
   // High-performance offline fallback generator
   const generateHeuristicBriefing = () => {
@@ -324,7 +348,6 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame, 
 
   const generateInsights = async () => {
     setIsAnalyzing(true);
-    setInsights(null);
 
     try {
       const response = await fetch('/api/generate-insights', {
@@ -341,8 +364,7 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame, 
 
       const data = await response.json();
       
-      // Successfully fetch premium Gemini 3.5 Flash coaching intelligence
-      setInsights({
+      const newInsights = {
         para1: data.offensiveBriefing || "No offensive breakdown generated.",
         para2: data.defensiveBriefing || "No defensive transition diagnostics generated.",
         para3: data.tacticalBriefing || "Keep focusing on possession and standard positional play.",
@@ -352,32 +374,36 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame, 
           differenceMaker: normalizeArchetype(data.archetypes?.differenceMaker)
         },
         focusAreas: Array.isArray(data.focusAreas) ? data.focusAreas : []
-      });
-      setDataChanged(false);
+      };
+
+      setInsights(newInsights);
+      setLastGeneratedHash(currentHash);
+
+      localStorage.setItem(insightsKey, JSON.stringify(newInsights));
+      localStorage.setItem(hashKey, currentHash);
 
     } catch (err) {
       console.warn("[AiAdvisorModule] Gemini endpoint offline or failed. Falling back to rule heuristics:", err);
       const fallback = generateHeuristicBriefing();
       setInsights(fallback);
+      setLastGeneratedHash(currentHash);
+      localStorage.setItem(insightsKey, JSON.stringify(fallback));
+      localStorage.setItem(hashKey, currentHash);
     } finally {
       setIsAnalyzing(false);
     }
   };
 
   useEffect(() => {
-    // Standard mount triggers default cached/offline heuristic briefings initially
-    const initBriefing = generateHeuristicBriefing();
-    setInsights(initBriefing);
+    if (!insights) {
+      const initBriefing = generateHeuristicBriefing();
+      setInsights(initBriefing);
+      setLastGeneratedHash(currentHash);
+      localStorage.setItem(insightsKey, JSON.stringify(initBriefing));
+      localStorage.setItem(hashKey, currentHash);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (isFirstLoad) {
-      setIsFirstLoad(false);
-      return;
-    }
-    setDataChanged(true);
-  }, [playerStats, rawStats, gameType, score]);
 
   return (
     <div className="w-full bg-slate-900 border border-slate-700/50 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden mb-8">
