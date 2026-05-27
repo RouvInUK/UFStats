@@ -32,7 +32,7 @@ export default async function handler(req, res) {
     }
 
     const genAI = new GoogleGenerativeAI(resolvedApiKey);
-    const { playerStats, rawStats, gameType, score } = req.body;
+    const { playerStats, rawStats, gameType, score, isMultiGame } = req.body;
 
     // 2. Aggregate and truncate data to fit the context
     const cleanPlayerStats = playerStats ? playerStats.map(p => ({
@@ -140,6 +140,7 @@ export default async function handler(req, res) {
     // 4. Build dense match state payload
     const teamStateSummary = `
       Match Format: ${gameType || 'grass'}
+      Match Scope: ${isMultiGame ? 'Multiple Games (Aggregated Tournament Data)' : 'Single Game'}
       Current Score: Us ${score?.us || 0} - Them ${score?.them || 0}
       Advanced Match Metrics (Calculated): ${JSON.stringify(advancedMetricsSummary)}
       Roster Performance Summary: ${JSON.stringify(cleanPlayerStats)}
@@ -154,6 +155,8 @@ export default async function handler(req, res) {
       Example: "Our offense is running clinical patterns with a clinical 3.2 Pass-to-Score ratio and a 75% Clean Hold Rate..." or "Our transition unit has been ruthless, converting at a 50% Break Rate..."
       
       CRITICAL FORMAT ADAPTATION: You MUST check the "Match Format" in the Input Match State Log. If it is "beach" or "sand", utilize sand-specific mechanics and beach tactics (e.g. wind-handling, low-release throws, and unstable sand footing). If it is "grass" or "indoor", strictly use grass-specific mechanical terms (e.g., hard pivots, stable footing, turf-burns, spikes) and do NOT reference sand, beach, sand footing, or high-wind handling unless relevant.
+
+      CRITICAL SCOPE ADAPTATION: You MUST verify the "Match Scope". If it is "Multiple Games (Aggregated Tournament Data)", formulate your briefings as a high-level retrospective tournament campaign assessment across multiple games. Pivot your vocabulary to reflect tournament progress, consistency, and cumulative fatigue rather than single-game sideline huddle urgency (e.g., refer to "this tournament/campaign", "our overall record", and "across these matches" instead of "this game" or "the next pull"). If it is "Single Game", deliver rapid, in-game sideline huddle diagnostics.
       
       Focus on:
       1. Offensive hold patterns, disc preservation, dump-swing movements, and huck decisions.

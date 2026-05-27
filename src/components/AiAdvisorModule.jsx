@@ -16,9 +16,11 @@ const FormatText = ({ text }) => {
   );
 };
 
-const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
+const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [insights, setInsights] = useState(null);
+  const [dataChanged, setDataChanged] = useState(false);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
 
   // High-performance offline fallback generator
   const generateHeuristicBriefing = () => {
@@ -321,7 +323,7 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ playerStats, rawStats, gameType, score }),
+        body: JSON.stringify({ playerStats, rawStats, gameType, score, isMultiGame }),
       });
 
       if (!response.ok) {
@@ -342,6 +344,7 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
         },
         focusAreas: Array.isArray(data.focusAreas) ? data.focusAreas : []
       });
+      setDataChanged(false);
 
     } catch (err) {
       console.warn("[AiAdvisorModule] Gemini endpoint offline or failed. Falling back to rule heuristics:", err);
@@ -358,6 +361,14 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
     setInsights(initBriefing);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (isFirstLoad) {
+      setIsFirstLoad(false);
+      return;
+    }
+    setDataChanged(true);
+  }, [playerStats, rawStats, gameType, score]);
 
   return (
     <div className="w-full bg-slate-900 border border-slate-700/50 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden mb-8">
@@ -382,14 +393,33 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score }) => {
         <button 
           onClick={generateInsights}
           disabled={isAnalyzing}
-          className="flex items-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 text-sm font-bold rounded-xl transition-all shadow-md disabled:opacity-50 shrink-0 uppercase tracking-wider"
+          className={`flex items-center gap-2 px-6 py-3 border text-sm font-bold rounded-xl transition-all disabled:opacity-50 shrink-0 uppercase tracking-wider ${
+            dataChanged 
+              ? 'bg-amber-500 hover:bg-amber-400 border-amber-300 text-slate-950 shadow-lg shadow-amber-500/30 animate-pulse' 
+              : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-200 shadow-md'
+          }`}
         >
           <RefreshCw className={`w-4 h-4 ${isAnalyzing ? 'animate-spin' : ''}`} />
-          {isAnalyzing ? 'Processing...' : 'Generate Briefing'}
+          {isAnalyzing ? 'Processing...' : dataChanged ? 'Update Briefing' : 'Generate Briefing'}
         </button>
       </div>
 
       <div className="relative z-10 bg-slate-950/60 border border-slate-800 rounded-2xl p-6 sm:p-10 shadow-inner">
+        {dataChanged && insights && (
+          <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm font-bold flex items-center justify-between animate-pulse">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-amber-400 animate-spin" />
+              <span>Match selection changed. Regenerate to update your AI coaching briefings!</span>
+            </div>
+            <button 
+              onClick={generateInsights}
+              className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg text-xs font-black uppercase tracking-wider transition-all"
+            >
+              Regenerate
+            </button>
+          </div>
+        )}
+
         {insights ? (
           <div className="space-y-8">
             <p className="text-slate-300 font-medium leading-relaxed tracking-wide text-lg sm:text-xl">
