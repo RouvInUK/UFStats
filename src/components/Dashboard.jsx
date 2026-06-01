@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { recordStatToDB, fetchActiveGames, clearActiveLineup, fetchLastStatForGame, deleteStat, fetchGameStats } from '../supabaseClient';
 import { upgradeLastStatToHuck } from '../SyncEngine';
-import { Undo2, ArrowLeftRight, Mic, MicOff, Star } from 'lucide-react';
+import { Undo2, ArrowLeftRight, Mic, MicOff, Star, Compass } from 'lucide-react';
 import { playChime, playClick, playBuzz } from '../utils/audioFeedback';
 
 const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, gameType, currentTeam, targetTeamId, opponentName, initialPossession, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers, isVoiceEnabled, setIsVoiceEnabled, isPro, isVoiceBeta }) => {
@@ -11,6 +11,20 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   const [lastSaved, setLastSaved] = useState(null);
   const [activeGames, setActiveGames] = useState([]);
   const [flashType, setFlashType] = useState(null);
+
+  const [beachMode, setBeachMode] = useState(() => {
+    return localStorage.getItem('ufstats_beach_mode') === 'true';
+  });
+
+  useEffect(() => {
+    if (beachMode) {
+      document.documentElement.classList.add('beach-mode');
+    } else {
+      document.documentElement.classList.remove('beach-mode');
+    }
+    localStorage.setItem('ufstats_beach_mode', beachMode.toString());
+  }, [beachMode]);
+
   const handleTap = (id, singleAction) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate && localStorage.getItem('ufstats_haptic_enabled') !== 'false') {
       try { navigator.vibrate(30); } catch (e) {}
@@ -657,15 +671,28 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
           </div>
         </div>
 
-        {/* On-Pitch Player Section */}
         <div className="flex flex-col p-2 min-h-0 overflow-y-auto relative bg-slate-800">
-           <div className="flex items-center px-1 mb-1 shrink-0 gap-3">
-              <span className="text-[11px] sm:text-xs uppercase font-bold text-slate-400 tracking-wider whitespace-nowrap">On Pitch ({activeLineup.length})</span>
-              <div className="flex-1 overflow-hidden">
-                  {isSaving && <span className="text-amber-400 text-[10px] font-bold animate-pulse truncate block text-left">Synchronizing...</span>}
-                  {lastSaved && !isSaving && <span className="text-emerald-400 text-[10px] font-bold truncate block text-left">✓ {lastSaved}</span>}
+            <div className="flex items-center justify-between px-1 mb-1 shrink-0 gap-3 w-full">
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] sm:text-xs uppercase font-bold text-slate-400 tracking-wider whitespace-nowrap">On Pitch ({activeLineup.length})</span>
+                <div className="overflow-hidden max-w-[150px] xs:max-w-[200px]">
+                    {isSaving && <span className="text-amber-400 text-[10px] font-bold animate-pulse truncate block text-left">Synchronizing...</span>}
+                    {lastSaved && !isSaving && <span className="text-emerald-400 text-[10px] font-bold truncate block text-left">✓ {lastSaved}</span>}
+                </div>
               </div>
-           </div>
+              <button
+                onClick={() => setBeachMode(!beachMode)}
+                className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest transition-all duration-200 border flex items-center gap-1 shrink-0 ${
+                  beachMode 
+                    ? 'bg-amber-400 text-slate-950 border-amber-500 hover:bg-amber-300 shadow-md shadow-amber-500/10' 
+                    : 'bg-slate-900 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-white'
+                }`}
+                title="Toggle High Contrast Beach Mode"
+              >
+                <Compass className={`w-3 h-3 ${beachMode ? 'animate-spin' : ''}`} />
+                <span>Beach Mode</span>
+              </button>
+            </div>
            
            <div className="w-full">
             {activeLineup.length === 0 ? (

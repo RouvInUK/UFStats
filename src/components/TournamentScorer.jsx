@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { addStatToLocalPoint, removeStatLocally, getLastLocalStat, upgradeLastStatToHuck, getPendingSyncCount, attemptSync, clearLocalQueue, clearMatchLocalQueue, getLocalStatsForGame, updateLocalStatPlayer } from '../SyncEngine';
-import { Target, AlertTriangle, ArrowLeft, Shield, Check, Undo2, Star, Play, CircleAlert, CheckCircle, RefreshCw } from 'lucide-react';
+import { Target, AlertTriangle, ArrowLeft, Shield, Check, Undo2, Star, Play, CircleAlert, CheckCircle, RefreshCw, Compass } from 'lucide-react';
 import { playChime, playClick, playBuzz } from '../utils/audioFeedback';
 
 const TournamentScorer = ({ seat, onBack }) => {
@@ -17,6 +17,19 @@ const TournamentScorer = ({ seat, onBack }) => {
   const resolvedGameType = match?.tournament?.game_type || (isBeachOrLight ? 'beach' : 'grass');
   const gameType = resolvedGameType === 'indoor' ? 'indoor' : (resolvedGameType === 'beach' ? 'beach' : 'grass');
   const expectedPlayersCount = gameType === 'grass' ? 7 : 5;
+
+  const [beachMode, setBeachMode] = useState(() => {
+    return localStorage.getItem('ufstats_beach_mode') === 'true';
+  });
+
+  useEffect(() => {
+    if (beachMode) {
+      document.documentElement.classList.add('beach-mode');
+    } else {
+      document.documentElement.classList.remove('beach-mode');
+    }
+    localStorage.setItem('ufstats_beach_mode', beachMode.toString());
+  }, [beachMode]);
 
   const [homePlayers, setHomePlayers] = useState([]);
   const [awayPlayers, setAwayPlayers] = useState([]);
@@ -965,7 +978,20 @@ const TournamentScorer = ({ seat, onBack }) => {
           </h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => setBeachMode(!beachMode)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 border shadow-md ${
+              beachMode 
+                ? 'bg-amber-400 text-slate-950 border-amber-500 hover:bg-amber-300' 
+                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-750 hover:text-white'
+            }`}
+            aria-pressed={beachMode}
+            title="Toggle High Contrast Beach Mode"
+          >
+            <Compass className={`w-4 h-4 shrink-0 ${beachMode ? 'animate-spin' : ''}`} />
+            <span>Beach: {beachMode ? 'ON' : 'OFF'}</span>
+          </button>
           <button
             onClick={() => setShowLogModal(true)}
             className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-xs font-black uppercase tracking-widest rounded-xl transition-all text-indigo-400"

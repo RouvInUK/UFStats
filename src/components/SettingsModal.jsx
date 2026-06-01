@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Volume2, Vibrate, Mic, Globe, Settings as SettingsIcon, Sun, Moon, Crown, Star } from 'lucide-react';
+import { X, Volume2, Vibrate, Mic, Globe, Settings as SettingsIcon, Sun, Moon, Crown, Star, Shield } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   getLegalPath, 
@@ -10,12 +10,16 @@ import {
   SUPPORT_EMAIL 
 } from '../constants/legal';
 
-const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled, onUpgradeClick }) => {
+const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled, onUpgradeClick, currentTeam, onDeleteTeam }) => {
   const { profile } = useAuth();
   const isProTier = profile?.tier === 'PRO' || (profile?.pro_expires_at && new Date(profile.pro_expires_at) > new Date());
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isHapticEnabled, setIsHapticEnabled] = useState(true);
   const [theme, setTheme] = useState(() => localStorage.getItem('ufstats_theme') || 'dark');
+
+  const [isDeleteClicked, setIsDeleteClicked] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Load initial settings
   useEffect(() => {
@@ -23,6 +27,9 @@ const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled, onU
       setIsAudioEnabled(localStorage.getItem('ufstats_audio_enabled') !== 'false');
       setIsHapticEnabled(localStorage.getItem('ufstats_haptic_enabled') !== 'false');
       setTheme(localStorage.getItem('ufstats_theme') || 'dark');
+      setIsDeleteClicked(false);
+      setDeleteConfirmText('');
+      setIsDeleting(false);
     }
   }, [isOpen]);
 
@@ -251,6 +258,83 @@ const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled, onU
               </div>
             )}
           </div>
+
+          {/* Danger Zone Section (Only when currentTeam is selected) */}
+          {currentTeam && (
+            <div className="space-y-4 pt-4 border-t border-slate-800">
+              <h3 className="text-xs font-bold text-rose-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                <Shield className="w-4 h-4 text-rose-500" /> Danger Zone
+              </h3>
+              
+              <div className="p-4 bg-rose-500/5 rounded-2xl border border-rose-500/20 space-y-3">
+                <div className="text-xs text-rose-300 font-semibold leading-relaxed">
+                  <span className="font-extrabold uppercase block mb-1 text-rose-450">Delete Team "{currentTeam.name}"</span>
+                  This will permanently delete all game stats, roster lines, and history for this team. This action is irreversible.
+                </div>
+                
+                {isDeleteClicked ? (
+                  <form 
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (deleteConfirmText !== `DELETE "${currentTeam.name}"`) return;
+                      setIsDeleting(true);
+                      try {
+                        if (onDeleteTeam) {
+                          await onDeleteTeam();
+                        }
+                        onClose();
+                      } catch (err) {
+                        console.error(err);
+                        alert("Failed to delete team.");
+                      } finally {
+                        setIsDeleting(false);
+                      }
+                    }} 
+                    className="space-y-3"
+                  >
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Type <strong className="text-rose-450 font-black">DELETE "{currentTeam.name}"</strong> to confirm:
+                    </label>
+                    <input 
+                      type="text"
+                      value={deleteConfirmText}
+                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      placeholder={`DELETE "${currentTeam.name}"`}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-250 outline-none focus:border-rose-500 text-xs font-mono transition-colors text-center"
+                      required
+                      autoComplete="off"
+                    />
+                    <div className="flex gap-2">
+                      <button 
+                        type="submit"
+                        disabled={deleteConfirmText !== `DELETE "${currentTeam.name}"` || isDeleting}
+                        className="flex-1 py-2 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-800 disabled:text-slate-650 disabled:border-slate-800 text-white text-xs font-black rounded-xl uppercase tracking-widest transition-all shadow-md disabled:cursor-not-allowed"
+                      >
+                        {isDeleting ? 'Deleting...' : 'Confirm'}
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setIsDeleteClicked(false);
+                          setDeleteConfirmText('');
+                        }} 
+                        className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-350 text-xs font-bold rounded-xl transition-all"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <button
+                    onClick={() => setIsDeleteClicked(true)}
+                    className="w-full py-2.5 bg-rose-600/10 hover:bg-rose-600/20 border border-rose-500/20 text-rose-500 hover:text-rose-400 text-xs font-black rounded-xl uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2"
+                  >
+                    Delete Team
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Legal & Disclosures Section */}
           <div className="space-y-4 pt-4 border-t border-slate-800">

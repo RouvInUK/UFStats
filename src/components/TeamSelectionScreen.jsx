@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchUserHierarchy, createClub, createTeam, checkTierLimits } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
-import { Shield, Plus, LogOut, ChevronRight, AlertTriangle, Crown, Trash2, Trophy } from 'lucide-react';
+import { Shield, Plus, LogOut, ChevronRight, AlertTriangle, Crown, Trophy } from 'lucide-react';
 
 const TeamSelectionScreen = ({ onSelectTeam, onNavigateToAdmin, onNavigateToTournamentSetup, allowAutoSelect = true, activeTeamId, onDeleteActiveTeam }) => {
   const { user, profile, signOut } = useAuth();
@@ -74,24 +74,6 @@ const TeamSelectionScreen = ({ onSelectTeam, onNavigateToAdmin, onNavigateToTour
       loadHierarchy();
     } catch (err) {
       alert(err.message);
-    }
-  };
-
-  const handleDeleteTeam = async (teamId, teamName) => {
-    const confirmed = window.confirm(`WARNING: Are you sure you want to delete the team "${teamName}"? All of its game statistics and lineup history will be permanently deleted. This action cannot be undone.`);
-    if (!confirmed) return;
-    
-    try {
-      const { deleteTeam } = await import('../supabaseClient');
-      await deleteTeam(teamId);
-      
-      if (activeTeamId === teamId && onDeleteActiveTeam) {
-        onDeleteActiveTeam();
-      }
-      
-      loadHierarchy();
-    } catch (err) {
-      alert(`Failed to delete team: ${err.message}`);
     }
   };
 
@@ -280,29 +262,14 @@ const TeamSelectionScreen = ({ onSelectTeam, onNavigateToAdmin, onNavigateToTour
                       <p className="text-slate-500 text-sm font-medium text-center py-4">No teams added yet.</p>
                     ) : (
                       clubTeams.map(team => (
-                        <div
+                        <button
                           key={team.id}
-                          className="w-full flex items-center justify-between p-4 bg-slate-900/50 hover:bg-slate-750/30 border border-slate-700/50 rounded-xl transition-all text-left group"
+                          onClick={() => onSelectTeam(team)}
+                          className="w-full flex items-center justify-between p-4 bg-slate-900/50 hover:bg-slate-750/30 border border-slate-700/50 rounded-xl transition-all text-left group outline-none"
                         >
-                          <button
-                            onClick={() => onSelectTeam(team)}
-                            className="flex-1 flex items-center justify-between text-left outline-none"
-                          >
-                            <span className="font-bold text-slate-200 group-hover:text-white transition-colors">{team.name}</span>
-                            <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-indigo-400 transition-colors mr-2" />
-                          </button>
-                          
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteTeam(team.id, team.name);
-                            }}
-                            className="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
-                            title="Delete Team"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                          <span className="font-bold text-slate-200 group-hover:text-white transition-colors">{team.name}</span>
+                          <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-indigo-400 transition-colors mr-2" />
+                        </button>
                       ))
                     )}
                   </div>

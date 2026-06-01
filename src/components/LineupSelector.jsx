@@ -1,10 +1,10 @@
 import { togglePlayerActiveStatus, clearActiveLineup, setLineupActiveStatus, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB, checkIfHalfTimeLogged, fetchActiveGames, deletePoint, fetchGameStats, fetchManagedLines, saveManagedLines } from '../supabaseClient';
 import { useState, useEffect } from 'react';
-import { Undo2, Mic, MicOff, Share2, Users, LayoutList } from 'lucide-react';
+import { Undo2, Mic, MicOff, Share2, Users, LayoutList, Info, Compass } from 'lucide-react';
 import PullTracker from './PullTracker';
 import ManageLinesModal from './ManageLinesModal';
 
-const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavigate, currentGame, setCurrentGame, currentPoint, setCurrentPoint, gameType, setGameType, setIsTrackingActive, opponentName, setOpponentName, initialPossession, setInitialPossession, isVoiceEnabled, setIsVoiceEnabled }) => {
+const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavigate, currentGame, setCurrentGame, currentPoint, setCurrentPoint, gameType, setGameType, isTrackingActive, setIsTrackingActive, opponentName, setOpponentName, initialPossession, setInitialPossession, isVoiceEnabled, setIsVoiceEnabled }) => {
   const [processingId, setProcessingId] = useState(null);
   const [isClearing, setIsClearing] = useState(false);
   const [isStartingPoint, setIsStartingPoint] = useState(false);
@@ -21,6 +21,19 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
   const [lines, setLines] = useState([]);
   const [showManageLines, setShowManageLines] = useState(false);
   const [activeLineId, setActiveLineId] = useState(null);
+
+  const [beachMode, setBeachMode] = useState(() => {
+    return localStorage.getItem('ufstats_beach_mode') === 'true';
+  });
+
+  useEffect(() => {
+    if (beachMode) {
+      document.documentElement.classList.add('beach-mode');
+    } else {
+      document.documentElement.classList.remove('beach-mode');
+    }
+    localStorage.setItem('ufstats_beach_mode', beachMode.toString());
+  }, [beachMode]);
 
   useEffect(() => {
     const loadLines = async () => {
@@ -88,14 +101,28 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
         checkIfHalfTimeLogged(currentGame)
           .then(val => { if (mounted) setHasHalfTime(val); }),
         fetchGameStats(currentGame, targetTeamId)
-          .then(stats => { if (mounted) setAllGameStats(stats); })
+          .then(stats => {
+            if (!mounted) return;
+            setAllGameStats(stats);
+            
+            // Derive completed points directly from database score stats to prevent out-of-sync bugs
+            let us = 0;
+            let them = 0;
+            stats.forEach(stat => {
+              if (stat.stat_type === 'Point') us += 1;
+              if (stat.stat_type === 'Opponent Point') them += 1;
+            });
+            const completedPoints = us + them;
+            const computedCurrentPoint = isTrackingActive ? completedPoints + 1 : completedPoints;
+            setCurrentPoint(computedCurrentPoint);
+          })
       ]).catch(console.error)
         .finally(() => { if (mounted) setIsStatsLoaded(true); });
     } else {
       setIsStatsLoaded(true);
     }
     return () => { mounted = false; };
-  }, [currentGame, targetTeamId, setGameType, currentPoint, setCurrentGame, setCurrentPoint, setOpponentName, setInitialPossession, setIsTrackingActive]);
+  }, [currentGame, targetTeamId, setGameType, currentPoint, setCurrentGame, setCurrentPoint, setOpponentName, setInitialPossession, isTrackingActive, setIsTrackingActive]);
 
   const handleUndoLastAction = async () => {
     if (!lastAction || !lastAction.id) return;
@@ -398,7 +425,20 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
                </button>
             )}
           </div>
-          <div className="flex gap-3 w-full sm:w-auto">
+          <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+            <button
+              onClick={() => setBeachMode(!beachMode)}
+              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 border flex items-center justify-center gap-2 w-full sm:w-auto shadow-md ${
+                beachMode 
+                  ? 'bg-amber-400 text-slate-950 border-amber-500 hover:bg-amber-300' 
+                  : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800'
+              }`}
+              aria-pressed={beachMode}
+              title="Toggle High Contrast Beach Mode"
+            >
+              <Compass className={`w-4 h-4 shrink-0 ${beachMode ? 'animate-spin' : ''}`} />
+              <span>Beach: {beachMode ? 'ON' : 'OFF'}</span>
+            </button>
             <button 
               onClick={handleClearLineup}
               disabled={isClearing || activeCount === 0}
@@ -580,11 +620,21 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
         </div>
 
         <div className="p-6 sm:p-8 border-t border-slate-700/50 bg-slate-900/30">
+          {isTrackingActive && (
+            <div className="mb-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex gap-3 items-start shadow-md text-amber-300">
+              <Info className="w-5 h-5 shrink-0 mt-0.5 text-amber-400" />
+              <div className="flex-1 text-xs sm:text-sm font-semibold leading-relaxed">
+                <span className="font-extrabold uppercase tracking-wide block mb-1 text-amber-400">Point in Progress (Substitution Mode)</span>
+                Replace players above to make substitutions, then tap <strong className="text-white uppercase font-black">Track 🎯</strong> in the bottom navigation to resume tracking.
+              </div>
+            </div>
+          )}
+
           <button
             onClick={handleStartPoint}
-            disabled={isStartingPoint || !isStatsLoaded || activeCount === 0 || !currentGame || (currentPoint === 0 && (!opponentName || (gameType !== 'training' && !initialPossession)))}
+            disabled={isStartingPoint || !isStatsLoaded || activeCount === 0 || !currentGame || isTrackingActive || (currentPoint === 0 && (!opponentName || (gameType !== 'training' && !initialPossession)))}
             className={`w-full group relative flex items-center justify-center px-6 py-5 border border-emerald-500/50 text-xl font-black rounded-2xl text-white backdrop-blur-md focus:outline-none focus:ring-4 focus:ring-emerald-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest ${
-              isStartingPoint || !isStatsLoaded ? 'bg-slate-700/50 border-slate-600' : 'bg-emerald-500/20 hover:bg-emerald-500/40'
+              isStartingPoint || !isStatsLoaded || isTrackingActive ? 'bg-slate-700/50 border-slate-600' : 'bg-emerald-500/20 hover:bg-emerald-500/40'
             }`}
           >
             {isStartingPoint ? (
@@ -592,7 +642,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
                  <div className="w-5 h-5 border-2 border-transparent border-t-white rounded-full animate-spin" />
                  Synchronizing...
                </span>
-            ) : (!isStatsLoaded ? 'Loading...' : (gameType === 'training' ? "Start Session" : `Start Point (${activeCount})`))}
+            ) : (!isStatsLoaded ? 'Loading...' : (isTrackingActive ? "Point in Progress" : (gameType === 'training' ? "Start Session" : `Start Point (${activeCount})`)))}
           </button>
           
           {currentPoint > 0 && (

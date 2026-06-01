@@ -232,6 +232,19 @@ function App() {
     }
   }, [currentTeam?.id]);
 
+  const handleDeleteActiveTeam = async () => {
+    if (!currentTeam) return;
+    try {
+      const { deleteTeam } = await import('./supabaseClient');
+      await deleteTeam(currentTeam.id);
+      setCurrentTeam(null);
+      setCurrentView('team_selection');
+    } catch (err) {
+      console.error(err);
+      alert(`Failed to delete team: ${err.message}`);
+    }
+  };
+
   const [opponentName, setOpponentName] = useState(() => {
     return localStorage.getItem('ufstats_opponent') || '';
   });
@@ -799,6 +812,7 @@ function App() {
           setCurrentPoint={setCurrentPoint}
           gameType={gameType}
           setGameType={setGameType}
+          isTrackingActive={isTrackingActive}
           setIsTrackingActive={setIsTrackingActive}
           opponentName={opponentName}
           setOpponentName={setOpponentName}
@@ -945,6 +959,8 @@ function App() {
         isVoiceEnabled={isVoiceEnabled}
         setIsVoiceEnabled={setIsVoiceEnabled}
         onUpgradeClick={() => setIsUpgradeOpen(true)}
+        currentTeam={currentTeam}
+        onDeleteTeam={handleDeleteActiveTeam}
       />
       <PayPalUpgradeModal
         isOpen={isUpgradeOpen}
