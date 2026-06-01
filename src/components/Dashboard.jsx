@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { recordStatToDB, fetchActiveGames, clearActiveLineup, fetchLastStatForGame, deleteStat, fetchGameStats } from '../supabaseClient';
 import { upgradeLastStatToHuck } from '../SyncEngine';
-import { Undo2, ArrowLeftRight, Mic, MicOff } from 'lucide-react';
+import { Undo2, ArrowLeftRight, Mic, MicOff, Star } from 'lucide-react';
 import { playChime, playClick, playBuzz } from '../utils/audioFeedback';
 
 const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, gameType, currentTeam, targetTeamId, opponentName, initialPossession, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers, isVoiceEnabled, setIsVoiceEnabled, isPro, isVoiceBeta }) => {
@@ -11,71 +11,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   const [lastSaved, setLastSaved] = useState(null);
   const [activeGames, setActiveGames] = useState([]);
   const [flashType, setFlashType] = useState(null);
-  const [huckTargetId, setHuckTargetId] = useState(null);
-  const lastTapRef = useRef({ id: null, time: 0 });
-  const pendingHuckRef = useRef(new Set());
-
-  const handleDoubleTap = async (id) => {
-    try {
-      if (typeof navigator !== 'undefined' && navigator.vibrate && localStorage.getItem('ufstats_haptic_enabled') !== 'false') {
-        navigator.vibrate([30, 50, 30, 50, 30]); // Unique double pulse
-      }
-      setHuckTargetId(id);
-      setTimeout(() => setHuckTargetId(null), 800);
-      playClick();
-      playChime(); // Premium audio confirmation
-
-      let upgraded = false;
-      if (id !== 'Drop' && id !== 'Throwaway') {
-         pendingHuckRef.current.add(id);
-         // If they double-tapped a player who is already logged (not the last in possession chain), call upgrade
-         const isHolder = possessionChain.length > 0 && possessionChain[possessionChain.length - 1] === id;
-         if (!isHolder) {
-            await new Promise(resolve => setTimeout(resolve, 200));
-            upgraded = await upgradeLastStatToHuck(currentGame, targetTeamId);
-         } else {
-            upgraded = true;
-         }
-      } else {
-         await new Promise(resolve => setTimeout(resolve, 200));
-         upgraded = await upgradeLastStatToHuck(currentGame, targetTeamId);
-      }
-      
-      if (upgraded) {
-         setLastSaved("Upgraded to Huck");
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-
-  const [doubleTapWindow, setDoubleTapWindow] = useState(null);
-
   const handleTap = (id, singleAction) => {
-    const now = Date.now();
-    const isDoubleTap = lastTapRef.current.id === id && (now - lastTapRef.current.time) < 350;
-    
-    // Immediate tactile feedback for every tap guarantees user gesture recognition
     if (typeof navigator !== 'undefined' && navigator.vibrate && localStorage.getItem('ufstats_haptic_enabled') !== 'false') {
       try { navigator.vibrate(30); } catch (e) {}
     }
-    
-    if (isDoubleTap) {
-      lastTapRef.current = { id: null, time: 0 };
-      setDoubleTapWindow(null);
-      handleDoubleTap(id);
-    } else {
-      lastTapRef.current = { id, time: now };
-      setDoubleTapWindow(id);
-      
-      playClick(); // Play click immediately on button down
-      
-      setTimeout(() => {
-        setDoubleTapWindow(null);
-      }, 350);
-      singleAction();
-    }
+    playClick();
+    singleAction();
   };
 
   // Voice Tracking State
@@ -103,6 +44,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   const [score, setScore] = useState({ us: 0, them: 0 });
   const [currentOD, setCurrentOD] = useState('O');
   const [liveOpponentName, setLiveOpponentName] = useState('Opponent');
+  const [isHuckPending, setIsHuckPending] = useState(false);
 
   useEffect(() => {
     if (!currentGame) return;
@@ -156,8 +98,13 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     if (activeLineup.length === 0) {
       setPossessionChain([]);
       setCallahanModeFor(null);
+      setIsHuckPending(false);
     }
   }, [activeLineup]);
+
+  useEffect(() => {
+    setIsHuckPending(false);
+  }, [currentOD]);
 
   const handlePlayerSelect = async (playerName) => {
     if (!isTrackingActive) return alert("Start tracking first!");
@@ -190,12 +137,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       
       if (prev.length >= 2) {
         const playerNMinus2 = prev[prev.length - 2];
-        const receiver = prev[prev.length - 1];
-        const isHuck = pendingHuckRef.current.has(receiver) || pendingHuckRef.current.has(playerNMinus2);
-        if (isHuck) {
-          pendingHuckRef.current.delete(receiver);
-          pendingHuckRef.current.delete(playerNMinus2);
-        }
+        const isHuck = isHuckPending;
+        if (isHuckPending) setIsHuckPending(false);
         // Fire and forget the pass log so the UI doesn't freeze
         handleStatRecord('Pass', playerNMinus2, prev, isHuck ? { is_huck: true } : null);
       }
@@ -242,11 +185,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         }
 
         if (pendingPasser) {
-           const isHuck = pendingHuckRef.current.has(activePlayer) || pendingHuckRef.current.has(pendingPasser);
-           if (isHuck) {
-              pendingHuckRef.current.delete(activePlayer);
-              pendingHuckRef.current.delete(pendingPasser);
-           }
+           const isHuck = isHuckPending;
            statsToSave.push({ ...baseStat, player: pendingPasser, stat: 'Pass', details: isHuck ? { is_huck: true } : null });
         }
         statsToSave.push({ ...baseStat, player: activePlayer, stat: 'Point' });
@@ -258,19 +197,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         statsToSave.push({ ...baseStat, player: activePlayer, stat: 'Pass', details: detailsOverride });
         playClick();
       } else if (['Drop', 'Throwaway', 'Stall Out'].includes(statType)) {
-        let isHuck = false;
-        if (currentChain.length > 1) {
-          const receiver = currentChain[currentChain.length - 1];
-          const thrower = currentChain[currentChain.length - 2];
-          isHuck = pendingHuckRef.current.has(receiver) || pendingHuckRef.current.has(thrower);
-          if (isHuck) {
-             pendingHuckRef.current.delete(receiver);
-             pendingHuckRef.current.delete(thrower);
-          }
-        } else {
-          isHuck = pendingHuckRef.current.has(activePlayer);
-          if (isHuck) pendingHuckRef.current.delete(activePlayer);
-        }
+        const isHuck = isHuckPending;
 
         if (currentChain.length > 1 && statType === 'Drop') {
           const thrower = currentChain[currentChain.length - 2];
@@ -338,7 +265,9 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     } catch (error) {
       console.error('Save failed:', error);
       alert('Failed to save. Check server logs.');
+    } finally {
       setIsSaving(false);
+      setIsHuckPending(false);
     }
   };
 
@@ -637,6 +566,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       alert('Failed to undo action.');
     } finally {
       setIsSaving(false);
+      setIsHuckPending(false);
     }
   };
 
@@ -744,11 +674,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                     disabled={isVoiceEnabled}
                     className={`relative flex flex-col items-center justify-center rounded-xl p-1 sm:p-2 h-[95px] sm:h-24 min-w-0 overflow-hidden ${getPlayerClass(player)} ${index === 6 && activeLineup.length === 7 ? 'col-start-2 sm:col-start-auto' : ''}`}
                   >
-                     {huckTargetId === player && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-40 rounded-xl">
-                          <span className="text-3xl filter drop-shadow-md">↗️</span>
-                        </div>
-                     )}
                      {players?.find(p => p.name === player)?.shirt_number ? (
                         <div className="relative flex flex-col items-center justify-center w-full">
                           <span className="text-4xl sm:text-5xl font-black mb-1 shrink-0 relative">
@@ -768,6 +693,19 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                   </button>
                   );
                 })}
+                {currentOD === 'O' && isTrackingActive && (
+                  <button
+                    onClick={() => setIsHuckPending(prev => !prev)}
+                    className={`relative flex flex-col items-center justify-center rounded-xl p-1 sm:p-2 h-[95px] sm:h-24 min-w-0 overflow-hidden transition-all border ${
+                      isHuckPending
+                        ? 'bg-rose-600 border-rose-400 text-white shadow-lg shadow-rose-500/30 animate-pulse font-black'
+                        : 'bg-rose-950/20 border-rose-500/30 text-rose-400 hover:bg-rose-900/20'
+                    }`}
+                  >
+                    <Star className={`w-6 h-6 mb-1 ${isHuckPending ? 'fill-white' : 'fill-transparent'}`} />
+                    <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Huck</span>
+                  </button>
+                )}
               </div>
             )}
            </div>

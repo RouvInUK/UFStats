@@ -120,6 +120,7 @@ const TournamentScorer = ({ seat, onBack }) => {
     }
   }, [isHalftimeCalled, matchId]);
 
+  const [isHuckPending, setIsHuckPending] = useState(false);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
 
@@ -160,7 +161,6 @@ const TournamentScorer = ({ seat, onBack }) => {
   const [editingStatId, setEditingStatId] = useState(null);
   const [editingPlayerName, setEditingPlayerName] = useState('');
   const [showLogModal, setShowLogModal] = useState(false);
-  const [huckTargetId, setHuckTargetId] = useState(null);
 
   const loadRecentStats = async () => {
     if (!matchId) return;
@@ -409,6 +409,7 @@ const TournamentScorer = ({ seat, onBack }) => {
   };
 
   const handleStartPoint = async () => {
+    setIsHuckPending(false);
     if (warningMessage && !ignoreWarning) {
       alert(`Soft Ratio Warning: ${warningMessage} Please select "Ignore Warning" if you have a special lineup arrangement.`);
       return;
@@ -473,6 +474,7 @@ const TournamentScorer = ({ seat, onBack }) => {
   };
 
   const handleHalftime = () => {
+    setIsHuckPending(false);
     const savedFirstOffense = localStorage.getItem(`first_offense_${matchId}`);
     const currentFirstOffense = savedFirstOffense || firstPointOffense || 'Home';
     const nextOffense = currentFirstOffense === 'Home' ? 'Away' : 'Home';
@@ -492,41 +494,6 @@ const TournamentScorer = ({ seat, onBack }) => {
 
     setIsHalftimeCalled(true);
     alert(`Halftime toggled. Starting offense set automatically to ${nextOffense === 'Home' ? (match?.home_team?.team_name || 'Light') : (match?.away_team?.team_name || 'Dark')}.`);
-  };
-
-  const lastTapRef = React.useRef({ id: null, time: 0 });
-  const pendingHuckRef = React.useRef(new Set());
-
-  const handleDoubleTap = async (player) => {
-    try {
-      if (typeof navigator !== 'undefined' && navigator.vibrate && localStorage.getItem('ufstats_haptic_enabled') !== 'false') {
-        try { navigator.vibrate([30, 50, 30, 50, 30]); } catch (e) {}
-      }
-      
-      setHuckTargetId(player.id);
-      setTimeout(() => setHuckTargetId(null), 800);
-      playClick();
-      playChime(); // Play the chime audio feedback just like Club Mode
-      
-      pendingHuckRef.current.add(player.id);
-      
-      const matchKey = `tournament_match_${matchId}`;
-      let upgraded = false;
-      // Only call upgradeLastStatToHuck if the double-tapped player is NOT the current active receiver
-      const isHolder = activePossessionPlayer?.id === player.id;
-      if (!isHolder) {
-         await new Promise(resolve => setTimeout(resolve, 200));
-         upgraded = await upgradeLastStatToHuck(matchKey, player.team_id);
-      } else {
-         upgraded = true;
-      }
-      
-      if (upgraded) {
-        loadRecentStats();
-      }
-    } catch (err) {
-      console.error(err);
-    }
   };
 
   const handlePlayerSelect = (player) => {
@@ -552,34 +519,10 @@ const TournamentScorer = ({ seat, onBack }) => {
   };
 
   const handleTap = (playerOrId, singleAction) => {
-    const now = Date.now();
-    const id = typeof playerOrId === 'string' ? playerOrId : playerOrId?.id;
-    const isDoubleTap = lastTapRef.current.id === id && (now - lastTapRef.current.time) < 350;
-    
     if (typeof navigator !== 'undefined' && navigator.vibrate && localStorage.getItem('ufstats_haptic_enabled') !== 'false') {
       try { navigator.vibrate(30); } catch (e) {}
     }
-    
-    if (isDoubleTap) {
-      lastTapRef.current = { id: null, time: 0 };
-      if (typeof playerOrId === 'string') {
-        const matchKey = `tournament_match_${matchId}`;
-        const activeTeamId = possessionTeam === 'Home' ? match.home_team_id : match.away_team_id;
-        setTimeout(async () => {
-          playClick();
-          playChime();
-          const upgraded = await upgradeLastStatToHuck(matchKey, activeTeamId);
-          if (upgraded) {
-            loadRecentStats();
-          }
-        }, 200);
-      } else {
-        handleDoubleTap(playerOrId);
-      }
-    } else {
-      lastTapRef.current = { id, time: now };
-      singleAction();
-    }
+    singleAction();
   };
 
   const handleEditStat = (stat) => {
@@ -665,27 +608,7 @@ const TournamentScorer = ({ seat, onBack }) => {
       };
 
       // Check if this action is a huck (deep throw)
-      let isHuck = false;
-      if (actionType === 'Pass') {
-        const thrower = player;
-        const receiver = currentChain.length > 0 ? currentChain[currentChain.length - 1] : null;
-        if ((thrower && pendingHuckRef.current.has(thrower.id)) || (receiver && pendingHuckRef.current.has(receiver.id))) {
-          isHuck = true;
-          if (thrower) pendingHuckRef.current.delete(thrower.id);
-          if (receiver) pendingHuckRef.current.delete(receiver.id);
-        }
-      } else if (['Point', 'Drop', 'Throwaway', 'Stall Out'].includes(actionType)) {
-        let thrower = null;
-        if (activePlayer && currentChain.length > 1 && currentChain[currentChain.length - 1].id === activePlayer.id) {
-          thrower = currentChain[currentChain.length - 2];
-        }
-        if ((activePlayer && pendingHuckRef.current.has(activePlayer.id)) || (thrower && pendingHuckRef.current.has(thrower.id))) {
-          isHuck = true;
-          if (activePlayer) pendingHuckRef.current.delete(activePlayer.id);
-          if (thrower) pendingHuckRef.current.delete(thrower.id);
-        }
-      }
-
+      let isHuck = isHuckPending;
       const huckDetails = isHuck ? { is_huck: true } : {};
 
       // Execute stats logging sequential inserts
@@ -786,6 +709,7 @@ const TournamentScorer = ({ seat, onBack }) => {
       setError('Failed to log stats event.');
     } finally {
       setProcessing(false);
+      setIsHuckPending(false);
     }
   };
 
@@ -831,6 +755,7 @@ const TournamentScorer = ({ seat, onBack }) => {
       setError('Failed to log opponent score.');
     } finally {
       setProcessing(false);
+      setIsHuckPending(false);
     }
   };
 
@@ -918,6 +843,7 @@ const TournamentScorer = ({ seat, onBack }) => {
       setError('Undo process failed.');
     } finally {
       setProcessing(false);
+      setIsHuckPending(false);
     }
   };
 
@@ -1307,11 +1233,6 @@ const TournamentScorer = ({ seat, onBack }) => {
                                 : 'bg-slate-950 border-slate-900 text-slate-400 hover:border-indigo-500/30 hover:text-indigo-400'
                           }`}
                         >
-                          {huckTargetId === p.id && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-40 rounded-2xl">
-                              <span className="text-3xl filter drop-shadow-md">↗️</span>
-                            </div>
-                          )}
                           <span className="flex items-center justify-between w-full gap-2">
                             <span className="truncate">{p.name}</span>
                             {isActive && <span className="text-xs animate-bounce shrink-0">🥏</span>}
@@ -1320,6 +1241,19 @@ const TournamentScorer = ({ seat, onBack }) => {
                         </button>
                       );
                     })}
+                    {possessionTeam === 'Home' && (
+                      <button
+                        onClick={() => setIsHuckPending(prev => !prev)}
+                        className={`p-4 border rounded-2xl text-center text-xs uppercase font-black tracking-wider transition-all flex flex-col items-center justify-center h-20 relative ${
+                          isHuckPending
+                            ? 'bg-rose-600 border-rose-450 text-white shadow-lg shadow-rose-500/30 font-black animate-pulse'
+                            : 'bg-rose-950/20 border-rose-500/30 text-rose-400 hover:bg-rose-900/20'
+                        }`}
+                      >
+                        <Star className={`w-5 h-5 mb-1 ${isHuckPending ? 'fill-white' : 'fill-transparent'}`} />
+                        <span>Huck</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -1390,11 +1324,6 @@ const TournamentScorer = ({ seat, onBack }) => {
                                 : 'bg-slate-950 border-slate-900 text-slate-400 hover:border-rose-500/30 hover:text-rose-400'
                           }`}
                         >
-                          {huckTargetId === p.id && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-40 rounded-2xl">
-                              <span className="text-3xl filter drop-shadow-md">↗️</span>
-                            </div>
-                          )}
                           <span className="flex items-center justify-between w-full gap-2">
                             <span className="truncate">{p.name}</span>
                             {isActive && <span className="text-xs animate-bounce shrink-0">🥏</span>}
@@ -1403,6 +1332,19 @@ const TournamentScorer = ({ seat, onBack }) => {
                         </button>
                       );
                     })}
+                    {possessionTeam === 'Away' && (
+                      <button
+                        onClick={() => setIsHuckPending(prev => !prev)}
+                        className={`p-4 border rounded-2xl text-center text-xs uppercase font-black tracking-wider transition-all flex flex-col items-center justify-center h-20 relative ${
+                          isHuckPending
+                            ? 'bg-rose-600 border-rose-450 text-white shadow-lg shadow-rose-500/30 font-black animate-pulse'
+                            : 'bg-rose-950/20 border-rose-500/30 text-rose-400 hover:bg-rose-900/20'
+                        }`}
+                      >
+                        <Star className={`w-5 h-5 mb-1 ${isHuckPending ? 'fill-white' : 'fill-transparent'}`} />
+                        <span>Huck</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
