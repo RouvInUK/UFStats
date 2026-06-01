@@ -20,7 +20,8 @@ export const getLegalPath = (subPath: string): string => {
     '/coach', 
     '/log',
     '/admin',
-    '/team_selection'
+    '/team_selection',
+    '/volunteer-login'
   ];
   
   for (const marker of markers) {

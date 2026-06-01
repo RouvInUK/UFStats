@@ -5,24 +5,6 @@
     <link id="favicon-link" rel="icon" type="image/png" href="/logo_icon.png" />
     <link id="apple-touch-link" rel="apple-touch-icon" href="/logo_icon.png" />
     <link id="manifest-link" rel="manifest" href="/manifest.json" />
-    <script>
-      (function() {
-        const savedTheme = localStorage.getItem('ufstats_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        const manifestEl = document.getElementById('manifest-link');
-        if (manifestEl) {
-          manifestEl.setAttribute('href', savedTheme === 'dark' ? '/manifest_dark.json' : '/manifest.json');
-        }
-        const themedIcon = savedTheme === 'dark' ? '/logo_dark_icon.png' : '/logo_light_icon.png';
-        const faviconEl = document.getElementById('favicon-link');
-        if (faviconEl) {
-          faviconEl.setAttribute('href', themedIcon);
-        }
-        const appleTouchEl = document.getElementById('apple-touch-link');
-        if (appleTouchEl) {
-          appleTouchEl.setAttribute('href', themedIcon);
-        }
-      })();
-    </script>
     <meta name="theme-color" content="#080c14" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />

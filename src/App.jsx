@@ -21,6 +21,12 @@ import SettingsModal from './components/SettingsModal';
 import PayPalUpgradeModal from './components/PayPalUpgradeModal';
 import { fetchPlayers } from './supabaseClient';
 import { useAuth } from './contexts/AuthContext';
+import VolunteerScorerLogin from './components/VolunteerScorerLogin';
+import TournamentSetupScreen from './components/TournamentSetupScreen';
+import TournamentProDashboard from './components/TournamentProDashboard';
+import TournamentMatchSelector from './components/TournamentMatchSelector';
+import TournamentScorer from './components/TournamentScorer';
+import AiRecapModule from './components/AiRecapModule';
 import { ShieldCheck, Star, LogOut, Cloud, CloudOff, CloudUpload, Crown, Settings, AlertTriangle } from 'lucide-react';
 import { getPendingSyncCount } from './SyncEngine';
 import { unlockAudio } from './utils/audioFeedback';
@@ -152,6 +158,8 @@ function App() {
   // Database State
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeScorerSeat, setActiveScorerSeat] = useState(null);
+  const [activeMatch, setActiveMatch] = useState(null);
 
   // Local Game State
   const [currentGame, setCurrentGame] = useState(() => {
@@ -375,11 +383,16 @@ function App() {
   useEffect(() => {
     // Only run this logic if auth has finished loading and we have a profile to avoid premature redirects
     if (!authLoading && profile) {
-      if (profile.is_system_admin && !shadowTeam) {
-        if (!['admin', 'team_selection'].includes(currentView)) {
+      if (profile.disable_club_track) {
+        // In tournament mode, default landing page is tournament_setup
+        if (currentView === 'dashboard' || !['tournament_setup', 'tournament_matches', 'tournament_recap', 'coach', 'admin', 'team_selection'].includes(currentView)) {
+          setCurrentView('tournament_setup');
+        }
+      } else if (profile.is_system_admin && !shadowTeam) {
+        if (!['admin', 'team_selection', 'tournament_setup', 'tournament_matches', 'tournament_recap', 'coach'].includes(currentView)) {
           setCurrentView('admin');
         }
-      } else if (!effectiveTeamName && !shadowTeam && currentView !== 'admin' && currentView !== 'team_selection') {
+      } else if (!effectiveTeamName && !shadowTeam && !['admin', 'team_selection', 'tournament_setup', 'tournament_matches', 'tournament_recap', 'coach'].includes(currentView)) {
         setCurrentView('team_selection');
       }
     }
@@ -425,6 +438,33 @@ function App() {
 
   if (spectatorGameId) {
      return <SpectatorMode spectatorGameId={spectatorGameId} />;
+  }
+
+  const isVolunteerLogin = path.includes('/volunteer-login');
+  if (isVolunteerLogin) {
+    if (currentView === 'tournament_scorer') {
+      return (
+        <TournamentScorer 
+          seat={activeScorerSeat} 
+          onBack={() => {
+            setActiveScorerSeat(null);
+            setCurrentView('volunteer_login');
+            window.history.pushState({}, '', getLegalPath('/volunteer-login'));
+          }} 
+        />
+      );
+    }
+    return (
+      <VolunteerScorerLogin 
+        onBack={() => {
+          window.history.pushState({}, '', getLegalPath('/'));
+        }} 
+        onLoginSuccess={(seat) => {
+          setActiveScorerSeat(seat);
+          setCurrentView('tournament_scorer');
+        }}
+      />
+    );
   }
 
   if (authLoading) {
@@ -590,6 +630,14 @@ function App() {
                 Admin Panel
              </button>
           )}
+          {(profile?.beta_tournament_tier || profile?.is_system_admin) && (
+             <button 
+                onClick={() => setCurrentView('tournament_setup')}
+                className="px-4 py-2 bg-slate-800 text-slate-300 hover:text-white font-bold rounded-xl transition-all uppercase tracking-wide text-xs"
+             >
+                Tournament Desk
+             </button>
+          )}
           <button 
             onClick={() => {
               if (!isProTier) {
@@ -600,7 +648,7 @@ function App() {
             }}
             className={`px-6 py-2.5 font-extrabold rounded-xl transition-all flex items-center gap-2 uppercase tracking-wide text-sm ${isProTier ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-[0_0_25px_rgba(245,158,11,0.2)] hover:shadow-[0_0_35px_rgba(245,158,11,0.4)] scale-100 hover:scale-[1.02]' : 'bg-slate-800 text-slate-600 border border-slate-700/50 cursor-not-allowed opacity-75'}`}
           >
-            Coach Pro ★
+            {profile?.disable_club_track ? 'Tournament Pro ★' : 'Coach Pro ★'}
           </button>
           <button 
             onClick={() => setIsSettingsOpen(true)}
@@ -648,6 +696,15 @@ function App() {
                 <ShieldCheck className="w-5 h-5" />
              </button>
           )}
+          {(profile?.beta_tournament_tier || profile?.is_system_admin) && (
+             <button 
+                onClick={() => setCurrentView('tournament_setup')}
+                className={`p-2 rounded-lg transition-all ${currentView === 'tournament_setup' ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-400 hover:text-white'}`}
+                title="Tournament Desk"
+             >
+                <span className="text-lg leading-none">🏆</span>
+             </button>
+          )}
           <button 
             onClick={() => {
               if (!isProTier) {
@@ -657,7 +714,7 @@ function App() {
               setCurrentView('coach');
             }}
             className={`p-2 rounded-lg transition-all ${currentView === 'coach' ? 'text-amber-400 bg-amber-500/10' : isProTier ? 'text-slate-400 hover:text-amber-400' : 'text-slate-600 cursor-not-allowed opacity-50'}`}
-            title="Coach Pro"
+            title={profile?.disable_club_track ? 'Tournament Pro' : 'Coach Pro'}
           >
             <Star className="w-5 h-5" />
           </button>
@@ -753,13 +810,20 @@ function App() {
       )}
 
       {currentView === 'coach' && !isAdminAndNoShadow && (
-        <CoachDashboard 
-          currentGame={currentGame}
-          currentTeam={effectiveTeamName}
-          targetTeamId={targetTeamId}
-          setCurrentTeam={setCurrentTeam}
-          players={players}
-        />
+        profile?.disable_club_track ? (
+          <TournamentProDashboard 
+            onBack={() => setCurrentView('tournament_setup')}
+            profile={profile}
+          />
+        ) : (
+          <CoachDashboard 
+            currentGame={currentGame}
+            currentTeam={effectiveTeamName}
+            targetTeamId={targetTeamId}
+            setCurrentTeam={setCurrentTeam}
+            players={players}
+          />
+        )
       )}
 
       {currentView === 'log' && !isAdminAndNoShadow && (
@@ -795,6 +859,30 @@ function App() {
         />
       )}
 
+      {currentView === 'tournament_setup' && (profile?.beta_tournament_tier || profile?.is_system_admin) && (
+        <TournamentSetupScreen 
+          profile={profile}
+          onBack={() => setCurrentView('dashboard')}
+        />
+      )}
+
+      {currentView === 'tournament_matches' && (profile?.beta_tournament_tier || profile?.is_system_admin) && (
+        <TournamentMatchSelector 
+          onBack={() => setCurrentView('dashboard')}
+          onSelectMatch={(selectedMatch) => {
+            setActiveMatch(selectedMatch);
+            setCurrentView('tournament_recap');
+          }}
+        />
+      )}
+
+      {currentView === 'tournament_recap' && (profile?.beta_tournament_tier || profile?.is_system_admin) && (
+        <AiRecapModule 
+          match={activeMatch}
+          onBack={() => setCurrentView('tournament_matches')}
+        />
+      )}
+
       {currentView === 'team_selection' && (
         <TeamSelectionScreen 
           allowAutoSelect={false}
@@ -805,22 +893,31 @@ function App() {
             setCurrentView('dashboard');
           }}
           onNavigateToAdmin={() => setCurrentView('admin')}
+          onNavigateToTournamentSetup={() => setCurrentView('tournament_setup')}
         />
       )}
 
       {/* Fixed Bottom Navigation Bar */}
       <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 flex justify-around items-center px-1 py-3 sm:py-4 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] pb-safe print:hidden">
-        <button onClick={() => setCurrentView('team_selection')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'team_selection' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
-          <span className={`text-xl leading-none transition-transform ${currentView === 'team_selection' ? 'scale-125' : 'scale-100'}`}>🛡️</span>
-          <span className="text-[10px] uppercase tracking-wider">Teams</span>
-        </button>
+        {!profile?.disable_club_track && (
+          <button onClick={() => setCurrentView('team_selection')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'team_selection' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
+            <span className={`text-xl leading-none transition-transform ${currentView === 'team_selection' ? 'scale-125' : 'scale-100'}`}>🛡️</span>
+            <span className="text-[10px] uppercase tracking-wider">Teams</span>
+          </button>
+        )}
         {profile?.is_system_admin && (
           <button onClick={() => setCurrentView('admin')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'admin' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
             <span className={`text-xl leading-none transition-transform ${currentView === 'admin' ? 'scale-125' : 'scale-100'}`}>⚙️</span>
             <span className="text-[10px] uppercase tracking-wider">Admin</span>
           </button>
         )}
-        {!isAdminAndNoShadow && (
+        {(profile?.beta_tournament_tier || profile?.is_system_admin) && (
+          <button onClick={() => setCurrentView('tournament_setup')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'tournament_setup' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
+            <span className={`text-xl leading-none transition-transform ${currentView === 'tournament_setup' ? 'scale-125' : 'scale-100'}`}>🏆</span>
+            <span className="text-[10px] uppercase tracking-wider">Tourneys</span>
+          </button>
+        )}
+        {!isAdminAndNoShadow && !profile?.disable_club_track && (
           <>
             <button onClick={() => setCurrentView('dashboard')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'dashboard' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
               <span className={`text-xl leading-none transition-transform ${currentView === 'dashboard' ? 'scale-125' : 'scale-100'}`}>🎯</span>

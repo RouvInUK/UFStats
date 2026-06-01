@@ -128,6 +128,28 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
     }
   };
 
+  const handleUpdateBetaTournamentTier = async (userId, beta_tournament_tier) => {
+    try {
+      const { updateUserBetaTournamentTier } = await import('../supabaseClient');
+      await updateUserBetaTournamentTier(userId, beta_tournament_tier);
+      setUsers(users.map(u => u.id === userId ? { ...u, beta_tournament_tier } : u));
+    } catch (err) {
+      console.error(err);
+      alert(`Failed to update tournament beta: ${err.message}`);
+    }
+  };
+
+  const handleUpdateDisableClubTrack = async (userId, disable_club_track) => {
+    try {
+      const { updateUserDisableClubTrack } = await import('../supabaseClient');
+      await updateUserDisableClubTrack(userId, disable_club_track);
+      setUsers(users.map(u => u.id === userId ? { ...u, disable_club_track } : u));
+    } catch (err) {
+      console.error(err);
+      alert(`Failed to update Club Track status: ${err.message}`);
+    }
+  };
+
   const handleUpdateIsTestAccount = async (userId, is_test_account) => {
     try {
       const { updateUserIsTestAccount } = await import('../supabaseClient');
@@ -504,13 +526,15 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                           </th>
                           <th className="p-4 font-bold text-center select-none">Test Account</th>
                           <th className="p-4 font-bold text-center select-none">Voice Beta</th>
+                          <th className="p-4 font-bold text-center select-none">Tourney Beta</th>
+                          <th className="p-4 font-bold text-center select-none">Disable Club Mode</th>
                           <th className="p-4 font-bold text-right select-none">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="text-sm">
                         {filteredUsers.length === 0 ? (
                           <tr>
-                            <td colSpan={9} className="p-12 text-center text-slate-500 font-medium">
+                            <td colSpan={11} className="p-12 text-center text-slate-500 font-medium">
                               No matching registered coaches found.
                             </td>
                           </tr>
@@ -636,6 +660,22 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                                     className="w-4 h-4 text-indigo-600 rounded bg-slate-900 border-slate-700 focus:ring-indigo-500 cursor-pointer animate-none"
                                   />
                                 </td>
+                                <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                  <input 
+                                    type="checkbox"
+                                    checked={user.beta_tournament_tier || false}
+                                    onChange={(e) => handleUpdateBetaTournamentTier(user.id, e.target.checked)}
+                                    className="w-4 h-4 text-indigo-600 rounded bg-slate-900 border-slate-700 focus:ring-indigo-500 cursor-pointer animate-none"
+                                  />
+                                </td>
+                                <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                  <input 
+                                    type="checkbox"
+                                    checked={user.disable_club_track || false}
+                                    onChange={(e) => handleUpdateDisableClubTrack(user.id, e.target.checked)}
+                                    className="w-4 h-4 text-rose-500 rounded bg-slate-900 border-slate-700 focus:ring-rose-500 cursor-pointer animate-none"
+                                  />
+                                </td>
                                 <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
                                   <div className="flex items-center justify-end gap-2.5">
                                     {user.teams?.length === 1 && (
@@ -669,7 +709,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                               </tr>
                               {expandedUser === user.id && (
                                 <tr className="bg-slate-950/50">
-                                  <td colSpan={9} className="p-6 border-b border-white/5">
+                                  <td colSpan={10} className="p-6 border-b border-white/5">
                                     <h4 className="text-slate-300 font-bold mb-4 uppercase tracking-widest text-xs">Clubs & Teams Hierarchy</h4>
                                     {(!user.clubs || user.clubs.length === 0) && <p className="text-slate-500 text-sm">No clubs created.</p>}
                                     <div className="space-y-4">

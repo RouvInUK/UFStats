@@ -48,6 +48,64 @@ If you are starting a point on **Defense**, the app will automatically prompt yo
 - **Location & Hangtime:** Track how deep the pull landed (e.g., Deep Endzone, Midfield, Out of Bounds) and any specific outcomes (e.g., Dropped Pull, Callahan).
 - This data feeds directly into the Coach Dashboard to automatically grade your team's pullers.
 
+### 3.4 Step-by-Step Tracking & Logging Guide
+
+To help you get the most out of ustats.pro, here is a detailed, step-by-step walkthrough on how to log a game, track a point, and record individual on-field actions.
+
+#### 1. How to Track / Log a Game
+Tracking a match starts before the first pull and continues until the final score is secured.
+*   **Step 1: Set Up Pre-Game Configurations**
+    When starting a new game (or when no game is currently active), you will see the **Pre-Game Configurations** in the Lineup Selector:
+    *   **Match Identifier / Title**: Enter a clear, unique name for the game (e.g., *EUCF Pool Play - Game 1*).
+    *   **Game Format**: Tap **Grass** (requires 7 players), **Beach** (requires 5 players), or **Indoor** (requires 5 players) to set the team size logic.
+    *   **Opponent Team Name**: Type the name of the opposing team (e.g., *Darkstar*).
+    *   **Starting Possession**: Select **Receive (Offense)** if your team starts on the O-line, or **Pull (Defense)** if starting on the D-line.
+*   **Step 2: Start the Match**
+    Select your starting line (see *How to Log a Point* below) and tap the large green **Start Point** button to launch tracking.
+*   **Step 3: Log Halftime**
+    At halftime, tap the **Log Half Time** button at the bottom of the Lineup Selector. This registers halftime in the database and automatically swaps starting possession direction for the second half.
+*   **Step 4: End the Game**
+    When the match finishes, tap the red-bordered **End Game** button in the Lineup Selector to permanently save and finalize the match.
+
+#### 2. How to Track / Log a Point
+ustats.pro tracks play on a point-by-point basis, transitioning between lineup selection and live tracking.
+*   **Step 1: Select the Lineup**
+    Before every point, you will be in the Lineup Selector:
+    *   **Manual Selection**: Tap players from your roster. Active players on the pitch are highlighted in vibrant green.
+    *   **Template Lines**: If you have preset lines, swipe horizontally through your **Manage Lines** templates at the top and tap a line (e.g., *O-Line*, *D-Line*) to instantly select all its players.
+*   **Step 2: Start the Point**
+    Verify the active count matches your game format (7 for Grass, 5 for Beach/Indoor) and tap the green **Start Point** button.
+*   **Step 3: Pull Tracking (If starting on Defense)**
+    If starting the point on Defense, the **Pull Tracker** overlay will automatically slide up:
+    *   Select the **Puller** from your active lineup.
+    *   Tap the **Landing Location** of the pull (e.g., *Deep Endzone*, *Midfield*, *Out of Bounds*).
+    *   (Optional) Select special outcomes like *Dropped Pull* or *Callahan*. Tap **Complete** to open the Live Tracker.
+*   **Step 4: End the Point (Scoring)**
+    When a team scores, tap one of the giant scoring buttons at the bottom of the Live Tracker:
+    *   **WE SCORED (Green)**: Registers a point for your team. Make sure the goal scorer is selected first.
+    *   **THEY SCORED (Red)**: Registers a point for the opponent.
+    *   Once a point is scored, the app saves the point data and immediately routes you back to the Lineup Selector to prepare for the next point.
+*   **Step 5: Undo a Point**
+    If a point was logged incorrectly, tap the **Undo Last Point** button at the bottom of the Lineup Selector. This will safely erase the last scored point and restore the active lineup and possession state so you can resume tracking without losing data.
+
+#### 3. How to Track / Log an Action
+Actions are tracked on the Live Tracker (Dashboard) with extremely simple tap interactions designed for zero-scroll sideline speed.
+*   **Selecting a Player (Possession & Target)**
+    Each active player on pitch is shown as a card. Tap a player's card to highlight them in purple. This registers that they currently have the disc (or were the target of the last play).
+*   **Logging Passes & Possession Chains**
+    To track passes, simply tap players in the order they catch the disc (e.g., Tap *John*, tap *Sarah*, tap *Mike*). 
+    *   The app logs a **Pass** for each transition and builds a live possession chain.
+    *   The last thrower in a scoring chain automatically receives an **Assist**, and the second-to-last thrower gets a **Secondary Assist** once you tap **WE SCORED**.
+*   **Logging Turnovers**
+    When a turnover occurs, log it immediately based on what happened:
+    *   **Throwaway (Incomplete)**: Tap the thrower, then tap the grey **Incomplete** button. This logs a throwaway for that player and resets possession to the opponent.
+    *   **Drop**: Tap the receiver, then tap the grey **Drop** button. This logs a pass attempt for the thrower, a drop turnover for the receiver, and resets possession.
+    *   **Stall Out**: Tap the player holding the disc, then tap **Stall Out**.
+*   **Logging Defense & Blocks**
+    When a player generates a block or forces a turnover, tap the defender's card, then tap the blue **Defence** button. This records a defensive block, resets the possession chain, and flips the live scoreboard state to **O (Offense)** since your team now has the disc.
+*   **Logging Hucks (Deep Shots)**
+    A "Huck" is a high-yardage, deep shot. To track a huck, **double-tap** the player or action button (e.g., double-tap a player's card to record a huck catch/throw, or double-tap the *Drop* or *Incomplete* buttons to log a huck turnover). The app upgrades the logged action to a Huck and awards specialized weighting in the NIS.
+
 ---
 
 ## 4. Advanced & Pro Features
@@ -66,31 +124,31 @@ The Coach Dashboard is the central analytical hub of ustats.pro, compiling sidel
 ##### 1. Player (Name & On/Off +/-)
 *   **Description:** The player's identity and their raw game-point margin while on the pitch.
 *   **Calculation Formula:**
-    $$\text{On/Off } \pm = (\text{Points Won by Team while Active}) - (\text{Points Lost by Team while Active})$$
+    **On/Off +/-** = (Points Won by Team while Active) - (Points Lost by Team while Active)
 *   **Coaching Rationale:** A simple baseline to track the scoring margin during a player's field time. However, it does not correct for starting line bias (O-line vs. D-line), which is addressed by the *System Impact %* metric.
 
 ##### 2. PP (Points Played)
 *   **Description:** Total volume of play-time.
 *   **Calculation Formula:**
-    $$\text{Points Played} = \text{Holds Played} + \text{Breaks Played}$$
+    **Points Played** = Holds Played + Breaks Played
 *   **Coaching Rationale:** Represents the player's overall workload and sample size of data.
 
 ##### 3. Offense/Defense Split
 *   **Description:** The split of points where the team started on Offense (receiving the pull) vs. Defense (pulling).
 *   **Calculation Formula:**
-    $$\text{Offense/Defense Split} = \text{Holds Played} \ \big/ \ \text{Breaks Played}$$
+    **Offense/Defense Split** = Holds Played / Breaks Played
 *   **Coaching Rationale:** Essential for identifying player deployment roles (O-Line vs. D-Line specialists).
 
 ##### 4. Touches
 *   **Description:** Total number of times the player possessed the disc during the games analyzed (excluding pulls thrown).
 *   **Calculation Formula:**
-    $$\text{Touches} = \text{Total recorded actions for the player} - \text{Pulls}$$
+    **Touches** = Total recorded actions for the player - Pulls
 *   **Coaching Rationale:** Measures active involvement and possession volume on offense.
 
 ##### 5. Average Touches per Point
 *   **Description:** The average offensive workload per point played.
 *   **Calculation Formula:**
-    $$\text{Touches per Point} = \frac{\text{Touches}}{\text{Points Played}}$$
+    **Touches per Point** = Touches / Points Played
 *   **Coaching Rationale:** Measures how central a player is to the offense when they are on the field. Handlers typically have high Touches/Pt (>3.0), whereas cutters have lower, more efficient numbers.
 
 ##### 6. Goals, Assists, Secondary Assists, and Blocks
@@ -105,7 +163,7 @@ The Coach Dashboard is the central analytical hub of ustats.pro, compiling sidel
 ##### 7. Turnovers
 *   **Description:** Total team possessions lost due to player errors, broken down into specific categories.
 *   **Calculation Formula:**
-    $$\text{Total Turnovers} = \text{Throwaways} + \text{Drops} + \text{Stalls}$$
+    **Total Turnovers** = Throwaways + Drops + Stalls
     *   **Throwaways**: Errant or incomplete passes.
     *   **Drops**: Dropped catchable passes.
     *   **Stalls**: Stalling out with the disc (10-second count).
@@ -114,20 +172,20 @@ The Coach Dashboard is the central analytical hub of ustats.pro, compiling sidel
 ##### 8. Passes
 *   **Description:** Completed passes vs. Attempted passes.
 *   **Calculation Formula:**
-    $$\text{Completed Passes} \ \big/ \ \text{Attempted Passes}$$
-    *   *Attempted Passes* is calculated as $\text{Completed Passes} + \text{Throwaways} + \text{Receiver Drops}$ (to capture all throws released by the player).
+    **Passes** = Completed Passes / Attempted Passes
+    *   *Attempted Passes* is calculated as **Completed Passes + Throwaways + Receiver Drops** (to capture all throws released by the player).
 *   **Coaching Rationale:** High attempted numbers signify a high-volume distributor.
 
 ##### 9. Pass Completion Percentage
 *   **Description:** The safety and accuracy rating of a player's throws.
 *   **Calculation Formula:**
-    $$\text{Pass Completion Percentage} = \left( \frac{\text{Completed Passes}}{\text{Attempted Passes}} \right) \times 100$$
+    **Pass Completion Percentage** = (Completed Passes / Attempted Passes) x 100
 *   **Coaching Rationale:** Primary handlers should ideally maintain a completion rate above 90% to provide structural stability.
 
 ##### 10. Completed Hucks / Attempted Hucks
 *   **Description:** High-risk, high-reward huck efficiency tracking.
 *   **Calculation Formula:**
-    $$\text{Hucks Completed} \ \big/ \ \text{Hucks Attempted}$$
+    **Hucks** = Hucks Completed / Hucks Attempted
     *   *Huck Attempts* include completed huck passes, huck throwaways, and hucks dropped by the receiver.
 *   **Coaching Rationale:** Isolates deep-throwing efficiency from short-passing statistics. Crucial for assessing deep throwers and decision-making on high-yardage shots.
 
@@ -136,18 +194,18 @@ The Coach Dashboard is the central analytical hub of ustats.pro, compiling sidel
 *   **Calculation Formula:**
     For every point played by a player, their impact is calculated against the team's overall tournament average (the baseline):
     *   If the team started the point on **Offense**:
-        $$\text{Point Impact} = \text{Point Result} - \text{Global Hold Rate}$$
+        **Point Impact** = Point Result - Global Hold Rate
         *(where Point Result is 1 if the team scored, and 0 if conceded)*
     *   If the team started the point on **Defense**:
-        $$\text{Point Impact} = (\text{Point Result} - \text{Global Break Rate}) \times 2.0 \ \text{ (Break Bonus)}$$
+        **Point Impact** = (Point Result - Global Break Rate) x 2.0 (Break Bonus)
         *(where Point Result is 1 if the team scored, and 0 if conceded. The Break Bonus of 2.0 is applied only to positive break impacts)*
-    *   $$\text{System Impact Percentage} = \left( \frac{\sum \text{Weighted Impacts}}{\text{Points Played}} \right) \times 100$$
+    *   **System Impact Percentage** = (Sum of Weighted Impacts / Points Played) x 100
 *   **Coaching Rationale:** In Ultimate, scoring on offense (holding) is significantly easier than scoring on defense (breaking). A simple +/- heavily biases O-line players. *System Impact %* corrects for this by grading each point against baseline expectations. Winning a break-point is rewarded with a **double weight bonus (2.0x)**, while holding simply meets standard expectations. This allows coaches to identify players who make a massive structural impact, regardless of which line they start on.
 
 ##### 12. Offensive Conversion Efficiency
 *   **Description:** The team's success rate at converting possessions into goals while this player is on the pitch.
 *   **Calculation Formula:**
-    $$\text{Offensive Conversion Efficiency} = \left( \frac{\text{Goals Scored on Pitch}}{\text{Possessions Played}} \right) \times 100$$
+    **Offensive Conversion Efficiency** = (Goals Scored on Pitch / Possessions Played) x 100
     *   *Possessions Played* = Total team turnovers during played points + 1 for each point won.
     *   *Goals Scored on Pitch* = Team goals scored while the player was active.
 *   **Coaching Rationale:** Measures how clinical the offense is. A high OCE means the team rarely turns the disc over and efficiently converts opportunities with this player active.
@@ -155,27 +213,27 @@ The Coach Dashboard is the central analytical hub of ustats.pro, compiling sidel
 ##### 13. OVA (Offensive Value Added)
 *   **Description:** A weighted metric highlighting mistake-free offensive production and distribution.
 *   **Calculation Formula & Weighting:**
-    $$\text{OVA} = (\text{Clean Holds} \times 0.5) + (\text{Assists} \times 2.0) + (\text{Secondary Assists} \times 1.5)$$
+    **OVA** = (Clean Holds x 0.5) + (Assists x 2.0) + (Secondary Assists x 1.5)
     *   *Clean Holds:* Number of O-points won where the team committed **zero** turnovers while the player was active.
 *   **Coaching Rationale:** Heavily rewards facilitators (Assists at 2.0x, Secondary Assists at 1.5x) and places a premium on clean, turnover-free possession flow (Clean Holds at 0.5x). High OVA indicates a highly effective, error-free distributor.
 
 ##### 14. Pull Impact
 *   **Description:** Average score grading the quality and depth of a player's pulls.
 *   **Calculation Formula:**
-    $$\text{Pull Impact} = \frac{\sum \text{Individual Pull Scores}}{\text{Total Pulls}}$$
+    **Pull Impact** = Sum of Individual Pull Scores / Total Pulls
     *   *Individual Pull Scores* are graded on a 0.0 to 5.0 scale automatically, where a deep pull pinned in the endzone yields a 5.0, and an out-of-bounds pull yields a 0.0.
 *   **Coaching Rationale:** Evaluates defensive field position generation. Excellent pulls allow the D-line maximum time to set up and apply pressure.
 
 ##### 15. Usage Rate
 *   **Description:** The player's share of team touches while they are on the field.
 *   **Calculation Formula:**
-    $$\text{Usage Rate} = \left( \frac{\text{Player Touches}}{\text{Total Team Touches on Played Points}} \right) \times 100$$
+    **Usage Rate** = (Player Touches / Total Team Touches on Played Points) x 100
 *   **Coaching Rationale:** Helps coaches manage offensive balance. If a single handler has a usage rate >30%, the offense is highly centralized and vulnerable to shutdown defense.
 
 ##### 16. NIS (Net Impact Score)
 *   **Description:** A comprehensive, single-number utility metric representing the player's overall efficiency and contribution per point played.
 *   **Calculation Formula & Weighting Coefficients:**
-    $$\text{Net Impact Score} = \frac{(\text{Goals} \times 2.0) + (\text{Assists} \times 1.5) + (\text{Blocks} \times 2.0) + (\text{Completed Passes} \times 0.3) + (\text{Completed Hucks} \times 0.7) - (\text{Turnovers} \times 2.0) + (\text{Huck Turnovers} \times 0.5)}{\text{Points Played}}$$
+    **Net Impact Score** = [(Goals x 2.0) + (Assists x 1.5) + (Blocks x 2.0) + (Completed Passes x 0.3) + (Completed Hucks x 0.7) - (Turnovers x 2.0) + (Huck Turnovers x 0.5)] / Points Played
     *   **Goals**: Catching a pass in the endzone (Weight: **+2.0**).
     *   **Assists**: Throwing the final completed scoring pass (Weight: **+1.5**).
     *   **Blocks**: Generating a defensive block or interception (Weight: **+2.0**).

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { fetchUserHierarchy, createClub, createTeam, checkTierLimits } from '../supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
-import { Shield, Plus, LogOut, ChevronRight, AlertTriangle, Crown, Trash2 } from 'lucide-react';
+import { Shield, Plus, LogOut, ChevronRight, AlertTriangle, Crown, Trash2, Trophy } from 'lucide-react';
 
-const TeamSelectionScreen = ({ onSelectTeam, onNavigateToAdmin, allowAutoSelect = true, activeTeamId, onDeleteActiveTeam }) => {
+const TeamSelectionScreen = ({ onSelectTeam, onNavigateToAdmin, onNavigateToTournamentSetup, allowAutoSelect = true, activeTeamId, onDeleteActiveTeam }) => {
   const { user, profile, signOut } = useAuth();
   const [hierarchy, setHierarchy] = useState({ clubs: [], teams: [] });
   const [loading, setLoading] = useState(true);
@@ -125,7 +125,15 @@ const TeamSelectionScreen = ({ onSelectTeam, onNavigateToAdmin, allowAutoSelect 
               )}
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
+             {(profile?.beta_tournament_tier || profile?.is_system_admin) && onNavigateToTournamentSetup && (
+               <button 
+                  onClick={onNavigateToTournamentSetup}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(79,70,229,0.25)]"
+               >
+                  <Trophy className="w-4 h-4 text-amber-450" /> Tournament Desk
+               </button>
+             )}
              {profile?.is_system_admin && (
                <button 
                   onClick={onNavigateToAdmin}
@@ -146,31 +154,117 @@ const TeamSelectionScreen = ({ onSelectTeam, onNavigateToAdmin, allowAutoSelect 
         </div>
 
         {noClubs ? (
-          <div className="bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-slate-700 p-8 sm:p-12 text-center">
-            <h2 className="text-2xl font-bold text-white mb-4">Welcome to ustats.pro!</h2>
-            <p className="text-slate-400 mb-8 max-w-lg mx-auto">
-              To get started, create your first Club. You can then add multiple teams (e.g. Open, Women's, Mixed) under this club.
-            </p>
-            <form onSubmit={handleAddClub} className="max-w-md mx-auto flex flex-col gap-4">
-              <input 
-                type="text" 
-                value={newClubName}
-                onChange={e => setNewClubName(e.target.value)}
-                placeholder="Enter Club Name (e.g. Deep Space)"
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-4 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner text-center text-lg font-bold"
-                required
-                autoComplete="off"
-              />
-              <button 
-                type="submit"
-                className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] uppercase tracking-widest text-lg"
-              >
-                Create My Club
-              </button>
-            </form>
-          </div>
+          (profile?.beta_tournament_tier || profile?.is_system_admin) ? (
+            profile?.disable_club_track ? (
+              <div className="max-w-md mx-auto bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-700 p-8 text-center space-y-6">
+                <div className="mx-auto w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-3xl">🏆</div>
+                <h2 className="text-2xl font-black text-white uppercase tracking-wider text-amber-400">Tournament Desk</h2>
+                <p className="text-slate-400 text-sm leading-relaxed font-medium">
+                  Your account is configured for Tournament operations only. Club track mode has been disabled by your administrator.
+                </p>
+                <button 
+                  onClick={onNavigateToTournamentSetup}
+                  className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-650 hover:from-amber-400 hover:to-orange-550 text-white font-black rounded-xl transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)] hover:shadow-[0_0_30px_rgba(245,158,11,0.4)] uppercase tracking-widest text-xs scale-100 hover:scale-[1.02]"
+                >
+                  Go to Tournament Desk
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Option 1: Club Track Mode */}
+                <div className="bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-700/80 p-8 flex flex-col justify-between text-center relative overflow-hidden group hover:border-indigo-500/30 transition-all duration-300">
+                  <div className="space-y-4">
+                    <div className="mx-auto w-16 h-16 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-3xl">🎯</div>
+                    <h3 className="text-xl font-extrabold text-white uppercase tracking-wider">Club Track Mode</h3>
+                    <p className="text-slate-400 text-sm leading-relaxed">
+                      Set up a single club with multiple sub-teams (e.g. Open, Mixed) to track custom roster lines, player stats, and generate team-level AI sideline briefings.
+                    </p>
+                  </div>
+                  
+                  <div className="mt-8 pt-6 border-t border-slate-700/50">
+                    <form onSubmit={handleAddClub} className="flex flex-col gap-4">
+                      <input 
+                        type="text" 
+                        value={newClubName}
+                        onChange={e => setNewClubName(e.target.value)}
+                        placeholder="Enter Club Name (e.g. Deep Space)"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500 text-sm font-semibold transition-colors text-center"
+                        required
+                        autoComplete="off"
+                      />
+                      <button 
+                        type="submit"
+                        className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl transition-all uppercase tracking-widest text-xs"
+                      >
+                        Create Club
+                      </button>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Option 2: Tournament Desk */}
+                <div className="bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-700/80 p-8 flex flex-col justify-between text-center relative overflow-hidden group hover:border-indigo-500/30 transition-all duration-300">
+                  <div className="space-y-4">
+                    <div className="mx-auto w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-3xl">🏆</div>
+                    <h3 className="text-xl font-extrabold text-white uppercase tracking-wider text-amber-400">Tournament Desk</h3>
+                    <p className="text-slate-400 text-sm leading-relaxed font-medium">
+                      Manage a multi-pitch tournament. Provision match schedules, import bulk team rosters from CSVs, generate 6-digit scorer pitch codes, and compile live bracket recaps.
+                    </p>
+                  </div>
+                  
+                  <div className="mt-8">
+                    <button 
+                      onClick={onNavigateToTournamentSetup}
+                      className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-650 hover:from-amber-400 hover:to-orange-550 text-white font-black rounded-xl transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)] hover:shadow-[0_0_30px_rgba(245,158,11,0.4)] uppercase tracking-widest text-xs scale-100 hover:scale-[1.02]"
+                    >
+                      Go to Tournament Desk
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          ) : (
+            <div className="bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-slate-700 p-8 sm:p-12 text-center">
+              <h2 className="text-2xl font-bold text-white mb-4">Welcome to ustats.pro!</h2>
+              <p className="text-slate-400 mb-8 max-w-lg mx-auto">
+                To get started, create your first Club. You can then add multiple teams (e.g. Open, Women's, Mixed) under this club.
+              </p>
+              <form onSubmit={handleAddClub} className="max-w-md mx-auto flex flex-col gap-4">
+                <input 
+                  type="text" 
+                  value={newClubName}
+                  onChange={e => setNewClubName(e.target.value)}
+                  placeholder="Enter Club Name (e.g. Deep Space)"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-4 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner text-center text-lg font-bold"
+                  required
+                  autoComplete="off"
+                />
+                <button 
+                  type="submit"
+                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] uppercase tracking-widest text-lg"
+                >
+                  Create My Club
+                </button>
+              </form>
+            </div>
+          )
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          profile?.disable_club_track ? (
+            <div className="max-w-md mx-auto bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-700 p-8 text-center space-y-6">
+              <div className="mx-auto w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-3xl">🏆</div>
+              <h2 className="text-2xl font-black text-white uppercase tracking-wider text-amber-400">Tournament Desk</h2>
+              <p className="text-slate-400 text-sm leading-relaxed font-medium">
+                Your account is configured for Tournament operations only. Club track mode has been disabled by your administrator.
+              </p>
+              <button 
+                onClick={onNavigateToTournamentSetup}
+                className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-650 hover:from-amber-400 hover:to-orange-550 text-white font-black rounded-xl transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)] hover:shadow-[0_0_30px_rgba(245,158,11,0.4)] uppercase tracking-widest text-xs scale-100 hover:scale-[1.02]"
+              >
+                Go to Tournament Desk
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {hierarchy.clubs.map(club => {
               const clubTeams = hierarchy.teams.filter(t => t.club_id === club.id);
               
@@ -293,6 +387,7 @@ const TeamSelectionScreen = ({ onSelectTeam, onNavigateToAdmin, allowAutoSelect 
               </button>
             )}
           </div>
+          )
         )}
 
       </div>

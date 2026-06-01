@@ -8,7 +8,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 import { getLocalPoint, savePointLocally, addStatToLocalPoint, generateUUID, attemptSync } from './SyncEngine';
 
 export const recordStatToDB = async (statData, currentTeamId) => {
-  const { player, stat, pointNumber, gameName, gameType, teamName, details } = statData;
+  const { player, stat, pointNumber, gameName, gameType, teamName, details, timestamp } = statData;
 
   const newStat = {
     player: player,
@@ -18,7 +18,8 @@ export const recordStatToDB = async (statData, currentTeamId) => {
     game_type: gameType || 'grass',
     team_name: teamName || 'Default Team',
     team_id: currentTeamId,
-    details: details || null
+    details: details || null,
+    timestamp: timestamp || statData.timestamp || null
   };
 
   const enrichedStat = await addStatToLocalPoint(newStat.game_name, pointNumber, newStat);
@@ -102,13 +103,14 @@ export const fetchClubPlayers = async (clubId) => {
   return data || [];
 };
 
-export const addPlayerToClub = async (name, clubId, shirtNumber) => {
+export const addPlayerToClub = async (name, clubId, shirtNumber, genderDesignation = null) => {
   const { data, error } = await supabase
     .from('players')
     .insert([{ 
       name, 
       club_id: clubId,
-      shirt_number: shirtNumber || null
+      shirt_number: shirtNumber || null,
+      gender_designation: genderDesignation || null
     }])
     .select();
 
@@ -119,12 +121,13 @@ export const addPlayerToClub = async (name, clubId, shirtNumber) => {
   return data[0];
 };
 
-export const updatePlayerInClub = async (playerId, name, shirtNumber) => {
+export const updatePlayerInClub = async (playerId, name, shirtNumber, genderDesignation = null) => {
   const { data, error } = await supabase
     .from('players')
     .update({ 
       name, 
-      shirt_number: shirtNumber || null
+      shirt_number: shirtNumber || null,
+      gender_designation: genderDesignation || null
     })
     .eq('id', playerId)
     .select();
@@ -580,6 +583,28 @@ export const updateUserIsTestAccount = async (userId, is_test_account) => {
   return data ? data[0] : null;
 };
 
+export const updateUserBetaTournamentTier = async (userId, beta_tournament_tier) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ beta_tournament_tier })
+    .eq('id', userId)
+    .select();
+
+  if (error) throw error;
+  return data ? data[0] : null;
+};
+
+export const updateUserDisableClubTrack = async (userId, disable_club_track) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ disable_club_track })
+    .eq('id', userId)
+    .select();
+
+  if (error) throw error;
+  return data ? data[0] : null;
+};
+
 export const fetchUserHierarchy = async (userId) => {
   if (!userId) return { clubs: [], teams: [] };
   
@@ -872,4 +897,246 @@ export const saveManagedLines = async (teamId, lines) => {
     console.error("Exception saving managed lines:", err);
     return false;
   }
+};
+
+// ==========================================
+// TOURNAMENT TIER CLIENT HELPERS (Phase 2)
+// ==========================================
+
+export const fetchTournaments = async () => {
+  if (!navigator.onLine) return [];
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('*')
+    .order('start_date', { ascending: false });
+  if (error) throw error;
+  return data || [];
+};
+
+export const createTournament = async (name, start_date, end_date, creatorId, gameType = 'grass') => {
+  if (!navigator.onLine) throw new Error("Offline. Cannot create tournament.");
+  
+  // Try inserting with game_type column first
+  const { data, error } = await supabase
+    .from('tournaments')
+    .insert({
+      name,
+      start_date: start_date || null,
+      end_date: end_date || null,
+      created_by: creatorId,
+      game_type: gameType
+    })
+    .select()
+    .single();
+
+  if (error) {
+    // If column doesn't exist in schema cache, fallback to inserting without it
+    if (error.message?.includes('game_type') || error.code === 'PGRST204') {
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('tournaments')
+        .insert({
+          name,
+          start_date: start_date || null,
+          end_date: end_date || null,
+          created_by: creatorId
+        })
+        .select()
+        .single();
+      if (fallbackError) throw fallbackError;
+      return fallbackData;
+    }
+    throw error;
+  }
+  return data;
+};
+
+export const updateTournament = async (tournamentId, name, start_date, end_date, gameType = 'grass') => {
+  if (!navigator.onLine) throw new Error("Offline. Cannot update tournament.");
+  
+  // Try updating with game_type column first
+  const { data, error } = await supabase
+    .from('tournaments')
+    .update({
+      name,
+      start_date: start_date || null,
+      end_date: end_date || null,
+      game_type: gameType
+    })
+    .eq('id', tournamentId)
+    .select()
+    .single();
+
+  if (error) {
+    // If column doesn't exist in schema cache, fallback to updating without it
+    if (error.message?.includes('game_type') || error.code === 'PGRST204') {
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('tournaments')
+        .update({
+          name,
+          start_date: start_date || null,
+          end_date: end_date || null
+        })
+        .eq('id', tournamentId)
+        .select()
+        .single();
+      if (fallbackError) throw fallbackError;
+      return fallbackData;
+    }
+    throw error;
+  }
+  return data;
+};
+
+export const fetchTournamentTeams = async (tournamentId) => {
+  if (!navigator.onLine) return [];
+  const { data, error } = await supabase
+    .from('tournament_teams')
+    .select('*')
+    .eq('tournament_id', tournamentId)
+    .order('team_name', { ascending: true });
+  if (error) throw error;
+  return data || [];
+};
+
+export const createTournamentTeam = async (tournamentId, team_name, division = 'Mixed') => {
+  if (!navigator.onLine) throw new Error("Offline. Cannot create team.");
+  const { data, error } = await supabase
+    .from('tournament_teams')
+    .insert({ tournament_id: tournamentId, team_name, division })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const fetchTournamentMatches = async (tournamentId) => {
+  if (!navigator.onLine) return [];
+  const { data, error } = await supabase
+    .from('tournament_matches')
+    .select(`
+      *,
+      home_team:tournament_teams!home_team_id(*),
+      away_team:tournament_teams!away_team_id(*),
+      tournament_scorer_seats(*)
+    `)
+    .eq('tournament_id', tournamentId)
+    .order('start_time', { ascending: true });
+  if (error) throw error;
+  return data || [];
+};
+
+export const createTournamentMatch = async (tournamentId, homeTeamId, awayTeamId, pitchNumber, startTime) => {
+  if (!navigator.onLine) throw new Error("Offline. Cannot schedule match.");
+  
+  let formattedStartTime = null;
+  if (startTime) {
+    try {
+      formattedStartTime = new Date(startTime).toISOString();
+    } catch (e) {
+      formattedStartTime = startTime;
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('tournament_matches')
+    .insert({
+      tournament_id: tournamentId,
+      home_team_id: homeTeamId,
+      away_team_id: awayTeamId,
+      pitch_number: pitchNumber || null,
+      start_time: formattedStartTime,
+      status: 'scheduled'
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const updateTournamentMatchScore = async (matchId, homeScore, awayScore) => {
+  const { data, error } = await supabase
+    .from('tournament_matches')
+    .update({ home_score: homeScore, away_score: awayScore })
+    .eq('id', matchId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const updateTournamentMatchStatus = async (matchId, status) => {
+  const { data, error } = await supabase
+    .from('tournament_matches')
+    .update({ status })
+    .eq('id', matchId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const validatePitchCode = async (code) => {
+  if (!navigator.onLine) return { valid: false, error: 'Offline. Cannot validate Pitch Code.' };
+  
+  try {
+    const cleanedCode = code.trim().toUpperCase();
+    const { data, error } = await supabase
+      .from('tournament_scorer_seats')
+      .select(`
+        *,
+        tournament_matches (
+          *,
+          home_team:tournament_teams!home_team_id(*),
+          away_team:tournament_teams!away_team_id(*),
+          tournament:tournaments(*)
+        )
+      `)
+      .eq('pitch_code', cleanedCode)
+      .eq('active', true)
+      .single();
+
+    if (error || !data) {
+      return { valid: false, error: 'Invalid or inactive Pitch Code. Please check with the organizer.' };
+    }
+    return { valid: true, seat: data };
+  } catch (err) {
+    return { valid: false, error: err.message || 'Validation failed.' };
+  }
+};
+
+export const createTournamentScorerSeat = async (tournamentId, matchId, pitchCode) => {
+  if (!navigator.onLine) throw new Error("Offline. Cannot provision scorer seat.");
+  const { data, error } = await supabase
+    .from('tournament_scorer_seats')
+    .insert({
+      tournament_id: tournamentId,
+      match_id: matchId,
+      pitch_code: pitchCode.trim().toUpperCase(),
+      active: true
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const deactivateTournamentScorerSeat = async (seatId) => {
+  const { error } = await supabase
+    .from('tournament_scorer_seats')
+    .update({ active: false })
+    .eq('id', seatId);
+  if (error) throw error;
+  return true;
+};
+
+export const updatePlayerGenderDesignation = async (playerId, genderDesignation) => {
+  if (!navigator.onLine) throw new Error("Offline. Cannot save player settings.");
+  const { data, error } = await supabase
+    .from('players')
+    .update({ gender_designation: genderDesignation || null })
+    .eq('id', playerId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
 };

@@ -112,6 +112,27 @@ const PrivacyPolicy = () => {
           <li><strong>Right to Object:</strong> Oppose processing based on legitimate interests.</li>
         </ul>
       </section>
+
+      <section className="mb-8">
+        <h2 className="text-xl font-bold text-white mb-4">7. Tournament Public Leaderboards &amp; Volunteer Scoring</h2>
+        <p className="mb-4">
+          When participating in organized tournaments, leagues, or events managed via the Platform:
+        </p>
+        <ul className="list-disc pl-6 space-y-2">
+          <li>
+            <strong>Volunteer Scoring:</strong> Authorized volunteer scorers may log point-by-point telemetry, including player names, shirt numbers, and gender designations (MMP/FMP) in real time using 6-digit Pitch Codes, without requiring players to authenticate directly.
+          </li>
+          <li>
+            <strong>Public Disclosures:</strong> Aggregated match telemetry, team scoring charts, play-by-play timelines, and AI-generated objective sports recaps are published publicly on spectator brackets, leaderboards, and tournament feeds.
+          </li>
+          <li>
+            <strong>Legal Basis:</strong> The processing of this athletic tournament data is carried out on the basis of <strong>Legitimate Interests (Article 6(1)(f) UK GDPR)</strong> to facilitate organized athletic competitions, support public spectator features, and deliver automated sports journalism recaps. 
+          </li>
+          <li>
+            <strong>Opt-Out &amp; Redaction:</strong> Players can request the anonymization or redaction of their statistical data on public tournament feeds by contacting their event coordinator or emailing us directly at <a href={`mailto:${SUPPORT_EMAIL}`} className="text-indigo-400 hover:text-indigo-300 underline font-black">{SUPPORT_EMAIL}</a>.
+          </li>
+        </ul>
+      </section>
     </article>
   );
 };

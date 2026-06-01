@@ -33,7 +33,7 @@ export const addStatToLocalPoint = async (gameName, pointNumber, newStat) => {
     const enrichedStat = {
       ...newStat,
       id: newStat.id || generateUUID(),
-      created_at: newStat.created_at || new Date().toISOString()
+      created_at: newStat.created_at || new Date(Date.now() + statsArray.length).toISOString()
     };
     
     statsArray.push(enrichedStat);
@@ -132,58 +132,102 @@ export const attemptSync = async () => {
     }
 
     for (const key of pointKeys) {
-      const pointData = await get(key);
-      if (!pointData || pointData.synced) continue;
-
-      // "Client-Wins" Logic:
-      // First, get the server's current stats for this game/point to delete any that were undone/removed locally
-      const { data: existingServerStats } = await supabase
-        .from('stats')
-        .select('id')
-        .eq('game_name', pointData.gameName)
-        .eq('point_number', pointData.pointNumber);
-
-      if (existingServerStats && existingServerStats.length > 0) {
-        const localIds = new Set(pointData.stats.map(s => s.id));
-        const idsToDelete = existingServerStats.filter(s => !localIds.has(s.id)).map(s => s.id);
-        
-        if (idsToDelete.length > 0) {
-          await supabase.from('stats').delete().in('id', idsToDelete);
-        }
-      }
-
-      // Now upsert the local stats entirely (this handles both inserts and updates, matching client state exactly)
-      if (pointData.stats.length > 0) {
-        const { error } = await supabase
-          .from('stats')
-          .upsert(pointData.stats, { onConflict: 'id' });
-          
-        if (error) {
-          console.error('Upsert failed for point:', error);
-          throw error; // throw to abort deleting the local queue
-        }
-      }
-
-      // Re-fetch with lock to ensure we don't overwrite stats added during the network request
-      while (pointLocks[key]) {
-        await new Promise(resolve => setTimeout(resolve, 10));
-      }
-      pointLocks[key] = true;
       try {
-        const latestPointData = await get(key);
-        if (latestPointData) {
-          if (latestPointData.last_modified === pointData.last_modified) {
-            // Nothing changed locally during upload
-            latestPointData.synced = true;
-            await set(key, latestPointData);
-          } else {
-            // New stats or edits (like huck upgrades) occurred locally while we were uploading!
-            // Leave synced as false so the new stats get synced next time.
-            console.log(`[SyncEngine] Stats appended during upload for ${key}. Leaving synced=false.`);
+        const pointData = await get(key);
+        if (!pointData || pointData.synced) continue;
+
+        // "Client-Wins" Logic:
+        // First, get the server's current stats for this game/point to delete any that were undone/removed locally
+        const { data: existingServerStats } = await supabase
+          .from('stats')
+          .select('id')
+          .eq('game_name', pointData.gameName)
+          .eq('point_number', pointData.pointNumber);
+
+        if (existingServerStats && existingServerStats.length > 0) {
+          const localIds = new Set(pointData.stats.map(s => s.id));
+          const idsToDelete = existingServerStats.filter(s => !localIds.has(s.id)).map(s => s.id);
+          
+          if (idsToDelete.length > 0) {
+            await supabase.from('stats').delete().in('id', idsToDelete);
           }
         }
-      } finally {
-        delete pointLocks[key];
+
+        // Now upsert the local stats entirely (this handles both inserts and updates, matching client state exactly)
+        if (pointData.stats.length > 0) {
+          let inferredGameType = pointData.stats.find(s => s.game_type)?.game_type;
+          if (!inferredGameType && pointData.gameName.startsWith('tournament_match_')) {
+            try {
+              const matchId = pointData.gameName.replace('tournament_match_', '');
+              const { data: matchData } = await supabase
+                .from('tournament_matches')
+                .select('home_team:home_team_id(division), tournament:tournament_id(game_type)')
+                .eq('id', matchId)
+                .maybeSingle();
+              if (matchData) {
+                const resolvedType = matchData.tournament?.game_type || (matchData.home_team?.division?.toLowerCase().includes('beach') ? 'beach' : 'grass');
+                inferredGameType = resolvedType === 'indoor' ? 'indoor' : (resolvedType === 'beach' ? 'beach' : 'grass');
+              }
+            } catch (e) {
+              console.error('Failed to query match details for game_type fallback:', e);
+            }
+          }
+          if (!inferredGameType) {
+            inferredGameType = 'grass';
+          }
+
+          let modified = false;
+          pointData.stats.forEach(s => {
+            if (!s.game_type) {
+              s.game_type = inferredGameType;
+              modified = true;
+            }
+          });
+
+          if (modified) {
+            await set(key, pointData);
+          }
+
+          // Strip timestamp from payload to prevent PG Bad Request (column timestamp does not exist on stats schema cache)
+          const statsToSend = pointData.stats.map(s => {
+            const { timestamp, ...rest } = s;
+            return rest;
+          });
+
+          const { error } = await supabase
+            .from('stats')
+            .upsert(statsToSend, { onConflict: 'id' });
+            
+          if (error) {
+            console.error(`Upsert failed for point key ${key}:`, error);
+            // Skip this point, but do not abort the entire queue!
+            continue;
+          }
+        }
+
+        // Re-fetch with lock to ensure we don't overwrite stats added during the network request
+        while (pointLocks[key]) {
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+        pointLocks[key] = true;
+        try {
+          const latestPointData = await get(key);
+          if (latestPointData) {
+            if (latestPointData.last_modified === pointData.last_modified) {
+              // Nothing changed locally during upload
+              latestPointData.synced = true;
+              await set(key, latestPointData);
+            } else {
+              // New stats or edits (like huck upgrades) occurred locally while we were uploading!
+              // Leave synced as false so the new stats get synced next time.
+              console.log(`[SyncEngine] Stats appended during upload for ${key}. Leaving synced=false.`);
+            }
+          }
+        } finally {
+          delete pointLocks[key];
+        }
+      } catch (pointErr) {
+        console.error(`Failed to sync point key ${key}:`, pointErr);
       }
     }
     
@@ -254,7 +298,6 @@ export const getLastLocalStat = async (gameName) => {
 };
 
 export const upgradeLastStatToHuck = async (gameName, teamId) => {
-  if (navigator.onLine) supabase.from('stats').insert({ game_name: 'DEBUG_LOG', stat_type: 'Log', point_number: 99, team_id: teamId, team_name: 'Telemetry', game_type: 'grass', player: 'Logger', details: { event: 'called', gameName } }).then(()=>{}).catch(()=>{});
   const allKeys = await keys();
   const pointKeys = allKeys.filter(k => typeof k === 'string' && k.startsWith(`point_${gameName}_`));
   
@@ -262,14 +305,21 @@ export const upgradeLastStatToHuck = async (gameName, teamId) => {
   // otherwise we read IDB *before* the stat we just tapped is actually saved!
   // To find the current point key, we parse the point number.
   let latestPointKey = null;
-  let maxPoint = -1;
-  for (const k of pointKeys) {
+  const sortedPointKeys = pointKeys.map(k => {
     const parts = k.split('_');
     const ptNum = parseInt(parts[parts.length - 1], 10);
-    if (!isNaN(ptNum) && ptNum > maxPoint) {
-      maxPoint = ptNum;
-      latestPointKey = k;
+    return { key: k, num: ptNum };
+  }).filter(x => !isNaN(x.num)).sort((a, b) => b.num - a.num);
+
+  for (const item of sortedPointKeys) {
+    const data = await get(item.key);
+    if (data && data.stats && data.stats.some(s => ['Pass', 'Pass Attempt', 'Point', 'Drop', 'Throwaway', 'Stall Out'].includes(s.stat_type))) {
+      latestPointKey = item.key;
+      break;
     }
+  }
+  if (!latestPointKey && sortedPointKeys.length > 0) {
+    latestPointKey = sortedPointKeys[0].key;
   }
   if (!latestPointKey) return null;
 
@@ -297,10 +347,10 @@ export const upgradeLastStatToHuck = async (gameName, teamId) => {
          navigator.onLine ? supabase.from('stats').update({ details: pointData.stats[statIndex].details }).eq('id', lastStat.id).then(()=>{}).catch(() => {}) : Promise.resolve()
       );
 
-      // Also upgrade the paired thrower action if it's a Drop
-      if (statIndex > 0 && lastStat.stat_type === 'Drop') {
+      // Also upgrade the paired thrower action if it's a Drop, Point, Throwaway, or Stall Out
+      if (statIndex > 0 && ['Drop', 'Point', 'Throwaway', 'Stall Out'].includes(lastStat.stat_type)) {
         const prevStat = pointData.stats[statIndex - 1];
-        if (['Pass', 'Pass Attempt'].includes(prevStat.stat_type) && prevStat.timestamp === lastStat.timestamp) {
+        if (['Pass', 'Pass Attempt'].includes(prevStat.stat_type)) {
            pointData.stats[statIndex - 1].details = { ...(pointData.stats[statIndex - 1].details || {}), is_huck: true };
            updatePromises.push(
               navigator.onLine ? supabase.from('stats').update({ details: pointData.stats[statIndex - 1].details }).eq('id', prevStat.id).then(()=>{}).catch(() => {}) : Promise.resolve()
@@ -318,7 +368,6 @@ export const upgradeLastStatToHuck = async (gameName, teamId) => {
       });
 
       debugLog.success = true;
-      if (navigator.onLine) supabase.from('stats').insert({ game_name: 'DEBUG_LOG', stat_type: 'Log', point_number: 99, team_id: teamId, team_name: 'Telemetry', game_type: 'grass', player: 'Logger', details: debugLog }).then(()=>{}).catch(()=>{});
 
       return pointData.stats[statIndex];
     }
@@ -337,3 +386,61 @@ if (typeof window !== 'undefined') {
     setTimeout(attemptSync, 1000);
   }
 }
+
+export const clearMatchLocalQueue = async (gameName) => {
+  const allKeys = await keys();
+  const pointKeys = allKeys.filter(k => typeof k === 'string' && k.startsWith(`point_${gameName}_`));
+  for (const key of pointKeys) {
+    await del(key);
+  }
+};
+
+export const clearLocalQueue = async () => {
+  const allKeys = await keys();
+  const pointKeys = allKeys.filter(k => typeof k === 'string' && k.startsWith('point_'));
+  for (const key of pointKeys) {
+    await del(key);
+  }
+  window.dispatchEvent(new CustomEvent('sync-status', { detail: 'synced' }));
+};
+
+export const getLocalStatsForGame = async (gameName) => {
+  const allKeys = await keys();
+  const pointKeys = allKeys.filter(k => typeof k === 'string' && k.startsWith(`point_${gameName}_`));
+  
+  let allStats = [];
+  for (const key of pointKeys) {
+    const pointData = await get(key);
+    if (pointData && pointData.stats) {
+      allStats.push(...pointData.stats.filter(s => s.stat_type !== 'Lineup' && s.player !== 'System'));
+    }
+  }
+  
+  // Sort by created_at descending
+  allStats.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  return allStats;
+};
+
+export const updateLocalStatPlayer = async (gameName, statId, newPlayerName) => {
+  const allKeys = await keys();
+  const pointKeys = allKeys.filter(k => typeof k === 'string' && k.startsWith(`point_${gameName}_`));
+  
+  for (const key of pointKeys) {
+    const pointData = await get(key);
+    if (pointData && pointData.stats) {
+      const idx = pointData.stats.findIndex(s => s.id === statId);
+      if (idx !== -1) {
+        pointData.stats[idx].player = newPlayerName;
+        pointData.last_modified = Date.now();
+        pointData.synced = false;
+        await set(key, pointData);
+        
+        if (navigator.onLine) {
+          attemptSync();
+        }
+        return true;
+      }
+    }
+  }
+  return false;
+};

@@ -10,11 +10,14 @@ ustats.pro is a modern, offline-capable Single Page Application (SPA) designed t
 - **Icons**: Lucide React.
 - **Charts**: Recharts (for Pro Analytics).
 - **PDF Generation**: html2pdf.js.
+- **AI Sports Journalism**: Node.js serverless route on Vercel (`api/generate-recap.js`) leveraging Google Gemini API with a model cascade fallback.
 
 ## Core Architecture Principles
 1. **Offline-First Resilience**: Ultimate Frisbee is played on pitches often lacking reliable Wi-Fi. The app uses a custom `SyncEngine` to persistently queue statistical events in `localStorage` and background-sync them to Supabase once connectivity is restored.
 2. **State Management**: Context API (`AuthContext`) manages global authentication, user profiles, and tier configurations (Free vs Pro). Component-level state manages the rapidly changing match data to avoid global re-render bottlenecks.
 3. **Data Model**: Event-sourced tracking. Every action (Pass, Drop, Goal) is recorded as a discrete row in the `stats` table. Analytics are derived by aggregating these discrete events in real-time.
+4. **Passwordless Sideline Telemetry**: To enable sideline volunteer scorers to log game events without creating user accounts, the system provisions unique, 6-digit alphanumeric Pitch Codes (e.g. `P1-A4B`). These pitch codes authorize public writes/updates/deletes dynamically through Supabase Row Level Security (RLS) without exposing high-privilege credentials.
+5. **Turnover-Driven Scoring Pipeline**: Displays a balanced, dual-team neutral scoring console that automatically swaps active recording panels to the opposite team upon an offensive turnover or defensive block event. Includes single-touch Undo state rollbacks to preserve telemetry integrity.
 
 ---
 
@@ -38,10 +41,16 @@ The core source code of the application.
 - **`Dashboard.jsx`**: The primary live-tracking UI. Handles player selection, action recording, and Voice Tracking integration via the Web Speech API.
 - **`Analytics.jsx`**: The Free-tier analytics engine. Computes basic stats (Goals, Assists, Pass %, Defence).
 - **`CoachDashboard.jsx`**: The Pro-tier advanced analytics engine. Includes line charts, scatter plots, active player filters, and PDF export functionality. **Now features the Team & Line-Level Stats Suite, which dynamically attributes point stats to line templates using a majority lineup matching threshold, aggregating Clean O-Holds, Break Conversions, Huck Efficiency, and Pass Completion Rates without database overhead.**
-- **`RosterSetup.jsx` & `LineupManager.jsx`**: Interfaces for configuring the team roster and the active 7 players on the pitch.
+- **`RosterSetup.jsx` & `LineupManager.jsx`**: Interfaces for configuring the team roster and the active 7 players on the pitch. Now extended to support Male Matching Player (MMP) and Female Matching Player (FMP) selections for mixed division compliance.
 - **`StandardFooter.jsx`**: Global compliance footer implementing corporate disclosures, support links, and the haptic/visual **Beach Mode** accessibility high-contrast toggle.
 - **`PayPalUpgradeModal.jsx`**: A premium glassmorphic checkout UI dynamically loading the PayPal Subscriptions SDK, managing UK pricing (£5/mo and £50/yr plans), and celebrating success with elegant celebratory layouts.
-- **`legal/`**: Folder containing lazy-loaded legal modules (`PrivacyPolicy.jsx`, `TermsOfService.jsx`, `AiDisclosure.jsx`, and `LegalLayout.jsx`) using Vite code splitting to isolate heavy text assets from the core stats-tracking code.
+- **`TournamentSetupScreen.jsx` [NEW]**: Organizer portal to schedule matches, assign pitches, generate Pitch Codes, and import rosters via drag-and-drop CSV files (mapping player shirt numbers and MMP/FMP gender designations).
+- **`VolunteerScorerLogin.jsx` [NEW]**: Segmented 6-digit character entry panel providing passwordless, single-use access for field volunteer scorers.
+- **`TournamentScorer.jsx` [NEW]**: Dual-team neutral scorer console implementing turnover-driven focus toggles, lineup ratio audits (Standard Mixed rule alternations vs Light Mixed guidelines), and single-touch Undo state rollbacks.
+- **`TournamentMatchSelector.jsx` [NEW]**: Multi-pitch spectator dashboard showing live schedules, statuses, and scoreboards.
+- **`AiRecapModule.jsx` [NEW]**: Magazine-style match center tab querying the serverless Gemini API to write objective, compelling sports recap articles with client-side localStorage caching.
+- **`legal/`**: Folder containing lazy-loaded legal modules (`PrivacyPolicy.jsx`, `TermsOfService.jsx`, `AiDisclosure.jsx`, and `LegalLayout.jsx`) using Vite code splitting to isolate heavy text assets from the core stats-tracking code. PrivacyPolicy.jsx now includes Section 7 detailing UK GDPR tournament disclosures.
+- **`utils/DuaaExportUtility.js` [NEW]**: Unified telemetry, timeline, and roster stats compiler exporting multi-table CSV reports.
 
 ---
 
@@ -65,13 +74,28 @@ Hierarchical organization of teams. A user can create a club and multiple teams 
 ### `team_players`
 Maps players to specific teams with attributes like `name`, `shirt_number`, and `gender_match`.
 
+### `players`
+Altered with a nullable `gender_designation` (`mmp`/`fmp`) column to support real-time mixed division ratio monitors while preserving backwards-compatibility for legacy teams.
+
+### `tournaments` [NEW]
+Core tournament entity: name, start_date, end_date, created_by.
+
+### `tournament_teams` [NEW]
+Teams registered under tournaments: team_name, division.
+
+### `tournament_matches` [NEW]
+Match scheduled on pitches: home/away team IDs, score, pitch_number, start_time, status.
+
+### `tournament_scorer_seats` [NEW]
+Authorized volunteer scorer seats maps matches to active unique `pitch_code` keys.
+
 ### `stats`
 The immutable ledger of game events.
-- `game_name` (Text): The identifier for the match.
+- `game_name` (Text): The identifier for the match (e.g. `tournament_match_${matchId}`).
 - `point_number` (Int): The current point of the match.
 - `player` (Text): The player who performed the action.
 - `stat_type` (Text): The action (e.g., 'Pass', 'Drop', 'Point', 'Defence').
-- `details` (JSONB): Extended metadata (e.g., `{ isCallahan: true }`, `{ x: 10, y: 20 }`).
+- `details` (JSONB): Extended metadata (e.g., `{ isCallahan: true }`, `{ x: 10, y: 20 }`, `{ pitch_code: "P1-A4B" }`).
 
 ---
 
@@ -123,9 +147,10 @@ To support granular team and unit (Line) diagnostics for the Coach Pro tier with
 
 ## Security & Authorization
 - **Row Level Security (RLS)**: PostgreSQL RLS policies ensure that users can only read, update, and delete data associated with their own `auth.uid()`.
-- **Column-Level Tamper Protection**: Implements a PostgreSQL `BEFORE UPDATE` trigger on the `profiles` table. If a non-admin client tries to modify columns like `tier`, `pro_expires_at`, `beta_voice_pro`, or `is_system_admin` directly from client-side JS, the database intercepts the request and automatically reverts those columns to their previously verified database state, completely neutralizing front-end console injections.
+- **Pitch-Code-Authorized Public RLS Rules**: Restructures RLS policies on the `stats` table to permit public INSERT, UPDATE, and DELETE actions strictly when an active alphanumeric code (`pitch_code`) stored in `details->>'pitch_code'` matches a verified seat assignment in `tournament_scorer_seats`, allowing passwordless sideline scorer entry without compromising database isolation.
+- **Column-Level Tamper Protection**: Implements a PostgreSQL `BEFORE UPDATE` trigger on the `profiles` table. If a non-admin client tries to modify columns like `tier`, `pro_expires_at`, `beta_voice_pro`, `is_system_admin`, or `beta_tournament_tier` directly from client-side JS, the database intercepts the request and automatically reverts those columns to their previously verified database state, completely neutralizing front-end console injections.
 - **Secure Admin User Deletion**: Implements a highly secure `delete_user_by_admin(target_user_id)` database function marked as `SECURITY DEFINER` (running as superuser). The function strictly verifies that the executing caller is a validated global System Administrator in the database before wiping the target record from `auth.users`. Because the schema uses full cascading constraints (`ON DELETE CASCADE`), deleting a user automatically, cleanly, and safely purges all of their profiles, clubs, teams, roster players, and game stats, leaving zero orphan database records.
-- **Tier Gating**: The frontend checks the Boolean `isProTier` state computed globally to conditionally render the Coach Dashboard or enable Voice Tracking.
+- **Tier Gating**: The frontend checks the Boolean `isProTier` state computed globally to conditionally render the Coach Dashboard or enable Voice Tracking. Tournament desk access is gated securely by checking `profile?.beta_tournament_tier || profile?.is_system_admin`.
 - **Session Termination**: Enforced via the 30-second `AuthContext` database heartbeat.
 
 ## Voice Tracking Pipeline

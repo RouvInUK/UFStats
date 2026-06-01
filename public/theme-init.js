@@ -1,10 +1,3 @@
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
-import { AuthProvider } from './contexts/AuthContext'
-import ErrorBoundary from './components/ErrorBoundary.jsx'
-
-// Pre-paint theme & manifest initialization to prevent flickering
 (function() {
   const savedTheme = localStorage.getItem('ufstats_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   const manifestEl = document.getElementById('manifest-link');
@@ -21,11 +14,3 @@ import ErrorBoundary from './components/ErrorBoundary.jsx'
     appleTouchEl.setAttribute('href', themedIcon);
   }
 })();
-
-createRoot(document.getElementById('root')).render(
-  <ErrorBoundary>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
-  </ErrorBoundary>
-)

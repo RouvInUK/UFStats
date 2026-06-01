@@ -6,19 +6,15 @@ const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SU
 
 async function check() {
   const { data, error } = await supabase
-    .from('stats')
-    .select('game_name, game_type');
+    .from('players')
+    .select('*')
+    .eq('team_id', '24b6e81e-f4fe-471b-818c-c7a7cb6e4bcd');
   
   if (error) {
     console.error(error);
   } else {
-    const uniqueGames = {};
-    data.forEach(row => {
-      if (row.game_name) {
-        uniqueGames[row.game_name] = row.game_type;
-      }
-    });
-    console.log("Unique Game Names and Game Types in Database:", uniqueGames);
+    console.log("Roster for Team Rain:");
+    console.log(data.map(p => ({ id: p.id, name: p.name })));
   }
 }
 check();

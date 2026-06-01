@@ -22,17 +22,20 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       }
       setHuckTargetId(id);
       setTimeout(() => setHuckTargetId(null), 800);
-      
-      if (navigator.onLine) {
-         import('../supabaseClient').then(({ supabase }) => {
-            supabase.from('stats').insert({ game_name: 'DEBUG_LOG', stat_type: 'Log', point_number: 99, team_id: targetTeamId, team_name: 'Telemetry', game_type: 'grass', player: 'Logger', details: { event: 'double_tap_fired', id } }).then(()=>{}).catch(()=>{});
-         });
-      }
+      playClick();
+      playChime(); // Premium audio confirmation
 
       let upgraded = false;
       if (id !== 'Drop' && id !== 'Throwaway') {
          pendingHuckRef.current.add(id);
-         upgraded = true;
+         // If they double-tapped a player who is already logged (not the last in possession chain), call upgrade
+         const isHolder = possessionChain.length > 0 && possessionChain[possessionChain.length - 1] === id;
+         if (!isHolder) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            upgraded = await upgradeLastStatToHuck(currentGame, targetTeamId);
+         } else {
+            upgraded = true;
+         }
       } else {
          await new Promise(resolve => setTimeout(resolve, 200));
          upgraded = await upgradeLastStatToHuck(currentGame, targetTeamId);
@@ -45,6 +48,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       console.error(err);
     }
   };
+
 
   const [doubleTapWindow, setDoubleTapWindow] = useState(null);
 
@@ -187,8 +191,11 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       if (prev.length >= 2) {
         const playerNMinus2 = prev[prev.length - 2];
         const receiver = prev[prev.length - 1];
-        const isHuck = pendingHuckRef.current.has(receiver);
-        if (isHuck) pendingHuckRef.current.delete(receiver);
+        const isHuck = pendingHuckRef.current.has(receiver) || pendingHuckRef.current.has(playerNMinus2);
+        if (isHuck) {
+          pendingHuckRef.current.delete(receiver);
+          pendingHuckRef.current.delete(playerNMinus2);
+        }
         // Fire and forget the pass log so the UI doesn't freeze
         handleStatRecord('Pass', playerNMinus2, prev, isHuck ? { is_huck: true } : null);
       }
@@ -235,8 +242,11 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         }
 
         if (pendingPasser) {
-           const isHuck = pendingHuckRef.current.has(activePlayer);
-           if (isHuck) pendingHuckRef.current.delete(activePlayer);
+           const isHuck = pendingHuckRef.current.has(activePlayer) || pendingHuckRef.current.has(pendingPasser);
+           if (isHuck) {
+              pendingHuckRef.current.delete(activePlayer);
+              pendingHuckRef.current.delete(pendingPasser);
+           }
            statsToSave.push({ ...baseStat, player: pendingPasser, stat: 'Pass', details: isHuck ? { is_huck: true } : null });
         }
         statsToSave.push({ ...baseStat, player: activePlayer, stat: 'Point' });
@@ -248,17 +258,29 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         statsToSave.push({ ...baseStat, player: activePlayer, stat: 'Pass', details: detailsOverride });
         playClick();
       } else if (['Drop', 'Throwaway', 'Stall Out'].includes(statType)) {
+        let isHuck = false;
+        if (currentChain.length > 1) {
+          const receiver = currentChain[currentChain.length - 1];
+          const thrower = currentChain[currentChain.length - 2];
+          isHuck = pendingHuckRef.current.has(receiver) || pendingHuckRef.current.has(thrower);
+          if (isHuck) {
+             pendingHuckRef.current.delete(receiver);
+             pendingHuckRef.current.delete(thrower);
+          }
+        } else {
+          isHuck = pendingHuckRef.current.has(activePlayer);
+          if (isHuck) pendingHuckRef.current.delete(activePlayer);
+        }
+
         if (currentChain.length > 1 && statType === 'Drop') {
           const thrower = currentChain[currentChain.length - 2];
-          statsToSave.push({ ...baseStat, player: thrower, stat: 'Pass Attempt' });
+          statsToSave.push({ ...baseStat, player: thrower, stat: 'Pass Attempt', details: isHuck ? { is_huck: true } : null });
         } else if (currentChain.length > 1 && (statType === 'Throwaway' || statType === 'Stall Out')) {
           const pendingPasser = currentChain[currentChain.length - 2];
-          const receiver = currentChain[currentChain.length - 1];
-          const isHuck = pendingHuckRef.current.has(receiver);
-          if (isHuck) pendingHuckRef.current.delete(receiver);
           statsToSave.push({ ...baseStat, player: pendingPasser, stat: 'Pass', details: isHuck ? { is_huck: true } : null });
         }
-        statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
+        
+        statsToSave.push({ ...baseStat, player: activePlayer, stat: statType, details: isHuck ? { is_huck: true } : null });
         setPossessionChain([]);
         setCallahanModeFor(null);
         playBuzz();
@@ -267,7 +289,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         // Handled silently
       } else if (statType === 'Defence') {
         statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
-        setPossessionChain([activePlayer]);
+        setPossessionChain([]);
         playChime();
       } else {
         statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });

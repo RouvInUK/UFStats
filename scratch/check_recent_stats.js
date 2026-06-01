@@ -7,18 +7,17 @@ const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SU
 async function check() {
   const { data, error } = await supabase
     .from('stats')
-    .select('game_name, game_type');
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(20);
   
   if (error) {
     console.error(error);
   } else {
-    const uniqueGames = {};
-    data.forEach(row => {
-      if (row.game_name) {
-        uniqueGames[row.game_name] = row.game_type;
-      }
+    console.log(`Found ${data.length} recent stats rows in database:`);
+    data.forEach(s => {
+      console.log(`[${s.created_at}] Game: ${s.game_name} | Player: ${s.player} | Stat: ${s.stat_type} | Details:`, s.details);
     });
-    console.log("Unique Game Names and Game Types in Database:", uniqueGames);
   }
 }
 check();

@@ -275,34 +275,59 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       if (stat.stat_type === 'Point') {
         p.goals += 1;
         
-        // Track the connection
-        const assister = normalizedStats[index - 1];
-        if (assister && assister.game_name === stat.game_name && assister.point_number === stat.point_number && assister.stat_type === 'Pass') {
-           const pairKey = `${assister.player} → ${stat.player}`;
-           connectionsMap[pairKey] = (connectionsMap[pairKey] || 0) + 1;
-           
-           // Secondary Assist Logic
-           const hockeyAssister = normalizedStats[index - 2];
-           if (hockeyAssister && hockeyAssister.game_name === stat.game_name && hockeyAssister.point_number === stat.point_number && hockeyAssister.stat_type === 'Pass') {
-              const saPlayer = ensurePlayer(hockeyAssister.player);
-              saPlayer.secondaryAssists += 1;
-           }
+        // Robust backward-scanning logic for assists
+        let passesInPoint = [];
+        for (let i = index - 1; i >= 0; i--) {
+          const s = normalizedStats[i];
+          if (s.game_name !== stat.game_name || s.point_number !== stat.point_number) {
+            break;
+          }
+          if (s.stat_type === 'Pass' && s.team_id === stat.team_id) {
+            passesInPoint.push(s);
+          }
+        }
+
+        if (passesInPoint.length > 1) {
+          const primaryAssisterStat = passesInPoint[1];
+          if (primaryAssisterStat.player !== stat.player) {
+            const assisterPlayer = ensurePlayer(primaryAssisterStat.player);
+            assisterPlayer.assists += 1;
+            
+            // Track the connection
+            const pairKey = `${primaryAssisterStat.player} → ${stat.player}`;
+            connectionsMap[pairKey] = (connectionsMap[pairKey] || 0) + 1;
+          }
+        }
+
+        if (passesInPoint.length > 2) {
+          const secondaryAssisterStat = passesInPoint[2];
+          if (secondaryAssisterStat.player !== stat.player && secondaryAssisterStat.player !== passesInPoint[1].player) {
+            const secAssisterPlayer = ensurePlayer(secondaryAssisterStat.player);
+            secAssisterPlayer.secondaryAssists += 1;
+          }
         }
       } else if (stat.stat_type === 'Pass') {
-        const nextStat = normalizedStats[index + 1];
+        // Robust look-ahead: scan forward to find the next active gameplay event in the same point
+        let nextGameplayStat = null;
+        for (let i = index + 1; i < normalizedStats.length; i++) {
+          const s = normalizedStats[i];
+          if (s.game_name !== stat.game_name || s.point_number !== stat.point_number) {
+            break;
+          }
+          if (['Point', 'Pass', 'Throwaway', 'Drop', 'Stall Out', 'Block', 'Defence', 'Opponent Point'].includes(s.stat_type)) {
+            nextGameplayStat = s;
+            break;
+          }
+        }
         
-        // Look ahead for a receiver drop OR an assist
-        if (nextStat && nextStat.game_name === stat.game_name && nextStat.point_number === stat.point_number && nextStat.stat_type === 'Drop') {
+        // Look ahead for a receiver drop
+        if (nextGameplayStat && nextGameplayStat.stat_type === 'Drop' && nextGameplayStat.team_id === stat.team_id) {
             p.passDropped += 1;
         } else {
             p.passes += 1; // Completed pass
-            if (stat.details?.is_huck || (nextStat && nextStat.details?.is_huck && (nextStat.stat_type === 'Pass' || nextStat.stat_type === 'Point'))) {
+            if (stat.details?.is_huck || (nextGameplayStat && nextGameplayStat.details?.is_huck && (nextGameplayStat.stat_type === 'Pass' || nextGameplayStat.stat_type === 'Point'))) {
                 p.huckPasses = (p.huckPasses || 0) + 1;
             }
-        }
-
-        if (nextStat && nextStat.game_name === stat.game_name && nextStat.point_number === stat.point_number && nextStat.stat_type === 'Point') {
-          p.assists += 1;
         }
       } else if (stat.stat_type === 'Pass Attempt') {
         p.passDropped += 1;

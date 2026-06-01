@@ -84,31 +84,51 @@ const Analytics = ({ targetTeamId, players = [] }) => {
 
       if (stat.stat_type === 'Point') {
         p.goals += 1;
+
+        // Robust backward-scanning logic for assists
+        let passesInPoint = [];
+        for (let i = index - 1; i >= 0; i--) {
+          const s = filteredStats[i];
+          if (s.game_name !== stat.game_name || s.point_number !== stat.point_number) {
+            break;
+          }
+          if (s.stat_type === 'Pass' && s.team_id === stat.team_id) {
+            passesInPoint.push(s);
+          }
+        }
+
+        if (passesInPoint.length > 1) {
+          const primaryAssisterStat = passesInPoint[1];
+          if (primaryAssisterStat.player !== stat.player) {
+            const assisterPlayer = ensurePlayer(primaryAssisterStat.player);
+            assisterPlayer.assists += 1;
+          }
+        }
       } else if (stat.stat_type === 'Pass') {
         p.passes += 1;
         
-        // Next stat in same game and point
-        const nextStat = filteredStats[index + 1];
+        // Robust look-ahead: scan forward to find the next active gameplay event in the same point
+        let nextGameplayStat = null;
+        for (let i = index + 1; i < filteredStats.length; i++) {
+          const s = filteredStats[i];
+          if (s.game_name !== stat.game_name || s.point_number !== stat.point_number) {
+            break;
+          }
+          if (['Point', 'Pass', 'Throwaway', 'Drop', 'Stall Out', 'Block', 'Defence', 'Opponent Point'].includes(s.stat_type)) {
+            nextGameplayStat = s;
+            break;
+          }
+        }
+        
         let isCompleted = true;
-        let isAssist = false;
-
-        if (
-          nextStat &&
-          nextStat.game_name === stat.game_name &&
-          nextStat.point_number === stat.point_number
-        ) {
-          if (nextStat.stat_type === 'Drop') {
+        if (nextGameplayStat && nextGameplayStat.team_id === stat.team_id) {
+          if (nextGameplayStat.stat_type === 'Drop') {
             isCompleted = false;
-          } else if (nextStat.stat_type === 'Point') {
-            isAssist = true;
           }
         }
 
         if (isCompleted) {
           p.completions += 1;
-        }
-        if (isAssist) {
-          p.assists += 1;
         }
 
       } else if (stat.stat_type === 'Pass Attempt') {
