@@ -700,7 +700,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                   </button>
                   );
                 })}
-                {currentOD === 'O' && isTrackingActive && (
+                {isTrackingActive && (
                   <button
                     onClick={() => {
                       const activeHolder = possessionChain.length > 0 ? possessionChain[possessionChain.length - 1] : null;
@@ -710,13 +710,16 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                         setHuckThrowerName(activeHolder);
                       }
                     }}
+                    disabled={possessionChain.length === 0}
                     className={`relative flex flex-col items-center justify-center rounded-xl p-1 sm:p-2 h-[95px] sm:h-24 min-w-0 overflow-hidden transition-all border ${
-                      isHuckPending
-                        ? 'bg-rose-600 border-rose-400 text-white shadow-lg shadow-rose-500/30 animate-pulse font-black'
-                        : 'bg-rose-950/20 border-rose-500/30 text-rose-400 hover:bg-rose-900/20'
+                      possessionChain.length === 0
+                        ? 'opacity-40 bg-slate-950 border-slate-900 text-slate-600 cursor-not-allowed'
+                        : isHuckPending
+                          ? 'bg-rose-600 border-rose-400 text-white shadow-lg shadow-rose-500/30 animate-pulse font-black'
+                          : 'bg-rose-950/20 border-rose-500/30 text-rose-400 hover:bg-rose-900/20'
                     }`}
                   >
-                    <Star className={`w-6 h-6 mb-1 ${isHuckPending ? 'fill-white' : 'fill-transparent'}`} />
+                    <Star className={`w-6 h-6 mb-1 ${isHuckPending && possessionChain.length > 0 ? 'fill-white' : 'fill-transparent'}`} />
                     <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Huck</span>
                   </button>
                 )}

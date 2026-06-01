@@ -1258,25 +1258,26 @@ const TournamentScorer = ({ seat, onBack }) => {
                         </button>
                       );
                     })}
-                    {possessionTeam === 'Home' && (
-                      <button
-                        onClick={() => {
-                          if (huckThrowerId) {
-                            setHuckThrowerId(null);
-                          } else if (activePossessionPlayer) {
-                            setHuckThrowerId(activePossessionPlayer.id);
-                          }
-                        }}
-                        className={`p-4 border rounded-2xl text-center text-xs uppercase font-black tracking-wider transition-all flex flex-col items-center justify-center h-20 relative ${
-                          isHuckPending
+                    <button
+                      onClick={() => {
+                        if (huckThrowerId) {
+                          setHuckThrowerId(null);
+                        } else if (activePossessionPlayer) {
+                          setHuckThrowerId(activePossessionPlayer.id);
+                        }
+                      }}
+                      disabled={possessionTeam !== 'Home' || !activePossessionPlayer}
+                      className={`p-4 border rounded-2xl text-center text-xs uppercase font-black tracking-wider transition-all flex flex-col items-center justify-center h-20 relative ${
+                        possessionTeam !== 'Home' || !activePossessionPlayer
+                          ? 'opacity-40 bg-slate-950 border-slate-900 text-slate-600 cursor-not-allowed'
+                          : isHuckPending
                             ? 'bg-rose-600 border-rose-450 text-white shadow-lg shadow-rose-500/30 font-black animate-pulse'
                             : 'bg-rose-950/20 border-rose-500/30 text-rose-400 hover:bg-rose-900/20'
-                        }`}
-                      >
-                        <Star className={`w-5 h-5 mb-1 ${isHuckPending ? 'fill-white' : 'fill-transparent'}`} />
-                        <span>Huck</span>
-                      </button>
-                    )}
+                      }`}
+                    >
+                      <Star className={`w-5 h-5 mb-1 ${isHuckPending && possessionTeam === 'Home' ? 'fill-white' : 'fill-transparent'}`} />
+                      <span>Huck</span>
+                    </button>
                   </div>
                 </div>
 
@@ -1355,25 +1356,26 @@ const TournamentScorer = ({ seat, onBack }) => {
                         </button>
                       );
                     })}
-                    {possessionTeam === 'Away' && (
-                      <button
-                        onClick={() => {
-                          if (huckThrowerId) {
-                            setHuckThrowerId(null);
-                          } else if (activePossessionPlayer) {
-                            setHuckThrowerId(activePossessionPlayer.id);
-                          }
-                        }}
-                        className={`p-4 border rounded-2xl text-center text-xs uppercase font-black tracking-wider transition-all flex flex-col items-center justify-center h-20 relative ${
-                          isHuckPending
+                    <button
+                      onClick={() => {
+                        if (huckThrowerId) {
+                          setHuckThrowerId(null);
+                        } else if (activePossessionPlayer) {
+                          setHuckThrowerId(activePossessionPlayer.id);
+                        }
+                      }}
+                      disabled={possessionTeam !== 'Away' || !activePossessionPlayer}
+                      className={`p-4 border rounded-2xl text-center text-xs uppercase font-black tracking-wider transition-all flex flex-col items-center justify-center h-20 relative ${
+                        possessionTeam !== 'Away' || !activePossessionPlayer
+                          ? 'opacity-40 bg-slate-950 border-slate-900 text-slate-600 cursor-not-allowed'
+                          : isHuckPending
                             ? 'bg-rose-600 border-rose-450 text-white shadow-lg shadow-rose-500/30 font-black animate-pulse'
                             : 'bg-rose-950/20 border-rose-500/30 text-rose-400 hover:bg-rose-900/20'
-                        }`}
-                      >
-                        <Star className={`w-5 h-5 mb-1 ${isHuckPending ? 'fill-white' : 'fill-transparent'}`} />
-                        <span>Huck</span>
-                      </button>
-                    )}
+                      }`}
+                    >
+                      <Star className={`w-5 h-5 mb-1 ${isHuckPending && possessionTeam === 'Away' ? 'fill-white' : 'fill-transparent'}`} />
+                      <span>Huck</span>
+                    </button>
                   </div>
                 </div>
 
