@@ -626,6 +626,9 @@ const TournamentScorer = ({ seat, onBack }) => {
       }
 
       const isHuck = throwerIdOfAction && throwerIdOfAction === huckThrowerId;
+      if (isHuck) {
+        setHuckThrowerId(null);
+      }
       const huckDetails = isHuck ? { is_huck: true } : {};
 
       // Execute stats logging sequential inserts
@@ -660,6 +663,7 @@ const TournamentScorer = ({ seat, onBack }) => {
         setPossessionChain([]);
         setHomeLineup([]);
         setAwayLineup([]);
+        setHuckThrowerId(null);
         // Scored, now pull on defense
         setPossessionTeam(possessionTeam === 'Home' ? 'Away' : 'Home');
 
@@ -674,6 +678,7 @@ const TournamentScorer = ({ seat, onBack }) => {
         await addStatToLocalPoint(matchKey, pointNumber, dropPayload);
 
         playBuzz(); // Audio feedback for turnover
+        setHuckThrowerId(null);
         setTimeout(() => {
           const nextTeam = possessionTeam === 'Home' ? 'Away' : 'Home';
           setPossessionTeam(nextTeam);
@@ -692,6 +697,7 @@ const TournamentScorer = ({ seat, onBack }) => {
         await addStatToLocalPoint(matchKey, pointNumber, turnoverPayload);
 
         playBuzz(); // Audio feedback for turnover
+        setHuckThrowerId(null);
         setTimeout(() => {
           const nextTeam = possessionTeam === 'Home' ? 'Away' : 'Home';
           setPossessionTeam(nextTeam);
@@ -704,6 +710,7 @@ const TournamentScorer = ({ seat, onBack }) => {
         await addStatToLocalPoint(matchKey, pointNumber, defensePayload);
 
         playChime(); // Audio feedback for defensive block
+        setHuckThrowerId(null);
         const nextTeam = possessionTeam === 'Home' ? 'Away' : 'Home';
         setPossessionTeam(nextTeam);
         setActiveTab(nextTeam);
@@ -726,7 +733,6 @@ const TournamentScorer = ({ seat, onBack }) => {
       setError('Failed to log stats event.');
     } finally {
       setProcessing(false);
-      setHuckThrowerId(null);
     }
   };
 

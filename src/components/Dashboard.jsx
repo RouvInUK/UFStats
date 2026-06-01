@@ -177,6 +177,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         }
         setPossessionChain([]);
         setCallahanModeFor(null);
+        setHuckThrowerName(null);
         playBuzz();
       } else if (statType === 'Point') {
         let pendingPasser = null;
@@ -193,6 +194,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         
         setPossessionChain([]);
         setCallahanModeFor(null);
+        setHuckThrowerName(null);
         playChime();
       } else if (statType === 'Pass') {
         statsToSave.push({ ...baseStat, player: activePlayer, stat: 'Pass', details: detailsOverride });
@@ -217,6 +219,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         statsToSave.push({ ...baseStat, player: activePlayer, stat: statType, details: isHuck ? { is_huck: true } : null });
         setPossessionChain([]);
         setCallahanModeFor(null);
+        setHuckThrowerName(null);
         playBuzz();
       } else if (statType === 'Opponent Turnover') {
         statsToSave.push({ ...baseStat, player: 'Opponent', stat: 'Opponent Turnover' });
@@ -224,6 +227,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       } else if (statType === 'Defence') {
         statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
         setPossessionChain([]);
+        setHuckThrowerName(null);
         playChime();
       } else {
         statsToSave.push({ ...baseStat, player: activePlayer, stat: statType });
@@ -274,7 +278,6 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       alert('Failed to save. Check server logs.');
     } finally {
       setIsSaving(false);
-      setHuckThrowerName(null);
     }
   };
 
