@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Zap, Battery, WifiOff, Smartphone, BarChart3, Wind, CloudUpload, Dumbbell, Users, ChevronRight, Menu, X, ArrowRight, Lock, Mic, Check, Star } from 'lucide-react';
+import { Zap, Battery, WifiOff, Smartphone, BarChart3, Wind, CloudUpload, Dumbbell, Users, ChevronRight, Menu, X, ArrowRight, Lock, Mic, Check, Star, Trophy } from 'lucide-react';
 import StandardFooter from './StandardFooter';
 
 const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
@@ -314,9 +314,17 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <ComingSoonCard
-              icon={<Mic className="w-7 h-7" />}
-              title="Voice Pro"
-              description="Eyes on the disc, not the device. Voice Pro will leverage offline AI to track every pass, D, and goal using simple voice commands — no screen interaction required."
+              icon={<Trophy className="w-7 h-7" />}
+              title="Tournament Mode"
+              description={
+                <>
+                  Organize leagues, schedule pitches, assign volunteer scorers, and compile live bracket recaps. If you are interested in trying our advanced multi-pitch tournament operations suite, contact us at{' '}
+                  <a href="mailto:info@ustats.pro" className="text-indigo-400 hover:text-indigo-300 font-bold underline transition-colors">
+                    info@ustats.pro
+                  </a>{' '}
+                  for early pilot access.
+                </>
+              }
             />
             <ComingSoonCard
               icon={<Dumbbell className="w-7 h-7" />}
