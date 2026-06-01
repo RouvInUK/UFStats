@@ -201,9 +201,14 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         playClick();
       } else if (['Drop', 'Throwaway', 'Stall Out'].includes(statType)) {
         let throwerNameOfAction = null;
-        if (currentChain.length > 1) {
-          throwerNameOfAction = currentChain[currentChain.length - 2];
+        if (statType === 'Drop') {
+          if (currentChain.length > 1) {
+            throwerNameOfAction = currentChain[currentChain.length - 2];
+          } else {
+            throwerNameOfAction = activePlayer;
+          }
         } else {
+          // For Throwaway or Stall Out, the active player who had the disc is the thrower who committed the turnover
           throwerNameOfAction = activePlayer;
         }
         const isHuck = throwerNameOfAction && throwerNameOfAction === huckThrowerName;

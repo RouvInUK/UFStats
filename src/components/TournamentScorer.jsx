@@ -616,13 +616,16 @@ const TournamentScorer = ({ seat, onBack }) => {
         const pendingPasser = activePlayer && currentChain.length > 1 && currentChain[currentChain.length - 1].id === activePlayer.id
           ? currentChain[currentChain.length - 2] : null;
         throwerIdOfAction = pendingPasser?.id;
-      } else if (['Drop', 'Throwaway', 'Stall Out'].includes(actionType)) {
+      } else if (actionType === 'Drop') {
         if (activePlayer && currentChain.length > 1 && currentChain[currentChain.length - 1].id === activePlayer.id) {
           const thrower = currentChain[currentChain.length - 2];
           throwerIdOfAction = thrower?.id;
         } else {
           throwerIdOfAction = activePlayer?.id;
         }
+      } else if (['Throwaway', 'Stall Out'].includes(actionType)) {
+        // For Throwaway or Stall Out, the active player who had the disc is the thrower who committed the turnover
+        throwerIdOfAction = activePlayer?.id;
       }
 
       const isHuck = throwerIdOfAction && throwerIdOfAction === huckThrowerId;
