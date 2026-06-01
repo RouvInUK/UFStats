@@ -39,8 +39,9 @@ When starting a new match or after every point, you are taken to the Lineup Sele
 - **Match Setup:** Enter the Match Identifier (e.g., "Pool Play Game 1"), Opponent Name, Game Format (Grass, Beach, Indoor, Training), and Starting Possession.
 - **Player Selection:** Tap players from your roster to bring them "On Pitch". 
 - **Start Point:** Once your lineup matches the required format size (7 for Grass, 5 for Beach), tap "START POINT" to enter the live dashboard.
-- **Mid-Point Subs:** If a player is injured or swaps out mid-point, tap **Sub** in the footer. You can adjust the lineup without starting a new point.
+- **Mid-Point Subs:** If a player is injured or swaps out mid-point, tap **Substitute** in the dashboard footer. You can adjust the lineup on the lineup screen. To prevent accidental point starts during substitutions, the **Start Point** button is disabled and styled gray (`"Point in Progress"`), accompanied by a gold warning banner instructing you to adjust players and tap **Track 🎯** in the bottom navigation to safely resume active tracking.
 - **Undo Point:** Accidentally scored a point incorrectly? Use the **Undo** button in the Lineup Selector to erase the last point completely and restore the previous state.
+- **Dynamic Score-to-Point Syncing:** To prevent manual point increment mistakes, the active point counter `Point {currentPoint}` is now mathematically derived on-the-fly from the actual recorded score events in the database (totaling completed `Point` and `Opponent Point` events). If point tracking is active, the point being played is strictly locked to `completedPoints + 1`. If tracking is inactive, the completed point count is strictly locked to `completedPoints`.
 
 ### 3.3 The Pull Tracker
 If you are starting a point on **Defense**, the app will automatically prompt you to track the Pull.
@@ -104,7 +105,7 @@ Actions are tracked on the Live Tracker (Dashboard) with extremely simple tap in
 *   **Logging Defense & Blocks**
     When a player generates a block or forces a turnover, tap the defender's card, then tap the blue **Defence** button. This records a defensive block, resets the possession chain, and flips the live scoreboard state to **O (Offense)** since your team now has the disc.
 *   **Logging Hucks (Deep Shots)**
-    A "Huck" is a high-yardage, deep shot. To track a huck, **double-tap** the player or action button (e.g., double-tap a player's card to record a huck catch/throw, or double-tap the *Drop* or *Incomplete* buttons to log a huck turnover). The app upgrades the logged action to a Huck and awards specialized weighting in the NIS.
+    A "Huck" is a high-yardage, deep shot. To track a huck, tap the dedicated **Huck** (star icon, red) button rendered at the end of the lineup grid. When active, it pulses red to indicate a huck is pending. Then tap the receiver player to record a completed huck pass, or tap one of the turnover buttons (e.g. Drop, Incomplete) to record an incomplete huck. This dedicated button completely removes the previous double-tap delay, enabling zero-input scorer latency.
 
 ---
 

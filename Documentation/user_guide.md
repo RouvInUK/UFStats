@@ -36,8 +36,13 @@ Once the wizard finishes you land on the **Dashboard** for the newly created tea
 
 ### 2.2 Teams
 - **Add a team** → Inside a club → *Add Team*.
-- **Rename / Delete** → Hover over the team name in the sidebar to reveal edit/delete icons.
-- **Cascade Delete** – deleting a team automatically removes:
+- **Rename Team** → Hover over the team name in the sidebar to reveal the edit icon.
+- **Delete Team (SaaS-Grade Danger Zone)** → To prevent accidental deletions on the primary team selection page, all trash bin icons have been completely removed from list views. To delete a team:
+  1. Select the team and open the **Settings** (gear icon) menu.
+  2. Navigate to the **Danger Zone** section at the bottom.
+  3. Click **Delete Team**, then type the validation confirmation string exactly: `DELETE "[Team Name]"` (including quotes and matching case).
+  4. Click **Confirm** to authorize the permanent deletion.
+- **Cascade Delete** – deleting a team automatically and permanently removes:
   - Players linked to the team
   - All recorded stats and points
   - Managed line templates attached to the team
@@ -126,7 +131,7 @@ You can press **OK** to proceed or **Cancel** to adjust the line.
 
 > **Note:** We removed the previous auto‑start feature. After confirming the line, you **must press the “Start Point” button** manually.
 
-### 5.3 Starting a Point
+### 5.3 Starting a Point & Safeguards
 1. Ensure **Match Name** (field at top) is filled.
 2. For a non‑training game, fill **Opponent Name** and set **Starting Possession** (O/D).
 3. Press **Start Point**.
@@ -134,7 +139,19 @@ You can press **OK** to proceed or **Cancel** to adjust the line.
    - Clears any previously active lineup in Supabase (`clearActiveLineup`).
    - Records the new lineup (`recordLineup`).
    - Emits **audio** and, if enabled, **haptic** feedback.
-   - Increments the point counter.
+   - Sets the active point tracking session to true (`isTrackingActive`).
+
+#### ⚠️ Point in Progress Safeguard (Substitution Mode)
+If point tracking is currently active and you select **Substitute** inside the dashboard to swap active players mid-game:
+- The **"Start Point"** button is automatically disabled and styled gray (`"Point in Progress"`).
+- A premium gold warning banner is displayed instructing you to adjust your active players and then select **Track 🎯** in the bottom navigation bar to safely resume tracking.
+- This prevents accidental starts and duplicate point events in the Supabase database.
+
+#### 🔄 Dynamic Score-to-Point Reactive Syncing
+The active point counter `Point {currentPoint}` is now mathematically derived on-the-fly from the actual recorded score events in the database (totaling completed `Point` and `Opponent Point` events).
+- If point tracking is active, the point being played is strictly locked to `completedPoints + 1`.
+- If tracking is inactive, the completed point count is strictly locked to `completedPoints`.
+This completely prevents manual point increment errors and keeps your active telemetry in perfect sync with the game scoreboard.
 
 ---
 
