@@ -285,7 +285,7 @@ export const fetchAllGameNames = async (teamName) => {
       }
   }
   
-  return [...new Set(allData.map(s => s.game_name))].filter(Boolean);
+  return [...new Set(allData.map(s => s.game_name))].filter(name => name && name !== 'DEBUG_LOG');
 };
 
 export const fetchActiveGames = async (teamName) => {
@@ -355,7 +355,7 @@ export const fetchActiveGames = async (teamName) => {
 
   // Filter out completed matches and return map of name to calculated current Point
   return Object.entries(gameStatus)
-    .filter(([, info]) => !info.isCompleted)
+    .filter(([name, info]) => name !== 'DEBUG_LOG' && !info.isCompleted)
     .map(([name, info]) => ({ 
       name, 
       maxPoint: info.maxPoint
