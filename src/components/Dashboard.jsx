@@ -44,7 +44,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
   const [score, setScore] = useState({ us: 0, them: 0 });
   const [currentOD, setCurrentOD] = useState('O');
   const [liveOpponentName, setLiveOpponentName] = useState('Opponent');
-  const [isHuckPending, setIsHuckPending] = useState(false);
+  const [huckThrowerName, setHuckThrowerName] = useState(null);
+  const isHuckPending = !!huckThrowerName;
 
   useEffect(() => {
     if (!currentGame) return;
@@ -98,12 +99,12 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     if (activeLineup.length === 0) {
       setPossessionChain([]);
       setCallahanModeFor(null);
-      setIsHuckPending(false);
+      setHuckThrowerName(null);
     }
   }, [activeLineup]);
 
   useEffect(() => {
-    setIsHuckPending(false);
+    setHuckThrowerName(null);
   }, [currentOD]);
 
   const handlePlayerSelect = async (playerName) => {
@@ -137,8 +138,8 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       
       if (prev.length >= 2) {
         const playerNMinus2 = prev[prev.length - 2];
-        const isHuck = isHuckPending;
-        if (isHuckPending) setIsHuckPending(false);
+        const isHuck = huckThrowerName && playerNMinus2 === huckThrowerName;
+        if (isHuck) setHuckThrowerName(null);
         // Fire and forget the pass log so the UI doesn't freeze
         handleStatRecord('Pass', playerNMinus2, prev, isHuck ? { is_huck: true } : null);
       }
@@ -185,7 +186,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         }
 
         if (pendingPasser) {
-           const isHuck = isHuckPending;
+           const isHuck = huckThrowerName && pendingPasser === huckThrowerName;
            statsToSave.push({ ...baseStat, player: pendingPasser, stat: 'Pass', details: isHuck ? { is_huck: true } : null });
         }
         statsToSave.push({ ...baseStat, player: activePlayer, stat: 'Point' });
@@ -197,7 +198,13 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         statsToSave.push({ ...baseStat, player: activePlayer, stat: 'Pass', details: detailsOverride });
         playClick();
       } else if (['Drop', 'Throwaway', 'Stall Out'].includes(statType)) {
-        const isHuck = isHuckPending;
+        let throwerNameOfAction = null;
+        if (currentChain.length > 1) {
+          throwerNameOfAction = currentChain[currentChain.length - 2];
+        } else {
+          throwerNameOfAction = activePlayer;
+        }
+        const isHuck = throwerNameOfAction && throwerNameOfAction === huckThrowerName;
 
         if (currentChain.length > 1 && statType === 'Drop') {
           const thrower = currentChain[currentChain.length - 2];
@@ -267,7 +274,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       alert('Failed to save. Check server logs.');
     } finally {
       setIsSaving(false);
-      setIsHuckPending(false);
+      setHuckThrowerName(null);
     }
   };
 
@@ -566,7 +573,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       alert('Failed to undo action.');
     } finally {
       setIsSaving(false);
-      setIsHuckPending(false);
+      setHuckThrowerName(null);
     }
   };
 
@@ -695,7 +702,14 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                 })}
                 {currentOD === 'O' && isTrackingActive && (
                   <button
-                    onClick={() => setIsHuckPending(prev => !prev)}
+                    onClick={() => {
+                      const activeHolder = possessionChain.length > 0 ? possessionChain[possessionChain.length - 1] : null;
+                      if (huckThrowerName) {
+                        setHuckThrowerName(null);
+                      } else if (activeHolder) {
+                        setHuckThrowerName(activeHolder);
+                      }
+                    }}
                     className={`relative flex flex-col items-center justify-center rounded-xl p-1 sm:p-2 h-[95px] sm:h-24 min-w-0 overflow-hidden transition-all border ${
                       isHuckPending
                         ? 'bg-rose-600 border-rose-400 text-white shadow-lg shadow-rose-500/30 animate-pulse font-black'

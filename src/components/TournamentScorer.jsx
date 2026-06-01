@@ -120,7 +120,8 @@ const TournamentScorer = ({ seat, onBack }) => {
     }
   }, [isHalftimeCalled, matchId]);
 
-  const [isHuckPending, setIsHuckPending] = useState(false);
+  const [huckThrowerId, setHuckThrowerId] = useState(null);
+  const isHuckPending = !!huckThrowerId;
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
 
@@ -409,7 +410,7 @@ const TournamentScorer = ({ seat, onBack }) => {
   };
 
   const handleStartPoint = async () => {
-    setIsHuckPending(false);
+    setHuckThrowerId(null);
     if (warningMessage && !ignoreWarning) {
       alert(`Soft Ratio Warning: ${warningMessage} Please select "Ignore Warning" if you have a special lineup arrangement.`);
       return;
@@ -474,7 +475,7 @@ const TournamentScorer = ({ seat, onBack }) => {
   };
 
   const handleHalftime = () => {
-    setIsHuckPending(false);
+    setHuckThrowerId(null);
     const savedFirstOffense = localStorage.getItem(`first_offense_${matchId}`);
     const currentFirstOffense = savedFirstOffense || firstPointOffense || 'Home';
     const nextOffense = currentFirstOffense === 'Home' ? 'Away' : 'Home';
@@ -608,7 +609,23 @@ const TournamentScorer = ({ seat, onBack }) => {
       };
 
       // Check if this action is a huck (deep throw)
-      let isHuck = isHuckPending;
+      let throwerIdOfAction = null;
+      if (actionType === 'Pass') {
+        throwerIdOfAction = player?.id;
+      } else if (actionType === 'Point') {
+        const pendingPasser = activePlayer && currentChain.length > 1 && currentChain[currentChain.length - 1].id === activePlayer.id
+          ? currentChain[currentChain.length - 2] : null;
+        throwerIdOfAction = pendingPasser?.id;
+      } else if (['Drop', 'Throwaway', 'Stall Out'].includes(actionType)) {
+        if (activePlayer && currentChain.length > 1 && currentChain[currentChain.length - 1].id === activePlayer.id) {
+          const thrower = currentChain[currentChain.length - 2];
+          throwerIdOfAction = thrower?.id;
+        } else {
+          throwerIdOfAction = activePlayer?.id;
+        }
+      }
+
+      const isHuck = throwerIdOfAction && throwerIdOfAction === huckThrowerId;
       const huckDetails = isHuck ? { is_huck: true } : {};
 
       // Execute stats logging sequential inserts
@@ -709,7 +726,7 @@ const TournamentScorer = ({ seat, onBack }) => {
       setError('Failed to log stats event.');
     } finally {
       setProcessing(false);
-      setIsHuckPending(false);
+      setHuckThrowerId(null);
     }
   };
 
@@ -755,7 +772,7 @@ const TournamentScorer = ({ seat, onBack }) => {
       setError('Failed to log opponent score.');
     } finally {
       setProcessing(false);
-      setIsHuckPending(false);
+      setHuckThrowerId(null);
     }
   };
 
@@ -843,7 +860,7 @@ const TournamentScorer = ({ seat, onBack }) => {
       setError('Undo process failed.');
     } finally {
       setProcessing(false);
-      setIsHuckPending(false);
+      setHuckThrowerId(null);
     }
   };
 
@@ -1243,7 +1260,13 @@ const TournamentScorer = ({ seat, onBack }) => {
                     })}
                     {possessionTeam === 'Home' && (
                       <button
-                        onClick={() => setIsHuckPending(prev => !prev)}
+                        onClick={() => {
+                          if (huckThrowerId) {
+                            setHuckThrowerId(null);
+                          } else if (activePossessionPlayer) {
+                            setHuckThrowerId(activePossessionPlayer.id);
+                          }
+                        }}
                         className={`p-4 border rounded-2xl text-center text-xs uppercase font-black tracking-wider transition-all flex flex-col items-center justify-center h-20 relative ${
                           isHuckPending
                             ? 'bg-rose-600 border-rose-450 text-white shadow-lg shadow-rose-500/30 font-black animate-pulse'
@@ -1334,7 +1357,13 @@ const TournamentScorer = ({ seat, onBack }) => {
                     })}
                     {possessionTeam === 'Away' && (
                       <button
-                        onClick={() => setIsHuckPending(prev => !prev)}
+                        onClick={() => {
+                          if (huckThrowerId) {
+                            setHuckThrowerId(null);
+                          } else if (activePossessionPlayer) {
+                            setHuckThrowerId(activePossessionPlayer.id);
+                          }
+                        }}
                         className={`p-4 border rounded-2xl text-center text-xs uppercase font-black tracking-wider transition-all flex flex-col items-center justify-center h-20 relative ${
                           isHuckPending
                             ? 'bg-rose-600 border-rose-450 text-white shadow-lg shadow-rose-500/30 font-black animate-pulse'
