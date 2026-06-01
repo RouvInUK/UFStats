@@ -743,26 +743,16 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
            <div className="grid grid-cols-4 gap-2">
               <button
                 onClick={() => handleTap('Drop', () => handleStatRecord('Drop'))}
-                disabled={activeLineup.length === 0 || !isTrackingActive || (possessionChain.length === 0 && doubleTapWindow !== 'Drop') || isVoiceEnabled}
+                disabled={activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
                 className={`relative overflow-hidden ${getActionClass("h-14 sm:h-16 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Drop')}`}
               >
-                {huckTargetId === 'Drop' && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-40 rounded-lg">
-                    <span className="text-3xl filter drop-shadow-md">↗️</span>
-                  </div>
-                )}
                 Drop
               </button>
               <button
                 onClick={() => handleTap('Throwaway', () => handleStatRecord('Throwaway'))}
-                disabled={activeLineup.length === 0 || !isTrackingActive || (possessionChain.length === 0 && doubleTapWindow !== 'Throwaway') || isVoiceEnabled}
+                disabled={activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
                 className={`relative overflow-hidden ${getActionClass("h-14 sm:h-16 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Throwaway')}`}
               >
-                {huckTargetId === 'Throwaway' && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-40 rounded-lg">
-                    <span className="text-3xl filter drop-shadow-md">↗️</span>
-                  </div>
-                )}
                 Incomplete
               </button>
               <button
