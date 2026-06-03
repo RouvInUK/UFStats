@@ -18,6 +18,7 @@ ustats.pro is a modern, offline-capable Single Page Application (SPA) designed t
 3. **Data Model**: Event-sourced tracking. Every action (Pass, Drop, Goal) is recorded as a discrete row in the `stats` table. Analytics are derived by aggregating these discrete events in real-time.
 4. **Passwordless Sideline Telemetry**: To enable sideline volunteer scorers to log game events without creating user accounts, the system provisions unique, 6-digit alphanumeric Pitch Codes (e.g. `P1-A4B`). These pitch codes authorize public writes/updates/deletes dynamically through Supabase Row Level Security (RLS) without exposing high-privilege credentials.
 5. **Turnover-Driven Scoring Pipeline**: Displays a balanced, dual-team neutral scoring console that automatically swaps active recording panels to the opposite team upon an offensive turnover or defensive block event. Includes single-touch Undo state rollbacks to preserve telemetry integrity.
+6. **Roster Match Validation Safeguards**: To prevent accidental tracking of mismatched lineups during competitive official matches, the pre-game match tracking console (`LineupSelector.jsx`) enforces strict active player validation rules. Selection interfaces restrict activating more than the expected format capacity (5 for Beach/Indoor, 7 for Grass) and block starting any point unless the exact roster quota is active on the pitch.
 
 ---
 
@@ -49,6 +50,9 @@ The core source code of the application.
 - **`TournamentScorer.jsx` [NEW]**: Dual-team neutral scorer console implementing turnover-driven focus toggles, lineup ratio audits (Standard Mixed rule alternations vs Light Mixed guidelines), and single-touch Undo state rollbacks.
 - **`TournamentMatchSelector.jsx` [NEW]**: Multi-pitch spectator dashboard showing live schedules, statuses, and scoreboards.
 - **`AiRecapModule.jsx` [NEW]**: Magazine-style match center tab querying the serverless Gemini API to write objective, compelling sports recap articles with client-side localStorage caching.
+- **`TrainingSetupScreen.jsx` [NEW]**: Setup interface for custom and default training drills, player rotation lines, scrimmage matches, and collapsible date-grouped recorded session history logs.
+- **`TrainingScorer.jsx` [NEW]**: Real-time stats logging console for practice drills (rep-by-rep or continuous) and dual-team scrimmage matches (Light vs Dark jerseys side-by-side) with local state serialization and resumption controls.
+- **`DrillStateContext.jsx` [NEW]**: Context provider managing active session states, selected practice drills, and lineup rosters for Trainings Desk.
 - **`legal/`**: Folder containing lazy-loaded legal modules (`PrivacyPolicy.jsx`, `TermsOfService.jsx`, `AiDisclosure.jsx`, and `LegalLayout.jsx`) using Vite code splitting to isolate heavy text assets from the core stats-tracking code. PrivacyPolicy.jsx now includes Section 7 detailing UK GDPR tournament disclosures.
 - **`utils/DuaaExportUtility.js` [NEW]**: Unified telemetry, timeline, and roster stats compiler exporting multi-table CSV reports.
 
@@ -87,12 +91,22 @@ Teams registered under tournaments: team_name, division.
 Match scheduled on pitches: home/away team IDs, score, pitch_number, start_time, status.
 
 ### `tournament_scorer_seats` [NEW]
-Authorized volunteer scorer seats maps matches to active unique `pitch_code` keys.
+Maps matches to active unique `pitch_code` keys.
+
+### `drill_definitions` [NEW]
+Stores team-specific custom and default practice drill definitions.
+- `id` (UUID): Primary key.
+- `team_id` (UUID): Reference to the owner team.
+- `name` (Text): Drill name.
+- `category` (Text): e.g. 'Throwing', 'Cutting', 'Defense'.
+- `metrics` (Array of Text): Custom actions serialized with action mappings (e.g. `"Butterfingers::Drop"`).
+- `flow_type` (Text): 'rep_based' or 'continuous'.
+- `created_by` (UUID): Author profile ID.
 
 ### `stats`
 The immutable ledger of game events.
-- `game_name` (Text): The identifier for the match (e.g. `tournament_match_${matchId}`).
-- `point_number` (Int): The current point of the match.
+- `game_name` (Text): The identifier for the match or training session (e.g. `tournament_match_${matchId}`, `Drill: ${drillName}::${date}`, `Scrimmage: ${name}::${date}`).
+- `point_number` (Int): The current point of the match or practice repetition.
 - `player` (Text): The player who performed the action.
 - `stat_type` (Text): The action (e.g., 'Pass', 'Drop', 'Point', 'Defence').
 - `details` (JSONB): Extended metadata (e.g., `{ isCallahan: true }`, `{ x: 10, y: 20 }`, `{ pitch_code: "P1-A4B" }`).
@@ -145,13 +159,27 @@ To support granular team and unit (Line) diagnostics for the Coach Pro tier with
 
 ---
 
+## Trainings & Scrimmage Scorer (Trainings Desk) Architecture
+
+To support coaching development and team practice logistics without polluting official tournament statistics, the system features a dedicated **Trainings Desk** submodule:
+
+1. **Access Gating**: Access is controlled globally through the `beta_trainings_tier` parameter in the `profiles` table. When enabled by a System Administrator, this unlocks access to the setup hub and scorers.
+2. **State Serialization & Active Match Resumption**: Due to potential interruptions or sideline switches to check dashboards, the `TrainingScorer.jsx` automatically serializes active scrimmage matches on state changes. This is written to `localStorage` under `ufstats_active_scrimmage_state`. Upon mounting, the setup dashboard prompts the coach to resume their active session or discard it.
+3. **Dynamic Metric Mappings for Custom Buttons**: Coaches can build custom drills with arbitrary tracking buttons. To prevent rendering custom metrics as blank fields on standard dashboards, the system uses a mapped action serializer. Metrics are stored as `"Label::Action"` (e.g. `"butterfingers::Drop"`, `"Huck D::Defence"`). The scorer parses this string:
+   - Renders the clean visual label `"butterfingers"` on the button.
+   - Maps actions under-the-hood to standard stats (`stat_type = 'Drop'`), dynamically linking custom actions into the Coach Dashboard metrics suite.
+4. **Drill Games Played & Points Played Accumulation**: To ensure that player participation in drills contributes accurately to their Coach Dashboard performance totals, the Trainings Desk logs a single `Lineup` event containing all players selected in the rotation line under `point_number: 1` upon drill initiation.
+5. **Mobile-Responsive Collapsible Tree Lists**: To eliminate double-scroll list traps on mobile pitch interfaces, both the Drill Library and Recorded Sessions lists utilize collapsible containers displaying elements in native inline grids. Historical logs are aggregated and displayed under expandable calendar days.
+
+---
+
 ## Security & Authorization
 - **Row Level Security (RLS)**: PostgreSQL RLS policies ensure that users can only read, update, and delete data associated with their own `auth.uid()`.
 - **Pitch-Code-Authorized Public RLS Rules**: Restructures RLS policies on the `stats` table to permit public INSERT, UPDATE, and DELETE actions strictly when an active alphanumeric code (`pitch_code`) stored in `details->>'pitch_code'` matches a verified seat assignment in `tournament_scorer_seats`, allowing passwordless sideline scorer entry without compromising database isolation.
-- **Column-Level Tamper Protection**: Implements a PostgreSQL `BEFORE UPDATE` trigger on the `profiles` table. If a non-admin client tries to modify columns like `tier`, `pro_expires_at`, `beta_voice_pro`, `is_system_admin`, or `beta_tournament_tier` directly from client-side JS, the database intercepts the request and automatically reverts those columns to their previously verified database state, completely neutralizing front-end console injections.
+- **Column-Level Tamper Protection**: Implements a PostgreSQL `BEFORE UPDATE` trigger on the `profiles` table. If a non-admin client tries to modify columns like `tier`, `pro_expires_at`, `beta_voice_pro`, `is_system_admin`, `beta_tournament_tier`, or `beta_trainings_tier` directly from client-side JS, the database intercepts the request and automatically reverts those columns to their previously verified database state, completely neutralizing front-end console injections.
 - **Secure Admin User Deletion**: Implements a highly secure `delete_user_by_admin(target_user_id)` database function marked as `SECURITY DEFINER` (running as superuser). The function strictly verifies that the executing caller is a validated global System Administrator in the database before wiping the target record from `auth.users`. Because the schema uses full cascading constraints (`ON DELETE CASCADE`), deleting a user automatically, cleanly, and safely purges all of their profiles, clubs, teams, roster players, and game stats, leaving zero orphan database records.
 - **SaaS-Grade Team Deletion Safety**: Completely disables team deletion actions from the primary selection screens to prevent accidental data purging. Team deletion is secured inside the `SettingsModal` under a distinct "Danger Zone" block, requiring the user to explicitly enter `DELETE "[Team Name]"` in a quote-sensitive validation box. The deletion API remains locked and inactive unless the text box matches the exact case-sensitive string.
-- **Tier Gating**: The frontend checks the Boolean `isProTier` state computed globally to conditionally render the Coach Dashboard or enable Voice Tracking. Tournament desk access is gated securely by checking `profile?.beta_tournament_tier || profile?.is_system_admin`.
+- **Tier Gating**: The frontend checks the Boolean `isProTier` state computed globally to conditionally render the Coach Dashboard or enable Voice Tracking. Tournament desk access is gated securely by checking `profile?.beta_tournament_tier || profile?.is_system_admin`. Trainings Desk access is similarly gated by checking `profile?.beta_trainings_tier || profile?.is_system_admin`.
 - **Session Termination**: Enforced via the 30-second `AuthContext` database heartbeat.
 
 ## Voice Tracking Pipeline
