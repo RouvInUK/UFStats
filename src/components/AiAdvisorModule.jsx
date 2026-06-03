@@ -200,17 +200,17 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame, 
          const engines = [...eligiblePlayers]
             .filter(p => p.reps > 2 && (p.successes / p.reps) >= 0.8)
             .sort((a, b) => b.successes - a.successes)
-            .slice(0, 2);
+            .slice(0, 3);
 
          const finishers = [...eligiblePlayers]
             .filter(p => p.reps > 2)
             .sort((a, b) => b.successes - a.successes)
-            .slice(0, 2);
+            .slice(0, 3);
 
          const differenceMakers = [...eligiblePlayers]
             .filter(p => p.ds > 0)
             .sort((a, b) => b.ds - a.ds)
-            .slice(0, 2);
+            .slice(0, 3);
 
          briefing.archetypes = {
             engine: engines.map(x => ({ name: x.name })),

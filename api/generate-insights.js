@@ -257,6 +257,34 @@ export default async function handler(req, res) {
 
     // 6. Parse and return the JSON bundle
     const parsedResponse = JSON.parse(textResponse.trim());
+
+    // Programmatically enforce the limit of 3 players per archetype in the API response
+    if (parsedResponse.archetypes) {
+      const capToThree = (val) => {
+        if (!val) return val;
+        if (Array.isArray(val)) {
+          return val.slice(0, 3);
+        }
+        if (typeof val === 'string') {
+          const names = val.split(',').map(n => n.trim()).filter(Boolean);
+          if (names.length > 3) {
+            return names.slice(0, 3).join(', ');
+          }
+        }
+        return val;
+      };
+
+      if (parsedResponse.archetypes.engine) {
+        parsedResponse.archetypes.engine = capToThree(parsedResponse.archetypes.engine);
+      }
+      if (parsedResponse.archetypes.finisher) {
+        parsedResponse.archetypes.finisher = capToThree(parsedResponse.archetypes.finisher);
+      }
+      if (parsedResponse.archetypes.differenceMaker) {
+        parsedResponse.archetypes.differenceMaker = capToThree(parsedResponse.archetypes.differenceMaker);
+      }
+    }
+
     return res.status(200).json(parsedResponse);
 
   } catch (error) {
