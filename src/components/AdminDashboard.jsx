@@ -884,6 +884,12 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                               Submitted by: <span className="text-indigo-400 font-extrabold">{drill.teams?.name || 'Unknown Team'}</span>
                             </p>
                             
+                            {drill.description && (
+                              <p className="text-xs text-slate-305 bg-indigo-950/20 border border-indigo-500/10 rounded-xl p-3 mb-4 leading-relaxed">
+                                {drill.description}
+                              </p>
+                            )}
+                            
                             <div className="mb-6 bg-slate-900/60 border border-slate-800 rounded-xl p-4">
                               <div className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2.5">Pre-configured Metrics Grid</div>
                               <div className="grid grid-cols-2 gap-2">

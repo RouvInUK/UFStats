@@ -1200,6 +1200,7 @@ export const insertDrill = async (drillData) => {
       team_id: drillData.teamId,
       created_by: drillData.createdBy,
       name: drillData.name,
+      description: drillData.description,
       category: drillData.category,
       flow_type: drillData.flowType || 'continuous',
       metrics: drillData.metrics,

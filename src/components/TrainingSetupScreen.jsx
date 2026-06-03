@@ -204,6 +204,7 @@ const TrainingSetupScreen = ({ user, players, setPlayers, currentTeam, targetTea
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [scrimmageName, setScrimmageName] = useState('');
   const [newDrillName, setNewDrillName] = useState('');
+  const [newDrillDescription, setNewDrillDescription] = useState('');
   const [newDrillCategory, setNewDrillCategory] = useState('Cutting');
   const [newDrillFlowType, setNewDrillFlowType] = useState('continuous');
   const [newDrillMetrics, setNewDrillMetrics] = useState(['', '', '', '']);
@@ -299,6 +300,7 @@ const TrainingSetupScreen = ({ user, players, setPlayers, currentTeam, targetTea
   const handleCreateDrillSubmit = async (e) => {
     e.preventDefault();
     if (!newDrillName.trim()) return alert("Enter drill name.");
+    if (!newDrillDescription.trim()) return alert("Enter drill description.");
     
     const cleanedMetrics = newDrillMetrics
       .map((m, idx) => {
@@ -317,6 +319,7 @@ const TrainingSetupScreen = ({ user, players, setPlayers, currentTeam, targetTea
     try {
       const res = await createCustomDrill({
         name: newDrillName,
+        description: newDrillDescription,
         category: newDrillCategory,
         flowType: newDrillFlowType,
         metrics: cleanedMetrics,
@@ -326,6 +329,7 @@ const TrainingSetupScreen = ({ user, players, setPlayers, currentTeam, targetTea
         alert("Custom drill registered successfully!");
         setShowCreateModal(false);
         setNewDrillName('');
+        setNewDrillDescription('');
         setNewDrillMetrics(['', '', '', '']);
         setNewDrillActions(['Custom', 'Custom', 'Custom', 'Custom']);
       } else {
@@ -557,6 +561,11 @@ const TrainingSetupScreen = ({ user, players, setPlayers, currentTeam, targetTea
                               </span>
                             </div>
                             <h4 className="text-base font-extrabold text-white">{drill.name}</h4>
+                            {drill.description && (
+                              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                                {drill.description}
+                              </p>
+                            )}
                           </div>
                           
                           <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between gap-2">
@@ -920,6 +929,17 @@ const TrainingSetupScreen = ({ user, players, setPlayers, currentTeam, targetTea
                 />
               </div>
 
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Description</label>
+                <textarea
+                  required
+                  placeholder="e.g. 3-player continuous flow upfield with quick transitions and short passes"
+                  value={newDrillDescription}
+                  onChange={(e) => setNewDrillDescription(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-indigo-500/50 h-20 resize-none"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Category</label>
@@ -932,6 +952,7 @@ const TrainingSetupScreen = ({ user, players, setPlayers, currentTeam, targetTea
                     <option value="Timing">Timing</option>
                     <option value="Field Awareness">Field Awareness</option>
                     <option value="Conditioning">Conditioning</option>
+                    <option value="Special Teams">Special Teams</option>
                   </select>
                 </div>
                 <div>

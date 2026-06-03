@@ -28,6 +28,7 @@ import TournamentMatchSelector from './components/TournamentMatchSelector';
 import TournamentScorer from './components/TournamentScorer';
 import TrainingSetupScreen from './components/TrainingSetupScreen';
 import TrainingScorer from './components/TrainingScorer';
+import { DrillStateProvider } from './contexts/DrillStateContext';
 import AiRecapModule from './components/AiRecapModule';
 import { ShieldCheck, Star, LogOut, Cloud, CloudOff, CloudUpload, Crown, Settings, AlertTriangle, Dumbbell } from 'lucide-react';
 import { getPendingSyncCount } from './SyncEngine';
@@ -600,7 +601,8 @@ function App() {
   const isTrial = !shadowTeam && !!(profile?.pro_expires_at && new Date(profile.pro_expires_at) - new Date(profile.created_at || Date.now()) <= 8 * 24 * 60 * 60 * 1000);
 
   return (
-    <div onClick={unlockAudio} onTouchStart={unlockAudio} className="min-h-screen bg-slate-900 selection:bg-indigo-500 selection:text-white pb-24">
+    <DrillStateProvider teamId={targetTeamId}>
+      <div onClick={unlockAudio} onTouchStart={unlockAudio} className="min-h-screen bg-slate-900 selection:bg-indigo-500 selection:text-white pb-24">
       {shadowTeam && (
         <div className="bg-amber-500 text-amber-950 font-black tracking-widest text-xs py-2 px-4 flex justify-center items-center gap-4 z-50 sticky top-0 shadow-md">
            <span>IMPERSONATING: {shadowTeam.name}</span>
@@ -1011,7 +1013,8 @@ function App() {
         isOpen={isUpgradeOpen}
         onClose={() => setIsUpgradeOpen(false)}
       />
-    </div>
+      </div>
+    </DrillStateProvider>
   );
 }
 
