@@ -1289,7 +1289,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                   <Lock className="w-5 h-5 text-amber-400" /> Stats Analytics Suite
                 </h3>
                 {/* Sub-tab toggles */}
-                <div className="flex bg-slate-950 p-1 rounded-xl border border-white/5">
+                <div className="flex bg-slate-950 p-1 rounded-xl border border-white/5 print:hidden">
                   <button
                     onClick={() => setActiveSubTab('players')}
                     className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeSubTab === 'players' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
@@ -1306,18 +1306,17 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
               </div>
               
               {activeSubTab === 'players' ? (
-                <span className="text-xs bg-slate-950 border border-slate-800 px-3 py-1 rounded-lg text-slate-500 font-medium">
+                <span className="text-xs bg-slate-950 border border-slate-800 px-3 py-1 rounded-lg text-slate-500 font-medium print:hidden">
                   Click column headers to sort
                 </span>
               ) : (
-                <span className="text-xs bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-lg text-indigo-400 font-bold uppercase tracking-wider">
+                <span className="text-xs bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-lg text-indigo-400 font-bold uppercase tracking-wider print:hidden">
                   Coach Pro Feature
                 </span>
               )}
             </div>
 
-            {activeSubTab === 'players' ? (
-              <div className="overflow-x-auto print:overflow-visible w-full">
+            <div className={`overflow-x-auto print:overflow-visible w-full ${activeSubTab === 'players' ? 'block' : 'hidden print:block'}`}>
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-950/80 text-slate-400 text-[10px] uppercase tracking-widest cursor-pointer select-none">
@@ -1483,8 +1482,13 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                 </tbody>
               </table>
             </div>
-            ) : (
-              <div className="flex flex-col w-full">
+
+            <div className={`flex flex-col w-full ${activeSubTab === 'team-lines' ? 'flex' : 'hidden print:flex'}`}>
+              <div className="hidden print:block p-6 border-b border-white/10 bg-slate-950/40">
+                <h4 className="text-base font-black text-white uppercase tracking-widest flex items-center gap-2">
+                  <Users className="w-4 h-4 text-indigo-400" /> Team & Line-Level Stats
+                </h4>
+              </div>
                 
                 {/* Team Overview Widgets Grid */}
                 <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 border-b border-white/10 bg-slate-950/40">
@@ -1610,8 +1614,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                 </div>
 
               </div>
-            )}
-          </div>
+            </div>
 
         </div>
       )}
