@@ -257,6 +257,7 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame, 
          playerDict[p.name] = {
             name: p.name,
             pointsPlayed: p.pp || p.pointsPlayed || 0,
+            gamesPlayed: p.gamesPlayed || 0,
             touches: 0,
             completions: 0,
             goals: 0,
@@ -381,7 +382,12 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame, 
          p1 += `Our Pass-to-Score ratio sits at **${passToScoreRatio.toFixed(1)}**, indicating a healthy balance of patience and decisive attacking motion. `;
       }
 
-      if (oHuckAttempts > 0) {
+      const totalTeamPassAttempts = playerStats.reduce((sum, p) => sum + (p.passAttempts || 0), 0);
+      const totalTeamHuckAttempts = oHuckAttempts + dHuckAttempts;
+      const teamHuckRate = totalTeamPassAttempts > 0 ? (totalTeamHuckAttempts / totalTeamPassAttempts) * 100 : 0;
+      const reflectHucks = teamHuckRate >= 2.0;
+
+      if (reflectHucks && oHuckAttempts > 0) {
          p1 += `Our set offense is launching deep with a **${oHuckIntegrityPct.toFixed(0)}% Huck Integrity** (${oHuckCompletions}/${oHuckAttempts}). `;
          if (oHuckIntegrityPct < 50) p1 += `We are turning the disc over on low-percentage deep looks. `;
       }
@@ -398,26 +404,25 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame, 
          p2 += `We haven't recorded any defensive points yet. `;
       }
 
-      if (dHuckAttempts > 0) {
+      if (reflectHucks && dHuckAttempts > 0) {
          p2 += `Looking at our transition offense, our Huck Integrity is at **${dHuckIntegrityPct.toFixed(0)}%** (${dHuckCompletions}/${dHuckAttempts}). `;
          if (dHuckIntegrityPct >= 50) {
             p2 += `We are taking calculated deep shots and stretching the field responsibly after generating a turn.`;
          } else {
             p2 += `We are forcing low-percentage deep looks after securing the disc instead of establishing the offense.`;
          }
-      } else if (dPointsPlayed > 0) {
+      } else if (dPointsPlayed > 0 && reflectHucks) {
          p2 += `We haven't recorded any transition deep shots yet. The D-unit is keeping everything underneath after generating a turn.`;
       }
       briefing.para2 = p2;
 
       let p3 = `**Tactical Recommendation:** `;
-      const totalHuckAttempts = oHuckAttempts + dHuckAttempts;
       const totalHuckCompletions = oHuckCompletions + dHuckCompletions;
-      const totalHuckIntegrity = totalHuckAttempts > 0 ? (totalHuckCompletions / totalHuckAttempts) * 100 : 0;
+      const totalHuckIntegrity = totalTeamHuckAttempts > 0 ? (totalHuckCompletions / totalTeamHuckAttempts) * 100 : 0;
 
       if (cleanHoldRate < 40 && oPointsPlayed > 0) {
          p3 += `**Protect the disc.** The Active Unit must prioritize possession over progression. Look to the break-side handler immediately if the primary cut isn't open by stall 3. Do not force the disc into tight windows.`;
-      } else if (totalHuckAttempts > 0 && totalHuckIntegrity < 40) {
+      } else if (reflectHucks && totalTeamHuckAttempts > 0 && totalHuckIntegrity < 40) {
          p3 += `**Holster the deep ball.** We are turning the disc over on forced hucks. I want the deep look held strictly as a decoy. Establish the dump-swing rhythm first, and only take the deep shot if it's a clear 1-on-1 mismatch.`;
       } else if (passToScoreRatio > 7) {
          p3 += `**Pace the offense.** We are working extremely hard for every point. Call strategic timeouts to preserve legs, and look for isolation plays to generate larger chunks of yardage.`;
@@ -428,11 +433,22 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame, 
       }
       briefing.para3 = p3;
 
-      const minPointsReq = Math.max(1, Math.ceil((oPointsPlayed + dPointsPlayed) * 0.25));
-      const eligiblePlayers = Object.values(playerDict).filter(p => p.pointsPlayed >= minPointsReq);
+      const uniqueGames = rawStats && rawStats.length > 0 
+        ? Array.from(new Set(rawStats.map(s => s.game_name))).filter(Boolean) 
+        : [];
+      const totalGamesCount = Math.max(1, uniqueGames.length);
 
+      const minPointsReq = Math.max(1, Math.ceil((oPointsPlayed + dPointsPlayed) * 0.25));
+      
+      // Enforce: Player must have played in at least 50% of the total matches played by the team
+      const eligiblePlayers = Object.values(playerDict).filter(p => 
+        p.pointsPlayed >= minPointsReq && 
+        p.gamesPlayed >= totalGamesCount * 0.5
+      );
+
+      // Enforce: touches per point >= 1.2
       const engines = [...eligiblePlayers]
-          .filter(p => p.touches > 5 && (p.completions / p.touches) > 0.90)
+          .filter(p => p.touches > 5 && (p.touches / p.pointsPlayed) >= 1.2 && (p.completions / p.touches) > 0.90)
           .sort((a, b) => (b.touches / b.pointsPlayed) - (a.touches / a.pointsPlayed))
           .slice(0, 3);
 
@@ -441,9 +457,14 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame, 
           .sort((a, b) => (b.goals / Math.max(1, b.touches)) - (a.goals / Math.max(1, a.touches)))
           .slice(0, 3);
 
+      // Enforce Difference Maker formula: (Goals + Assists + Secondary Assists + Defence + Huck Completions) - Turnovers
       const differenceMakers = [...eligiblePlayers]
-          .filter(p => (p.ds + p.huckCompletions + p.assists + p.secondaryAssists) >= 2)
-          .sort((a, b) => ((b.ds + b.huckCompletions + b.assists + b.secondaryAssists) / b.pointsPlayed) - ((a.ds + a.huckCompletions + a.assists + a.secondaryAssists) / a.pointsPlayed))
+          .map(p => ({
+             ...p,
+             netPlaymaking: (p.goals + p.assists + p.secondaryAssists + p.ds + p.huckCompletions) - p.turnovers
+          }))
+          .filter(p => p.netPlaymaking > 0)
+          .sort((a, b) => (b.netPlaymaking / b.pointsPlayed) - (a.netPlaymaking / a.pointsPlayed))
           .slice(0, 3);
 
       let focusArray = [];

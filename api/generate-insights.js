@@ -34,14 +34,25 @@ export default async function handler(req, res) {
     const genAI = new GoogleGenerativeAI(resolvedApiKey);
     const { playerStats, rawStats, gameType, score, isMultiGame, teamStats } = req.body;
 
+    // Calculate total matches logged dynamically
+    const uniqueGames = rawStats && rawStats.length > 0 
+      ? Array.from(new Set(rawStats.map(s => s.game_name))).filter(Boolean) 
+      : [];
+    const totalGamesCount = Math.max(1, uniqueGames.length);
+
     // 2. Aggregate and truncate data to fit the context
     const cleanPlayerStats = playerStats ? playerStats.map(p => ({
       name: p.name,
       goals: p.goals || 0,
       assists: p.assists || 0,
-      ds: p.ds || 0,
+      secondaryAssists: p.secondaryAssists || 0,
+      ds: p.ds !== undefined ? p.ds : (p.blocks || 0),
       turnovers: p.turnovers || 0,
-      pointsPlayed: p.pp || p.pointsPlayed || 0
+      pointsPlayed: p.pp || p.pointsPlayed || 0,
+      gamesPlayed: p.gamesPlayed || 0,
+      touchesPerPoint: p.touchesPerPoint || 0,
+      passAttempts: p.passAttempts || 0,
+      completions: p.passes || 0
     })) : [];
 
     const cleanRawStats = rawStats ? rawStats.slice(-150).map(s => ({
@@ -160,6 +171,7 @@ export default async function handler(req, res) {
     const teamStateSummary = `
       Match Format: ${gameType || 'grass'}
       Match Scope: ${isMultiGame ? 'Multiple Games (Aggregated Tournament Data)' : 'Single Game'}
+      Total Matches Logged: ${totalGamesCount}
       Current Score: Us ${score?.us || 0} - Them ${score?.them || 0}
       Advanced Match Metrics (Calculated): ${JSON.stringify(advancedMetricsSummary)}
       Roster Performance Summary: ${JSON.stringify(cleanPlayerStats)}
@@ -169,6 +181,12 @@ export default async function handler(req, res) {
     const prompt = `
       System Instruction: You are 'Antigravity Coach Pro', an elite, highly analytical, and motivational Ultimate Frisbee coach. 
       Deliver technical, encouraging huddle briefings and diagnostic suggestions. 
+      
+      CRITICAL THRESHOLDS & ARITHMETIC RULES FOR ARCHETYPES AND BRIEFINGS:
+      1. Huck/Deep Throw rule: If the team's total huck attempts (offensiveHuckIntegrity and defensiveHuckIntegrity sources combined) are under 2% of the team's total throw attempts (which is the sum of passAttempts of all players in the Roster Performance Summary), you are STRICTLY PROHIBITED from mentioning hucks, deep throws, or huck success rates anywhere in the briefings (offensiveBriefing, defensiveBriefing, tacticalBriefing).
+      2. The Engine rule: A player CANNOT be designated as "The Engine" if their touchesPerPoint is less than 1.2.
+      3. The Difference Maker rule: When evaluating a player for "The Difference Maker", you must calculate their Net Playmaking score as: (goals + assists + secondaryAssists + ds) - turnovers. Only choose players with a positive Net Playmaking score.
+      4. Games Played eligibility: A player is ELIGIBLE for any archetype (engine, finisher, differenceMaker) or diagnostic suggestion in "focusAreas" ONLY if they played in at least 50% of the total matches played by the team (Total Matches Logged = ${totalGamesCount}). Filter out players with gamesPlayed < (0.5 * ${totalGamesCount}).
       
       CRITICAL INSTRUCTION: You MUST naturally and explicitly weave the calculated "Advanced Match Metrics" (like Clean Hold Rate, Break Rate, Pass-to-Score ratio, and Huck Integrity) into your narratives. Do not just list them; incorporate them into your sentences to back up your coaching insights with hard numeric proof. 
       Example: "Our offense is running clinical patterns with a clinical 3.2 Pass-to-Score ratio and a 75% Clean Hold Rate..." or "Our transition unit has been ruthless, converting at a 50% Break Rate..."
