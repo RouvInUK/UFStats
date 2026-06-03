@@ -579,9 +579,9 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame, 
         para2: data.defensiveBriefing || "No defensive transition diagnostics generated.",
         para3: data.tacticalBriefing || "Keep focusing on possession and standard positional play.",
         archetypes: {
-          engine: normalizeArchetype(data.archetypes?.engine),
-          finisher: normalizeArchetype(data.archetypes?.finisher),
-          differenceMaker: normalizeArchetype(data.archetypes?.differenceMaker)
+          engine: normalizeArchetype(data.archetypes?.engine).slice(0, 3),
+          finisher: normalizeArchetype(data.archetypes?.finisher).slice(0, 3),
+          differenceMaker: normalizeArchetype(data.archetypes?.differenceMaker).slice(0, 3)
         },
         focusAreas: Array.isArray(data.focusAreas) ? data.focusAreas : []
       };
