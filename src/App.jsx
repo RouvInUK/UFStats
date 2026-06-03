@@ -936,11 +936,13 @@ function App() {
 
       {currentView === 'training_setup' && (profile?.beta_trainings_tier || profile?.is_system_admin) && (
         <TrainingSetupScreen 
+          user={user}
           players={players}
           setPlayers={setPlayers}
           currentTeam={effectiveTeamName}
           targetTeamId={targetTeamId}
           onNavigate={setCurrentView}
+          onSelectTeam={setCurrentTeam}
         />
       )}
 

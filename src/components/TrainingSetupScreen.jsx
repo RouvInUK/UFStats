@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Dumbbell, Shield, LayoutGrid, Check, Plus, RefreshCw, X, ArrowLeft, Users, Zap, BookOpen, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import { useDrillState } from '../contexts/DrillStateContext';
-import { fetchAllGameNames, deleteGame } from '../supabaseClient';
+import { fetchAllGameNames, deleteGame, fetchUserHierarchy } from '../supabaseClient';
 
-const TrainingSetupScreen = ({ players, setPlayers, currentTeam, targetTeamId, onNavigate }) => {
+const TrainingSetupScreen = ({ user, players, setPlayers, currentTeam, targetTeamId, onNavigate, onSelectTeam }) => {
   const {
     drills,
     activeDrill,
@@ -18,6 +18,23 @@ const TrainingSetupScreen = ({ players, setPlayers, currentTeam, targetTeamId, o
   } = useDrillState();
 
   const [hasSavedScrimmage, setHasSavedScrimmage] = useState(false);
+  const [teams, setTeams] = useState([]);
+
+  useEffect(() => {
+    const loadTeams = async () => {
+      if (user?.id) {
+        try {
+          const data = await fetchUserHierarchy(user.id);
+          if (data && data.teams) {
+            setTeams(data.teams);
+          }
+        } catch (err) {
+          console.error("Failed to load user teams:", err);
+        }
+      }
+    };
+    loadTeams();
+  }, [user]);
 
   useEffect(() => {
     try {
@@ -386,7 +403,29 @@ const TrainingSetupScreen = ({ players, setPlayers, currentTeam, targetTeamId, o
             </div>
             <div>
               <h1 className="text-2xl font-black uppercase tracking-widest text-white">Trainings Desk</h1>
-              <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mt-1">{currentTeam} Roster Workspace</p>
+              {teams.length > 1 ? (
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[10px] text-slate-500 font-extrabold uppercase tracking-widest">Team:</span>
+                  <select
+                    value={targetTeamId || ''}
+                    onChange={(e) => {
+                      const selectedTeam = teams.find(t => t.id === e.target.value);
+                      if (selectedTeam && onSelectTeam) {
+                        onSelectTeam(selectedTeam);
+                      }
+                    }}
+                    className="bg-slate-950 border border-white/10 rounded-xl px-3 py-1.5 text-white font-bold text-xs uppercase tracking-wider outline-none focus:border-indigo-500 cursor-pointer shadow-inner pr-8"
+                  >
+                    {teams.map(t => (
+                      <option key={t.id} value={t.id} className="bg-slate-950 text-slate-200 uppercase font-bold tracking-wide text-xs">
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mt-1">{currentTeam} Roster Workspace</p>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
