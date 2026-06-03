@@ -461,7 +461,7 @@ const AiAdvisorModule = ({ playerStats, rawStats, gameType, score, isMultiGame, 
       const differenceMakers = [...eligiblePlayers]
           .map(p => ({
              ...p,
-             netPlaymaking: (p.goals + p.assists + p.secondaryAssists + p.ds + p.huckCompletions) - p.turnovers
+             netPlaymaking: (1.0 * p.goals) + (1.5 * p.assists) + (0.75 * p.secondaryAssists) + (1.5 * p.ds) + (1.0 * p.huckCompletions) - (1.25 * p.turnovers)
           }))
           .filter(p => p.netPlaymaking > 0)
           .sort((a, b) => (b.netPlaymaking / b.pointsPlayed) - (a.netPlaymaking / a.pointsPlayed))

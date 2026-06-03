@@ -52,7 +52,8 @@ export default async function handler(req, res) {
       gamesPlayed: p.gamesPlayed || 0,
       touchesPerPoint: p.touchesPerPoint || 0,
       passAttempts: p.passAttempts || 0,
-      completions: p.passes || 0
+      completions: p.passes || 0,
+      huckCompletions: p.huckCompletions || 0
     })) : [];
 
     const cleanRawStats = rawStats ? rawStats.slice(-150).map(s => ({
@@ -185,7 +186,7 @@ export default async function handler(req, res) {
       CRITICAL THRESHOLDS & ARITHMETIC RULES FOR ARCHETYPES AND BRIEFINGS:
       1. Huck/Deep Throw rule: If the team's total huck attempts (offensiveHuckIntegrity and defensiveHuckIntegrity sources combined) are under 2% of the team's total throw attempts (which is the sum of passAttempts of all players in the Roster Performance Summary), you are STRICTLY PROHIBITED from mentioning hucks, deep throws, or huck success rates anywhere in the briefings (offensiveBriefing, defensiveBriefing, tacticalBriefing).
       2. The Engine rule: A player CANNOT be designated as "The Engine" if their touchesPerPoint is less than 1.2.
-      3. The Difference Maker rule: When evaluating a player for "The Difference Maker", you must calculate their Net Playmaking score as: (goals + assists + secondaryAssists + ds) - turnovers. Only choose players with a positive Net Playmaking score.
+      3. The Difference Maker rule: When evaluating a player for "The Difference Maker", you must calculate their Net Playmaking score as: (1.0 * goals + 1.5 * assists + 0.75 * secondaryAssists + 1.5 * ds + 1.0 * huckCompletions) - 1.25 * turnovers. Only choose players with a positive Net Playmaking score.
       4. Games Played eligibility: A player is ELIGIBLE for any archetype (engine, finisher, differenceMaker) or diagnostic suggestion in "focusAreas" ONLY if they played in at least 50% of the total matches played by the team (Total Matches Logged = ${totalGamesCount}). Filter out players with gamesPlayed < (0.5 * ${totalGamesCount}).
       
       CRITICAL INSTRUCTION: You MUST naturally and explicitly weave the calculated "Advanced Match Metrics" (like Clean Hold Rate, Break Rate, Pass-to-Score ratio, and Huck Integrity) into your narratives. Do not just list them; incorporate them into your sentences to back up your coaching insights with hard numeric proof. 
