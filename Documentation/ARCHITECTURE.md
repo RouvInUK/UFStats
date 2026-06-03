@@ -170,6 +170,8 @@ To support coaching development and team practice logistics without polluting of
    - Maps actions under-the-hood to standard stats (`stat_type = 'Drop'`), dynamically linking custom actions into the Coach Dashboard metrics suite.
 4. **Drill Games Played & Points Played Accumulation**: To ensure that player participation in drills contributes accurately to their Coach Dashboard performance totals, the Trainings Desk logs a single `Lineup` event containing all players selected in the rotation line under `point_number: 1` upon drill initiation.
 5. **Mobile-Responsive Collapsible Tree Lists**: To eliminate double-scroll list traps on mobile pitch interfaces, both the Drill Library and Recorded Sessions lists utilize collapsible containers displaying elements in native inline grids. Historical logs are aggregated and displayed under expandable calendar days.
+6. **Multi-Team Workspace Swapping**: To support coaches managing statistics across multiple team rosters, a dynamic hierarchy dropdown switcher is provided in the Trainings Desk header. When the user has multiple registered teams, this switcher mounts and enables changing the workspace context on the fly, automatically re-pointing roster players, drill profiles, and logged histories.
+
 
 ---
 
