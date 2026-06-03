@@ -1,6 +1,6 @@
 import { togglePlayerActiveStatus, clearActiveLineup, setLineupActiveStatus, recordLineup, fetchLastStatForGame, deleteStat, restoreLineupForPoint, recordStatToDB, checkIfHalfTimeLogged, fetchActiveGames, deletePoint, fetchGameStats, fetchManagedLines, saveManagedLines } from '../supabaseClient';
 import { useState, useEffect } from 'react';
-import { Undo2, Mic, MicOff, Share2, Users, LayoutList, Info, Compass } from 'lucide-react';
+import { Undo2, Mic, MicOff, Share2, Users, LayoutList, Info, Compass, Plus } from 'lucide-react';
 import PullTracker from './PullTracker';
 import ManageLinesModal from './ManageLinesModal';
 
@@ -72,7 +72,18 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
   const filteredPlayers = players;
 
   useEffect(() => {
-    fetchActiveGames(targetTeamId).then(setActiveGames).catch(console.error);
+    fetchActiveGames(targetTeamId)
+      .then(games => {
+        const standardGames = games.filter(g => 
+          g.name && 
+          !g.name.startsWith('Drill: ') && 
+          !g.name.startsWith('Scrimmage: ') && 
+          !g.name.startsWith('Training drill ') && 
+          !g.name.startsWith('Training scrimmage ')
+        );
+        setActiveGames(standardGames);
+      })
+      .catch(console.error);
   }, [targetTeamId]);
 
   useEffect(() => {
@@ -172,9 +183,8 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     const expectedCount = gameType === 'grass' ? 7 : (gameType === 'beach' || gameType === 'indoor' ? 5 : 0);
     
     if (expectedCount > 0 && activeLineupNames.length !== expectedCount) {
-      if (!window.confirm(`You selected ${activeLineupNames.length} players, but a ${gameType} game usually expects ${expectedCount}. Start ${gameType === 'training' ? 'session' : 'point'} anyway?`)) {
-        return;
-      }
+      alert(`You have selected ${activeLineupNames.length} players, but the current game format (${gameType === 'grass' ? 'Grass' : gameType === 'beach' ? 'Beach' : 'Indoor'}) requires exactly ${expectedCount} players on the pitch.`);
+      return;
     }
 
     if (!currentGame) return alert("Enter a Match Name first.");
@@ -321,6 +331,14 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
   };
 
   const togglePlayer = async (player) => {
+    const expectedCount = gameType === 'grass' ? 7 : (gameType === 'beach' || gameType === 'indoor' ? 5 : 0);
+    const activeCount = players.filter(p => p.is_active).length;
+
+    if (!player.is_active && expectedCount > 0 && activeCount >= expectedCount) {
+      alert(`Cannot select more than ${expectedCount} players on the pitch for ${gameType === 'grass' ? 'Grass' : gameType === 'beach' ? 'Beach' : 'Indoor'} format.`);
+      return;
+    }
+
     setActiveLineId(null);
     const optimisticPlayers = players.map(p => 
       p.id === player.id ? { ...p, is_active: !p.is_active } : p
@@ -367,6 +385,11 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
     const requiredCount = gameType === 'grass' ? 7 : (gameType === 'beach' || gameType === 'indoor' ? 5 : 7);
     const selectedCount = line.playerIds.length;
     
+    if (requiredCount > 0 && selectedCount > requiredCount) {
+      alert(`Cannot select this line template. It has ${selectedCount} players, which exceeds the maximum limit of ${requiredCount} for ${gameType === 'grass' ? 'Grass' : gameType === 'beach' ? 'Beach' : 'Indoor'} format.`);
+      return;
+    }
+
     const updatedPlayers = players.map(p => ({
       ...p,
       is_active: line.playerIds.includes(p.id)
@@ -434,10 +457,10 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
                   : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800'
               }`}
               aria-pressed={beachMode}
-              title="Toggle High Contrast Beach Mode"
+              title="Toggle High Contrast Mode"
             >
               <Compass className={`w-4 h-4 shrink-0 ${beachMode ? 'animate-spin' : ''}`} />
-              <span>Beach: {beachMode ? 'ON' : 'OFF'}</span>
+              <span>High Contrast: {beachMode ? 'ON' : 'OFF'}</span>
             </button>
             <button 
               onClick={handleClearLineup}
@@ -531,27 +554,27 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
                    }} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner" placeholder="e.g. EUCF Pool Play - Game 1" />
                 </div>
                 <div>
-                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">Game Format</label>
-                   <div className="flex flex-wrap bg-slate-950 border border-slate-700 rounded-xl overflow-hidden shadow-inner font-bold w-full text-sm">
-                      <button onClick={() => setGameType('grass')} className={`flex-1 min-w-[25%] py-3 px-2 transition-all ${gameType === 'grass' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Grass</button>
-                      <button onClick={() => setGameType('beach')} className={`flex-1 min-w-[25%] py-3 px-2 transition-all ${gameType === 'beach' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Beach</button>
-                      <button onClick={() => setGameType('indoor')} className={`flex-1 min-w-[25%] py-3 px-2 transition-all ${gameType === 'indoor' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Indoor</button>
-                      <button onClick={() => alert("Training mode is temporarily disabled.")} className="flex-1 min-w-[25%] py-3 px-2 transition-all bg-slate-900 text-slate-700 cursor-not-allowed opacity-50">Training</button>
-                   </div>
-                </div>
-                <div>
-                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">
-                     {gameType === 'training' ? 'Drill / Exercise Name' : 'Opponent Team Name'}
-                   </label>
-                   <input type="text" value={opponentName} onChange={e => setOpponentName(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner" placeholder={gameType === 'training' ? "e.g. 3-Man Weave" : "e.g. Darkstar"} />
-                </div>
-                <div className={gameType === 'training' ? 'opacity-30 pointer-events-none' : ''}>
-                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">Starting Possession</label>
-                   <div className="flex bg-slate-950 border border-slate-700 rounded-xl overflow-hidden shadow-inner font-bold w-full text-sm">
-                      <button onClick={() => setInitialPossession('O')} className={`flex-1 py-3 px-2 transition-all ${initialPossession === 'O' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Receive (Offense)</button>
-                      <button onClick={() => setInitialPossession('D')} className={`flex-1 py-3 px-2 transition-all ${initialPossession === 'D' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Pull (Defense)</button>
-                   </div>
-                </div>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">Game Format</label>
+                    <div className="flex flex-wrap bg-slate-950 border border-slate-700 rounded-xl overflow-hidden shadow-inner font-bold w-full text-sm">
+                       <button onClick={() => setGameType('grass')} className={`flex-1 min-w-[33%] py-3 px-2 transition-all ${gameType === 'grass' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Grass</button>
+                       <button onClick={() => setGameType('beach')} className={`flex-1 min-w-[33%] py-3 px-2 transition-all ${gameType === 'beach' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Beach</button>
+                       <button onClick={() => setGameType('indoor')} className={`flex-1 min-w-[33%] py-3 px-2 transition-all ${gameType === 'indoor' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Indoor</button>
+                    </div>
+                 </div>
+
+                 <div>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">
+                      Opponent Team Name
+                    </label>
+                    <input type="text" value={opponentName} onChange={e => setOpponentName(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 outline-none focus:border-indigo-500 transition-colors shadow-inner" placeholder="e.g. Darkstar" />
+                 </div>
+                 <div>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2 mb-2 block">Starting Possession</label>
+                    <div className="flex bg-slate-950 border border-slate-700 rounded-xl overflow-hidden shadow-inner font-bold w-full text-sm">
+                       <button onClick={() => setInitialPossession('O')} className={`flex-1 py-3 px-2 transition-all ${initialPossession === 'O' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Receive (Offense)</button>
+                       <button onClick={() => setInitialPossession('D')} className={`flex-1 py-3 px-2 transition-all ${initialPossession === 'D' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}>Pull (Defense)</button>
+                    </div>
+                 </div>
              </div>
           </div>
         )}
@@ -632,7 +655,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
 
           <button
             onClick={handleStartPoint}
-            disabled={isStartingPoint || !isStatsLoaded || activeCount === 0 || !currentGame || isTrackingActive || (currentPoint === 0 && (!opponentName || (gameType !== 'training' && !initialPossession)))}
+            disabled={isStartingPoint || !isStatsLoaded || activeCount === 0 || !currentGame || isTrackingActive || (currentPoint === 0 && (!opponentName || (!initialPossession)))}
             className={`w-full group relative flex items-center justify-center px-6 py-5 border border-emerald-500/50 text-xl font-black rounded-2xl text-white backdrop-blur-md focus:outline-none focus:ring-4 focus:ring-emerald-500/50 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest ${
               isStartingPoint || !isStatsLoaded || isTrackingActive ? 'bg-slate-700/50 border-slate-600' : 'bg-emerald-500/20 hover:bg-emerald-500/40'
             }`}
@@ -642,7 +665,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
                  <div className="w-5 h-5 border-2 border-transparent border-t-white rounded-full animate-spin" />
                  Synchronizing...
                </span>
-            ) : (!isStatsLoaded ? 'Loading...' : (isTrackingActive ? "Point in Progress" : (gameType === 'training' ? "Start Session" : `Start Point (${activeCount})`)))}
+            ) : (!isStatsLoaded ? 'Loading...' : (isTrackingActive ? "Point in Progress" : `Start Point (${activeCount})`))}
           </button>
           
           {currentPoint > 0 && (
@@ -710,6 +733,7 @@ const LineupSelector = ({ players, setPlayers, currentTeam, targetTeamId, onNavi
           onClose={() => setShowManageLines(false)}
         />
       )}
+
     </div>
   );
 };

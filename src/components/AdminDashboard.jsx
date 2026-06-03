@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, pruneIncompleteGames, fetchActionsPerDay } from '../supabaseClient';
+import { supabase, pruneIncompleteGames, fetchActionsPerDay, fetchPendingDrills, updateDrillStatus } from '../supabaseClient';
 import { Shield, ArrowLeft, Users, Activity, Trash2, Crown, LayoutDashboard, Database, RefreshCw, BarChart2, Calendar, ChevronDown, ChevronUp, Search, Download } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -12,6 +12,9 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
   const [actionLoading, setActionLoading] = useState(false);
   const [deletingUser, setDeletingUser] = useState(null);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+  
+  const [pendingDrills, setPendingDrills] = useState([]);
+  const [drillsLoading, setDrillsLoading] = useState(false);
 
   // Sorting & Filtering States
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
@@ -139,6 +142,17 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
     }
   };
 
+  const handleUpdateBetaTrainingsTier = async (userId, beta_trainings_tier) => {
+    try {
+      const { updateUserBetaTrainingsTier } = await import('../supabaseClient');
+      await updateUserBetaTrainingsTier(userId, beta_trainings_tier);
+      setUsers(users.map(u => u.id === userId ? { ...u, beta_trainings_tier } : u));
+    } catch (err) {
+      console.error(err);
+      alert(`Failed to update trainings beta: ${err.message}`);
+    }
+  };
+
   const handleUpdateDisableClubTrack = async (userId, disable_club_track) => {
     try {
       const { updateUserDisableClubTrack } = await import('../supabaseClient');
@@ -190,6 +204,47 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
       alert(`Failed to delete user: ${err.message}`);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const loadPendingDrills = async () => {
+    setDrillsLoading(true);
+    try {
+      const data = await fetchPendingDrills();
+      setPendingDrills(data);
+    } catch (err) {
+      console.error("Failed to fetch pending drills:", err);
+    } finally {
+      setDrillsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'drills') {
+      loadPendingDrills();
+    }
+  }, [activeTab]);
+
+  const handleApproveDrill = async (drillId) => {
+    try {
+      await updateDrillStatus(drillId, 'approved');
+      setPendingDrills(prev => prev.filter(d => d.id !== drillId));
+      alert("Drill approved and added to the public library!");
+    } catch (err) {
+      console.error(err);
+      alert(`Failed to approve drill: ${err.message}`);
+    }
+  };
+
+  const handleRejectDrill = async (drillId) => {
+    if (!window.confirm("Are you sure you want to reject this public drill request?")) return;
+    try {
+      await updateDrillStatus(drillId, 'rejected');
+      setPendingDrills(prev => prev.filter(d => d.id !== drillId));
+      alert("Drill request rejected.");
+    } catch (err) {
+      console.error(err);
+      alert(`Failed to reject drill: ${err.message}`);
     }
   };
 
@@ -345,6 +400,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
           {[
             { id: 'overview', icon: LayoutDashboard, label: 'Global Health' },
             { id: 'users', icon: Users, label: 'Users & Tiers' },
+            { id: 'drills', icon: Shield, label: 'Drills Review' },
             { id: 'data', icon: Database, label: 'Data Hygiene' }
           ].map(tab => (
             <button
@@ -527,6 +583,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                           <th className="p-4 font-bold text-center select-none">Test Account</th>
                           <th className="p-4 font-bold text-center select-none">Voice Beta</th>
                           <th className="p-4 font-bold text-center select-none">Tourney Beta</th>
+                          <th className="p-4 font-bold text-center select-none">Trainings Beta</th>
                           <th className="p-4 font-bold text-center select-none">Disable Club Mode</th>
                           <th className="p-4 font-bold text-right select-none">Actions</th>
                         </tr>
@@ -671,6 +728,14 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                                 <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
                                   <input 
                                     type="checkbox"
+                                    checked={user.beta_trainings_tier || false}
+                                    onChange={(e) => handleUpdateBetaTrainingsTier(user.id, e.target.checked)}
+                                    className="w-4 h-4 text-indigo-600 rounded bg-slate-900 border-slate-700 focus:ring-indigo-500 cursor-pointer animate-none"
+                                  />
+                                </td>
+                                <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                  <input 
+                                    type="checkbox"
                                     checked={user.disable_club_track || false}
                                     onChange={(e) => handleUpdateDisableClubTrack(user.id, e.target.checked)}
                                     className="w-4 h-4 text-rose-500 rounded bg-slate-900 border-slate-700 focus:ring-rose-500 cursor-pointer animate-none"
@@ -773,6 +838,83 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                 >
                   {actionLoading ? 'SCANNING & PRUNING...' : 'RUN PRUNE OPERATION'}
                 </button>
+              </div>
+            )}
+
+            {/* DRILLS REVIEW TAB */}
+            {activeTab === 'drills' && (
+              <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-3xl shadow-xl overflow-hidden">
+                <div className="p-6 border-b border-white/10 flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-indigo-400" /> Pending Public Drills Review ({pendingDrills.length})
+                  </h3>
+                  <button 
+                    onClick={loadPendingDrills}
+                    className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-xl border border-white/5 text-slate-300"
+                  >
+                    Refresh List
+                  </button>
+                </div>
+                
+                <div className="p-6">
+                  {drillsLoading ? (
+                    <div className="text-center p-12 text-indigo-400 font-bold tracking-widest animate-pulse">
+                      FETCHING PENDING DRILLS...
+                    </div>
+                  ) : pendingDrills.length === 0 ? (
+                    <div className="text-center p-12 text-slate-500 font-medium">
+                      No pending public drills submitted for admin review.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {pendingDrills.map(drill => (
+                        <div key={drill.id} className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between shadow-lg relative overflow-hidden">
+                          <div className="absolute top-0 left-0 right-0 h-1 bg-indigo-500/50"></div>
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-[10px] font-black uppercase tracking-widest bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded">
+                                {drill.category}
+                              </span>
+                              <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
+                                Flow: {drill.flow_type === 'rep_based' ? 'Rep-by-Rep' : 'Continuous'}
+                              </span>
+                            </div>
+                            <h4 className="text-lg font-extrabold text-white mb-2">{drill.name}</h4>
+                            <p className="text-xs text-slate-400 mb-4 font-semibold uppercase tracking-wider">
+                              Submitted by: <span className="text-indigo-400 font-extrabold">{drill.teams?.name || 'Unknown Team'}</span>
+                            </p>
+                            
+                            <div className="mb-6 bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+                              <div className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2.5">Pre-configured Metrics Grid</div>
+                              <div className="grid grid-cols-2 gap-2">
+                                {drill.metrics?.map((m, idx) => (
+                                  <div key={idx} className="bg-slate-950 px-3 py-1.5 rounded border border-white/5 text-xs text-slate-300 font-bold text-center truncate">
+                                    {m}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => handleApproveDrill(drill.id)}
+                              className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-md shadow-emerald-500/10"
+                            >
+                              Approve Public
+                            </button>
+                            <button
+                              onClick={() => handleRejectDrill(drill.id)}
+                              className="flex-1 py-2.5 bg-rose-900/20 hover:bg-rose-900/40 text-rose-400 border border-rose-500/20 font-black text-xs uppercase tracking-widest rounded-xl transition-all"
+                            >
+                              Reject Request
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

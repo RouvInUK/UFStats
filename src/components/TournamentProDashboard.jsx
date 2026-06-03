@@ -516,7 +516,7 @@ const TournamentProDashboard = ({ onBack, profile }) => {
       
       const totalHuckAttempts = p.huckPasses + p.huckThrowaways + p.huckAttemptsDropped;
       const totalHuckTurnovers = p.huckThrowaways + p.huckDrops;
-      const nis = ((p.goals * 2) + (p.assists * 1.5) + (p.secondaryAssists * 1.5) + (p.defence * 2) + (p.passes * 0.3) + (p.huckPasses * 0.7) - (turnovers * 2) + (totalHuckTurnovers * 0.5)) / pointsPlayed;
+      const nis = ((p.goals * 2) + (p.assists * 2.0) + (p.secondaryAssists * 1.5) + (p.defence * 2) + (p.passes * 0.3) + (p.huckPasses * 0.7) - (turnovers * 2) + (totalHuckTurnovers * 0.5)) / pointsPlayed;
 
       let plusMinus = 0;
       let totalWeightedImpact = 0;
@@ -555,7 +555,17 @@ const TournamentProDashboard = ({ onBack, profile }) => {
 
       const systemImpact = p.pointsPlayedSet.size > 0 ? parseFloat(((totalWeightedImpact / p.pointsPlayedSet.size) * 100).toFixed(1)) : 0;
       const oce = p.possessionsPlayed > 0 ? parseFloat(((p.goalsOnPitch / p.possessionsPlayed) * 100).toFixed(1)) : 0;
-      const ova = (p.cleanHolds * 0.5) + (p.assists * 2.0) + (p.secondaryAssists * 1.5);
+      
+      // Calculate games played dynamically from pointsPlayedSet
+      const playedGamesSet = new Set();
+      p.pointsPlayedSet.forEach(pointKey => {
+         const gameName = pointKey.substring(0, pointKey.lastIndexOf('_'));
+         playedGamesSet.add(gameName);
+      });
+      const gamesPlayed = Math.max(1, playedGamesSet.size);
+
+      const rawOva = (1.0 * p.goals) + (1.0 * p.assists) + (0.5 * p.secondaryAssists) - (0.75 * turnovers) + (0.05 * p.passes);
+      const ova = rawOva / gamesPlayed;
       const avgPullScore = p.pulls > 0 ? parseFloat((p.pullScoreTotal / p.pulls).toFixed(2)) : 0;
       const usage = teamTouchesCount > 0 ? parseFloat(((p.touches / teamTouchesCount) * 100).toFixed(1)) : 0;
 
@@ -1265,8 +1275,8 @@ const TournamentProDashboard = ({ onBack, profile }) => {
                         <th className="py-4 px-4 text-center w-24 hover:text-white transition-colors" onClick={() => handleAnalyticsSort('oce')} title="Offensive Conversion Efficiency">
                           OCE % {analyticsSortConfig.key === 'oce' ? (analyticsSortConfig.direction === 'asc' ? '▲' : '▼') : ''}
                         </th>
-                        <th className="py-4 px-4 text-center w-20 hover:text-white transition-colors" onClick={() => handleAnalyticsSort('ova')} title="Offensive Value Added">
-                          OVA {analyticsSortConfig.key === 'ova' ? (analyticsSortConfig.direction === 'asc' ? '▲' : '▼') : ''}
+                        <th className="py-4 px-4 text-center w-24 hover:text-white transition-colors whitespace-nowrap" onClick={() => handleAnalyticsSort('ova')} title="Offensive Value Added per Game: (Goals + Assists + 0.5 * Hockey Assists - 0.75 * Turnovers + 0.05 * Completions) / Games Played">
+                          OVA/G {analyticsSortConfig.key === 'ova' ? (analyticsSortConfig.direction === 'asc' ? '▲' : '▼') : ''}
                         </th>
                         <th className="py-4 px-4 text-right w-20 hover:text-white transition-colors" onClick={() => handleAnalyticsSort('nis')} title="Net Impact Score (Efficiency per Point)">
                           NIS {analyticsSortConfig.key === 'nis' ? (analyticsSortConfig.direction === 'asc' ? '▲' : '▼') : ''}
@@ -1352,7 +1362,7 @@ const TournamentProDashboard = ({ onBack, profile }) => {
                                 {row.oce > 0 ? `${row.oce}%` : '-'}
                               </span>
                             </td>
-                            <td className="py-4 px-4 text-center font-mono text-slate-300 text-xs print-text-black">{row.ova}</td>
+                            <td className={`py-4 px-4 text-center font-mono text-xs print-text-black ${row.ova <= 0 ? 'text-rose-400 font-bold' : 'text-slate-300'}`}>{row.ova}</td>
                             <td className="py-4 px-4 text-right">
                               <span className={`inline-flex px-1.5 py-0.5 font-bold rounded text-[10px] print-badge ${
                                 row.nis > 0 

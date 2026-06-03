@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, is_system_admin, tier, beta_voice_pro, beta_tournament_tier, disable_club_track, current_session_id, pro_expires_at, created_at')
+        .select('id, is_system_admin, tier, beta_voice_pro, beta_tournament_tier, beta_trainings_tier, disable_club_track, current_session_id, pro_expires_at, created_at')
         .eq('id', userId)
         .single();
         

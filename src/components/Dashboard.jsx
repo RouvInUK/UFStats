@@ -1,16 +1,34 @@
 import { useState, useEffect, useRef } from 'react';
 import { recordStatToDB, fetchActiveGames, clearActiveLineup, fetchLastStatForGame, deleteStat, fetchGameStats } from '../supabaseClient';
 import { upgradeLastStatToHuck } from '../SyncEngine';
-import { Undo2, ArrowLeftRight, Mic, MicOff, Star, Compass } from 'lucide-react';
+import { Undo2, ArrowLeftRight, Mic, MicOff, Star, Compass, Lock } from 'lucide-react';
 import { playChime, playClick, playBuzz } from '../utils/audioFeedback';
+import { useDrillState } from '../contexts/DrillStateContext';
 
 const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, gameType, currentTeam, targetTeamId, opponentName, initialPossession, isTrackingActive, setIsTrackingActive, onNavigate, players, setPlayers, isVoiceEnabled, setIsVoiceEnabled, isPro, isVoiceBeta }) => {
+  const {
+    activeDrill,
+    isGhostScrimmage,
+    lightShirtPlayers,
+    darkShirtPlayers,
+    lockedThrowerId,
+    toggleLockedThrower
+  } = useDrillState();
+
   const [possessionChain, setPossessionChain] = useState([]);
   const [previousChain, setPreviousChain] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [activeGames, setActiveGames] = useState([]);
   const [flashType, setFlashType] = useState(null);
+
+  const lastTapRef = useRef({});
+
+  useEffect(() => {
+    if (gameType === 'training' && activeDrill?.flow_type === 'rep_based') {
+      setPossessionChain(lockedThrowerId ? [lockedThrowerId] : []);
+    }
+  }, [lockedThrowerId, gameType, activeDrill?.flow_type]);
 
   const [beachMode, setBeachMode] = useState(() => {
     return localStorage.getItem('ufstats_beach_mode') === 'true';
@@ -121,9 +139,51 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     setHuckThrowerName(null);
   }, [currentOD]);
 
+  const handlePlayerCardTap = (playerName) => {
+    if (gameType === 'training' && activeDrill?.flow_type === 'rep_based') {
+      const now = Date.now();
+      const lastTap = lastTapRef.current[playerName] || 0;
+      const DOUBLE_TAP_DELAY = 300;
+      
+      if (now - lastTap < DOUBLE_TAP_DELAY) {
+        toggleLockedThrower(playerName);
+        lastTapRef.current[playerName] = 0;
+      } else {
+        handlePlayerSelect(playerName);
+        lastTapRef.current[playerName] = now;
+      }
+    } else {
+      handlePlayerSelect(playerName);
+    }
+  };
+
   const handlePlayerSelect = async (playerName) => {
     if (!isTrackingActive) return alert("Start tracking first!");
     
+    if (gameType === 'training' && activeDrill?.flow_type === 'rep_based') {
+      if (lockedThrowerId) {
+        setPossessionChain([lockedThrowerId, playerName]);
+        playClick();
+      } else {
+        setPossessionChain(prev => {
+          if (prev.length === 0) {
+            playClick();
+            return [playerName];
+          } else if (prev.length === 1) {
+            if (prev[0] === playerName) {
+              return [];
+            }
+            playClick();
+            return [...prev, playerName];
+          } else {
+            playClick();
+            return [prev[0], playerName];
+          }
+        });
+      }
+      return;
+    }
+
     if (possessionChain.length === 0) {
       // We are picking up the disc. Did the opponent have it?
       const lastStat = await fetchLastStatForGame(currentGame, targetTeamId);
@@ -167,6 +227,132 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     // Note: fallback to current state is still susceptible to race conditions for rapid sequential calls,
     // but we use overrideChain from handlePlayerSelect to fix the critical path.
     const currentChain = overrideChain || possessionChain;
+
+    if (gameType === 'training' && activeDrill?.flow_type === 'rep_based') {
+      const activeCatcher = overridePlayer || currentChain[currentChain.length - 1];
+      const activeThrower = lockedThrowerId || (currentChain.length > 1 ? currentChain[0] : null);
+      
+      if (!activeCatcher) return alert("Select a catcher first!");
+      if (!activeThrower) return alert("Select a thrower first!");
+      if (activeThrower === activeCatcher) return alert("Thrower and Catcher cannot be the same player!");
+
+      setIsSaving(true);
+      setLastSaved(null);
+      
+      try {
+        const statsToSave = [];
+        const baseStat = {
+          timestamp: new Date().toLocaleString(),
+          pointNumber: currentPoint,
+          gameName: currentGame,
+          gameType: gameType,
+          teamName: currentTeam,
+        };
+
+        const isPositive = statType === 'Leading Catch' || statType.toLowerCase().includes('stride') || statType.toLowerCase().includes('catch') || statType.toLowerCase().includes('cut');
+        const isDrop = statType === 'Drop' || statType.toLowerCase().includes('drop');
+        const isThrowaway = statType === 'Overthrow' || statType === 'Underthrow' || statType === 'Throwaway' || statType.toLowerCase().includes('throw') || statType.toLowerCase().includes('incomplete');
+
+        if (isPositive) {
+          statsToSave.push({ 
+            player: activeThrower, 
+            stat_type: 'Pass', 
+            point_number: currentPoint,
+            game_name: currentGame,
+            game_type: gameType,
+            team_name: currentTeam,
+            details: { target: activeCatcher, drill_name: activeDrill.name, metric: statType } 
+          });
+          statsToSave.push({ 
+            player: activeCatcher, 
+            stat_type: statType, 
+            point_number: currentPoint,
+            game_name: currentGame,
+            game_type: gameType,
+            team_name: currentTeam,
+            details: { thrower: activeThrower, drill_name: activeDrill.name } 
+          });
+          playChime();
+          triggerFeedback('success');
+        } else if (isDrop) {
+          statsToSave.push({ 
+            player: activeThrower, 
+            stat_type: 'Pass Attempt', 
+            point_number: currentPoint,
+            game_name: currentGame,
+            game_type: gameType,
+            team_name: currentTeam,
+            details: { target: activeCatcher, drill_name: activeDrill.name, metric: statType } 
+          });
+          statsToSave.push({ 
+            player: activeCatcher, 
+            stat_type: 'Drop', 
+            point_number: currentPoint,
+            game_name: currentGame,
+            game_type: gameType,
+            team_name: currentTeam,
+            details: { thrower: activeThrower, drill_name: activeDrill.name } 
+          });
+          playBuzz();
+          triggerFeedback('error');
+        } else if (isThrowaway) {
+          statsToSave.push({ 
+            player: activeThrower, 
+            stat_type: 'Throwaway', 
+            point_number: currentPoint,
+            game_name: currentGame,
+            game_type: gameType,
+            team_name: currentTeam,
+            details: { target: activeCatcher, drill_name: activeDrill.name, metric: statType } 
+          });
+          statsToSave.push({ 
+            player: activeCatcher, 
+            stat_type: statType, 
+            point_number: currentPoint,
+            game_name: currentGame,
+            game_type: gameType,
+            team_name: currentTeam,
+            details: { thrower: activeThrower, drill_name: activeDrill.name } 
+          });
+          playBuzz();
+          triggerFeedback('error');
+        } else {
+          // Fallback generic dynamic metric
+          statsToSave.push({ 
+            player: activeCatcher, 
+            stat_type: statType, 
+            point_number: currentPoint,
+            game_name: currentGame,
+            game_type: gameType,
+            team_name: currentTeam,
+            details: { thrower: activeThrower, drill_name: activeDrill.name } 
+          });
+          playClick();
+          triggerFeedback('neutral');
+        }
+
+        for (const st of statsToSave) {
+          await recordStatToDB(st, targetTeamId);
+        }
+
+        setLastSaved(`Saved ${statType} rep`);
+        
+        // Auto-Reset catcher/rep after 500ms
+        setTimeout(() => {
+          setIsSaving(false);
+          setPossessionChain(lockedThrowerId ? [lockedThrowerId] : []);
+          setHuckThrowerName(null);
+        }, 500);
+        
+        return;
+      } catch (err) {
+        console.error("Save rep failed:", err);
+        alert("Failed to save rep.");
+        setIsSaving(false);
+        return;
+      }
+    }
+
     const activePlayer = overridePlayer || currentChain[currentChain.length - 1];
     if (statType !== 'Opponent Point' && !activePlayer) return alert("Select a player first!");
     
@@ -615,6 +801,33 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
     if (isVoiceEnabled) {
       return 'bg-slate-900 text-slate-500 border border-slate-800 opacity-50 cursor-not-allowed transition-all';
     }
+
+    const isLight = isGhostScrimmage && lightShirtPlayers.includes(player);
+    const isDark = isGhostScrimmage && darkShirtPlayers.includes(player);
+
+    const defaultClass = isLight 
+      ? 'bg-slate-100 text-slate-800 border border-slate-300 hover:bg-slate-200 hover:text-slate-950 transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 shadow-md shadow-white/5'
+      : isDark
+        ? 'bg-slate-950 text-slate-300 border border-slate-800/80 hover:bg-slate-900 hover:text-slate-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 shadow-md shadow-black/10'
+        : 'bg-slate-900 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105';
+
+    if (gameType === 'training' && activeDrill?.flow_type === 'rep_based') {
+      const isThrower = lockedThrowerId === player || (possessionChain.length > 0 && possessionChain[0] === player);
+      const isCatcher = possessionChain.length > 1 && possessionChain[1] === player;
+      const isLocked = lockedThrowerId === player;
+
+      if (isLocked) {
+        return 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.7)] ring-4 ring-blue-400 scale-105 z-20 transition-all relative';
+      }
+      if (isThrower) {
+        return 'bg-blue-900/70 text-blue-200 border border-blue-500/40 scale-100 z-10 transition-all shadow-[0_0_10px_rgba(37,99,235,0.2)]';
+      }
+      if (isCatcher) {
+        return 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.7)] ring-4 ring-indigo-400 scale-105 z-20 transition-all relative';
+      }
+      return defaultClass;
+    }
+
     if (callahanModeFor === player) {
       return 'bg-gradient-to-br from-indigo-600 to-rose-600 text-white shadow-[0_0_25px_rgba(225,29,72,0.7)] ring-4 ring-rose-500 scale-105 z-30 transition-all relative animate-pulse';
     }
@@ -626,7 +839,7 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
       // Subtle active state for pending passer
       return 'bg-indigo-900/80 text-indigo-200 border border-indigo-500/50 scale-100 z-10 transition-all shadow-[0_0_10px_rgba(79,70,229,0.2)]';
     }
-    return 'bg-slate-900 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105';
+    return defaultClass;
   };
 
   return (
@@ -647,27 +860,31 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
         {/* Scoreboard Header Section (Original Full-Size Layout) */}
         <div className="p-2 sm:p-4 bg-slate-900 border-b border-slate-700/50 shrink-0">
           <div className="flex items-center justify-between bg-slate-950/50 rounded-xl border border-white/5 shadow-inner p-2 sm:p-4">
-             {/* Left Column: Us */}
-             <div className="flex flex-col items-start w-1/3">
-                <span className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest truncate w-full">{currentTeam}</span>
-                <div className={`text-4xl sm:text-5xl font-black font-mono tracking-tighter ${score.us > score.them ? 'text-indigo-400 drop-shadow-[0_0_15px_rgba(129,140,248,0.5)]' : 'text-slate-300'}`}>{score.us}</div>
-             </div>
-
-             {/* Center Column: Point & O/D */}
-             <div className="flex flex-col items-center justify-center w-1/3 px-2">
-                <div className="flex items-center justify-center gap-3">
-                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm sm:text-base font-black shadow-lg ${currentOD === 'O' ? 'bg-indigo-600 text-white ring-2 ring-indigo-400/50' : 'bg-rose-600 text-white ring-2 ring-rose-400/50'}`}>
-                    {currentOD}
-                  </div>
-                </div>
-                <div className="mt-2 text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Point {currentPoint}</div>
-             </div>
-
-             {/* Right Column: Them */}
-             <div className="flex flex-col items-end w-1/3 text-right">
-                <span className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest truncate w-full text-right">{liveOpponentName}</span>
-                <div className={`text-4xl sm:text-5xl font-black font-mono tracking-tighter ${score.them > score.us ? 'text-rose-400 drop-shadow-[0_0_15px_rgba(244,63,94,0.5)]' : 'text-slate-300'}`}>{score.them}</div>
-             </div>
+              {/* Left Column: Us */}
+              <div className="flex flex-col items-start w-1/3">
+                 <span className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest truncate w-full">
+                   {isGhostScrimmage ? 'Light Shirts' : currentTeam}
+                 </span>
+                 <div className={`text-4xl sm:text-5xl font-black font-mono tracking-tighter ${score.us > score.them ? 'text-indigo-400 drop-shadow-[0_0_15px_rgba(129,140,248,0.5)]' : 'text-slate-300'}`}>{score.us}</div>
+              </div>
+ 
+              {/* Center Column: Point & O/D */}
+              <div className="flex flex-col items-center justify-center w-1/3 px-2">
+                 <div className="flex items-center justify-center gap-3">
+                   <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm sm:text-base font-black shadow-lg ${currentOD === 'O' ? 'bg-indigo-600 text-white ring-2 ring-indigo-400/50' : 'bg-rose-600 text-white ring-2 ring-rose-400/50'}`}>
+                     {currentOD}
+                   </div>
+                 </div>
+                 <div className="mt-2 text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Point {currentPoint}</div>
+              </div>
+ 
+              {/* Right Column: Them */}
+              <div className="flex flex-col items-end w-1/3 text-right">
+                 <span className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest truncate w-full text-right">
+                   {isGhostScrimmage ? 'Dark Shirts' : liveOpponentName}
+                 </span>
+                 <div className={`text-4xl sm:text-5xl font-black font-mono tracking-tighter ${score.them > score.us ? 'text-rose-400 drop-shadow-[0_0_15px_rgba(244,63,94,0.5)]' : 'text-slate-300'}`}>{score.them}</div>
+              </div>
           </div>
         </div>
 
@@ -687,10 +904,10 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
                     ? 'bg-amber-400 text-slate-950 border-amber-500 hover:bg-amber-300 shadow-md shadow-amber-500/10' 
                     : 'bg-slate-900 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-white'
                 }`}
-                title="Toggle High Contrast Beach Mode"
+                title="Toggle High Contrast Mode"
               >
                 <Compass className={`w-3 h-3 ${beachMode ? 'animate-spin' : ''}`} />
-                <span>Beach Mode</span>
+                <span>High Contrast</span>
               </button>
             </div>
            
@@ -709,13 +926,19 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 h-full content-start pb-2">
                 {activeLineup.map((player, index) => {
                   const isHolder = possessionChain.length > 0 && possessionChain[possessionChain.length - 1] === player;
+                  const isLocked = lockedThrowerId === player;
                   return (
                   <button
                     key={player}
-                    onClick={() => handleTap(player, () => handlePlayerSelect(player))}
+                    onClick={() => handleTap(player, () => handlePlayerCardTap(player))}
                     disabled={isVoiceEnabled}
                     className={`relative flex flex-col items-center justify-center rounded-xl p-1 sm:p-2 h-[95px] sm:h-24 min-w-0 overflow-hidden ${getPlayerClass(player)} ${index === 6 && activeLineup.length === 7 ? 'col-start-2 sm:col-start-auto' : ''}`}
                   >
+                     {isLocked && (
+                        <div className="absolute top-1.5 right-1.5 text-blue-200 z-30">
+                          <Lock className="w-3.5 h-3.5 fill-blue-200/25" />
+                        </div>
+                     )}
                      {players?.find(p => p.name === player)?.shirt_number ? (
                         <div className="relative flex flex-col items-center justify-center w-full">
                           <span className="text-4xl sm:text-5xl font-black mb-1 shrink-0 relative">
@@ -773,56 +996,136 @@ const Dashboard = ({ activeLineup, currentPoint, setCurrentPoint, currentGame, g
 
         {/* Scoring Actions Section */}
         <div className="px-3 pt-3 shrink-0 border-t border-slate-700/50 pb-1 bg-slate-900 relative">
-           {/* Primary Scores */}
-           <div className="grid grid-cols-2 gap-3 mb-3">
-              <button
-                onClick={() => handleStatRecord('Point')}
-                disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
-                className={getActionClass("flex items-center justify-center h-14 sm:h-16 rounded-xl font-black text-xl sm:text-2xl text-white bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] transition-all shadow-md disabled:opacity-50 tracking-tight", 'Point')}
-              >
-                WE SCORED
-              </button>
-              <button
-                onClick={() => handleStatRecord('Opponent Point')}
-                disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || isVoiceEnabled || (possessionChain.length > 0 && callahanModeFor === null)}
-                className={getActionClass("flex items-center justify-center h-14 sm:h-16 rounded-xl font-black text-xl sm:text-2xl text-white bg-rose-700 hover:bg-rose-600 active:scale-[0.98] transition-all shadow-md disabled:opacity-50 tracking-tight", 'Opponent Point')}
-              >
-                THEY SCORED
-              </button>
-           </div>
-           
-           {/* Secondary Actions */}
-           <div className="grid grid-cols-4 gap-2">
-              <button
-                onClick={() => handleTap('Drop', () => handleStatRecord('Drop'))}
-                disabled={activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
-                className={`relative overflow-hidden ${getActionClass("h-14 sm:h-16 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Drop')}`}
-              >
-                Drop
-              </button>
-              <button
-                onClick={() => handleTap('Throwaway', () => handleStatRecord('Throwaway'))}
-                disabled={activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
-                className={`relative overflow-hidden ${getActionClass("h-14 sm:h-16 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Throwaway')}`}
-              >
-                Incomplete
-              </button>
-              <button
-                onClick={() => handleStatRecord('Stall Out')}
-                disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
-                className={getActionClass("h-14 sm:h-16 bg-slate-700 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Stall Out')}
-              >
-                Stall Out
-              </button>
-              <button
-                onClick={() => handleStatRecord('Defence')}
-                disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
-                className={getActionClass("h-14 sm:h-16 bg-orange-600 hover:bg-orange-500 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center", 'Defence')}
-              >
-                Defence
-              </button>
-           </div>
-        </div>
+            {gameType === 'training' ? (
+               <div className="bg-indigo-950/40 p-4 rounded-xl border border-indigo-500/20 mb-3 flex items-center justify-between shadow-inner">
+                  <div className="flex items-center gap-2.5">
+                     <div className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-pulse" />
+                     <div>
+                        <div className="text-[10px] text-indigo-400 font-extrabold uppercase tracking-wider">Active Coaching Drill</div>
+                        <div className="font-extrabold text-sm text-white">{activeDrill?.name || 'Custom Drill'}</div>
+                     </div>
+                  </div>
+                  <div className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-1 rounded font-black uppercase tracking-wider">
+                     {activeDrill?.flow_type === 'rep_based' ? 'Rep-by-Rep' : 'Continuous'}
+                  </div>
+               </div>
+            ) : (
+               <div className="grid grid-cols-2 gap-3 mb-3">
+                  <button
+                    onClick={() => handleStatRecord('Point')}
+                    disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || possessionChain.length === 0 || isVoiceEnabled}
+                    className={getActionClass("flex items-center justify-center h-14 sm:h-16 rounded-xl font-black text-xl sm:text-2xl text-white bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] transition-all shadow-md disabled:opacity-50 tracking-tight", 'Point')}
+                  >
+                    WE SCORED
+                  </button>
+                  <button
+                    onClick={() => handleStatRecord('Opponent Point')}
+                    disabled={isSaving || activeLineup.length === 0 || !isTrackingActive || isVoiceEnabled || (possessionChain.length > 0 && callahanModeFor === null)}
+                    className={getActionClass("flex items-center justify-center h-14 sm:h-16 rounded-xl font-black text-xl sm:text-2xl text-white bg-rose-700 hover:bg-rose-600 active:scale-[0.98] transition-all shadow-md disabled:opacity-50 tracking-tight", 'Opponent Point')}
+                  >
+                    THEY SCORED
+                  </button>
+               </div>
+            )}
+            
+            {/* Secondary Actions */}
+            <div className="grid grid-cols-4 gap-2">
+               <button
+                 onClick={() => {
+                   const action = gameType === 'training' && activeDrill ? activeDrill.metrics[0] : 'Drop';
+                   if (gameType === 'training' && activeDrill?.flow_type === 'rep_based') {
+                     handleStatRecord(action);
+                   } else {
+                     handleTap(action, () => handleStatRecord(action));
+                   }
+                 }}
+                 disabled={
+                   activeLineup.length === 0 || 
+                   !isTrackingActive || 
+                   isVoiceEnabled ||
+                   (gameType === 'training' && activeDrill?.flow_type === 'rep_based'
+                     ? possessionChain.length < 2
+                     : possessionChain.length === 0)
+                 }
+                 className={`relative overflow-hidden ${getActionClass(
+                   "h-14 sm:h-16 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center " + 
+                   (gameType === 'training' && activeDrill ? "bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/20" : "bg-slate-700"), 
+                   gameType === 'training' && activeDrill ? activeDrill.metrics[0] : 'Drop'
+                 )}`}
+               >
+                 {gameType === 'training' && activeDrill ? activeDrill.metrics[0] : 'Drop'}
+               </button>
+               <button
+                 onClick={() => {
+                   const action = gameType === 'training' && activeDrill ? activeDrill.metrics[1] : 'Throwaway';
+                   if (gameType === 'training' && activeDrill?.flow_type === 'rep_based') {
+                     handleStatRecord(action);
+                   } else {
+                     handleTap(action, () => handleStatRecord(action));
+                   }
+                 }}
+                 disabled={
+                   activeLineup.length === 0 || 
+                   !isTrackingActive || 
+                   isVoiceEnabled ||
+                   (gameType === 'training' && activeDrill?.flow_type === 'rep_based'
+                     ? possessionChain.length < 2
+                     : possessionChain.length === 0)
+                 }
+                 className={`relative overflow-hidden ${getActionClass(
+                   "h-14 sm:h-16 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center " + 
+                   (gameType === 'training' && activeDrill ? "bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/20" : "bg-slate-700"), 
+                   gameType === 'training' && activeDrill ? activeDrill.metrics[1] : 'Throwaway'
+                 )}`}
+               >
+                 {gameType === 'training' && activeDrill ? activeDrill.metrics[1] : 'Incomplete'}
+               </button>
+               <button
+                 onClick={() => {
+                   const action = gameType === 'training' && activeDrill ? activeDrill.metrics[2] : 'Stall Out';
+                   handleStatRecord(action);
+                 }}
+                 disabled={
+                   isSaving || 
+                   activeLineup.length === 0 || 
+                   !isTrackingActive || 
+                   isVoiceEnabled ||
+                   (gameType === 'training' && activeDrill?.flow_type === 'rep_based'
+                     ? possessionChain.length < 2
+                     : possessionChain.length === 0)
+                 }
+                 className={getActionClass(
+                   "h-14 sm:h-16 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center " + 
+                   (gameType === 'training' && activeDrill ? "bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/20" : "bg-slate-700"), 
+                   gameType === 'training' && activeDrill ? activeDrill.metrics[2] : 'Stall Out'
+                 )}
+               >
+                 {gameType === 'training' && activeDrill ? activeDrill.metrics[2] : 'Stall Out'}
+               </button>
+               <button
+                 onClick={() => {
+                   const action = gameType === 'training' && activeDrill ? activeDrill.metrics[3] : 'Defence';
+                   handleStatRecord(action);
+                 }}
+                 disabled={
+                   isSaving || 
+                   activeLineup.length === 0 || 
+                   !isTrackingActive || 
+                   isVoiceEnabled ||
+                   (gameType === 'training' && activeDrill?.flow_type === 'rep_based'
+                     ? possessionChain.length < 2
+                     : possessionChain.length === 0)
+                 }
+                 className={getActionClass(
+                   "h-14 sm:h-16 text-white text-[11px] sm:text-xs font-bold rounded-lg uppercase tracking-tighter active:scale-95 disabled:opacity-50 flex items-center justify-center " + 
+                   (gameType === 'training' && activeDrill ? "bg-orange-600/30 border border-orange-500/30 text-orange-400 hover:bg-orange-600/50" : "bg-orange-600 hover:bg-orange-500"), 
+                   gameType === 'training' && activeDrill ? activeDrill.metrics[3] : 'Defence'
+                 )}
+               >
+                 {gameType === 'training' && activeDrill ? activeDrill.metrics[3] : 'Defence'}
+               </button>
+            </div>
+         </div>
 
         {/* Footer Actions */}
         <div className="shrink-0 p-2 border-t border-slate-800 bg-slate-950 grid grid-cols-3 gap-2">

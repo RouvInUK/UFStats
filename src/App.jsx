@@ -26,8 +26,10 @@ import TournamentSetupScreen from './components/TournamentSetupScreen';
 import TournamentProDashboard from './components/TournamentProDashboard';
 import TournamentMatchSelector from './components/TournamentMatchSelector';
 import TournamentScorer from './components/TournamentScorer';
+import TrainingSetupScreen from './components/TrainingSetupScreen';
+import TrainingScorer from './components/TrainingScorer';
 import AiRecapModule from './components/AiRecapModule';
-import { ShieldCheck, Star, LogOut, Cloud, CloudOff, CloudUpload, Crown, Settings, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, Star, LogOut, Cloud, CloudOff, CloudUpload, Crown, Settings, AlertTriangle, Dumbbell } from 'lucide-react';
 import { getPendingSyncCount } from './SyncEngine';
 import { unlockAudio } from './utils/audioFeedback';
 
@@ -180,11 +182,7 @@ function App() {
   });
 
   useEffect(() => {
-    if (gameType === 'training') {
-      setGameType('grass');
-    } else {
-      localStorage.setItem('ufstats_game_type', gameType);
-    }
+    localStorage.setItem('ufstats_game_type', gameType);
   }, [gameType]);
 
   const [currentTeam, setCurrentTeam] = useState(() => {
@@ -651,6 +649,19 @@ function App() {
                 Tournament Desk
              </button>
           )}
+          {/* Trainings Desk Entry Point */}
+          {(profile?.beta_trainings_tier || profile?.is_system_admin) && (
+            <button 
+               onClick={() => {
+                 setCurrentView('training_setup');
+               }}
+               className={`px-4 py-2 font-bold rounded-xl transition-all flex items-center gap-2 uppercase tracking-wide text-xs ${['training_setup', 'training_scorer'].includes(currentView) ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.15)]' : 'bg-slate-800 text-slate-300 hover:text-white border border-white/5'}`}
+               title="Trainings Desk"
+            >
+               <Dumbbell className="w-4 h-4" />
+               <span>Trainings Desk</span>
+            </button>
+          )}
           <button 
             onClick={() => {
               if (!isProTier) {
@@ -716,6 +727,18 @@ function App() {
                 title="Tournament Desk"
              >
                 <span className="text-lg leading-none">🏆</span>
+             </button>
+          )}
+          {/* Trainings Desk Entry Point */}
+          {(profile?.beta_trainings_tier || profile?.is_system_admin) && (
+             <button 
+                onClick={() => {
+                  setCurrentView('training_setup');
+                }}
+                className={`p-2 rounded-lg transition-all ${['training_setup', 'training_scorer'].includes(currentView) ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-400 hover:text-white'}`}
+                title="Trainings Desk"
+             >
+                <Dumbbell className="w-5 h-5" />
              </button>
           )}
           <button 
@@ -911,7 +934,27 @@ function App() {
         />
       )}
 
-      {/* Fixed Bottom Navigation Bar */}
+      {currentView === 'training_setup' && (profile?.beta_trainings_tier || profile?.is_system_admin) && (
+        <TrainingSetupScreen 
+          players={players}
+          setPlayers={setPlayers}
+          currentTeam={effectiveTeamName}
+          targetTeamId={targetTeamId}
+          onNavigate={setCurrentView}
+        />
+      )}
+
+      {currentView === 'training_scorer' && (profile?.beta_trainings_tier || profile?.is_system_admin) && (
+        <TrainingScorer 
+          players={players}
+          setPlayers={setPlayers}
+          currentTeam={effectiveTeamName}
+          targetTeamId={targetTeamId}
+          onNavigate={setCurrentView}
+          isPro={isProTier}
+          isVoiceBeta={isVoiceBetaTier}
+        />
+      )}
       <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 flex justify-around items-center px-1 py-3 sm:py-4 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] pb-safe print:hidden">
         {!profile?.disable_club_track && (
           <button onClick={() => setCurrentView('team_selection')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'team_selection' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>

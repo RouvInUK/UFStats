@@ -8,21 +8,41 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 import { getLocalPoint, savePointLocally, addStatToLocalPoint, generateUUID, attemptSync } from './SyncEngine';
 
 export const recordStatToDB = async (statData, currentTeamId) => {
-  const { player, stat, pointNumber, gameName, gameType, teamName, details, timestamp } = statData;
+  const { 
+    player, 
+    stat, 
+    stat_type, 
+    pointNumber, 
+    point_number, 
+    gameName, 
+    game_name, 
+    gameType, 
+    game_type, 
+    teamName, 
+    team_name, 
+    details, 
+    timestamp 
+  } = statData;
+
+  const resolvedStatType = stat || stat_type;
+  const resolvedPointNumber = pointNumber !== undefined ? pointNumber : point_number;
+  const resolvedGameName = gameName || game_name || 'Unnamed Game';
+  const resolvedGameType = gameType || game_type || 'grass';
+  const resolvedTeamName = teamName || team_name || 'Default Team';
 
   const newStat = {
     player: player,
-    stat_type: stat,
-    point_number: pointNumber,
-    game_name: gameName || 'Unnamed Game',
-    game_type: gameType || 'grass',
-    team_name: teamName || 'Default Team',
+    stat_type: resolvedStatType,
+    point_number: resolvedPointNumber,
+    game_name: resolvedGameName,
+    game_type: resolvedGameType,
+    team_name: resolvedTeamName,
     team_id: currentTeamId,
     details: details || null,
     timestamp: timestamp || statData.timestamp || null
   };
 
-  const enrichedStat = await addStatToLocalPoint(newStat.game_name, pointNumber, newStat);
+  const enrichedStat = await addStatToLocalPoint(newStat.game_name, resolvedPointNumber, newStat);
   return enrichedStat;
 };
 
@@ -594,6 +614,17 @@ export const updateUserBetaTournamentTier = async (userId, beta_tournament_tier)
   return data ? data[0] : null;
 };
 
+export const updateUserBetaTrainingsTier = async (userId, beta_trainings_tier) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ beta_trainings_tier })
+    .eq('id', userId)
+    .select();
+
+  if (error) throw error;
+  return data ? data[0] : null;
+};
+
 export const updateUserDisableClubTrack = async (userId, disable_club_track) => {
   const { data, error } = await supabase
     .from('profiles')
@@ -1140,3 +1171,71 @@ export const updatePlayerGenderDesignation = async (playerId, genderDesignation)
   if (error) throw error;
   return data;
 };
+
+// --- Dynamic Drill Definitions API helpers for Trainings Mode ---
+
+export const fetchDrills = async (teamId) => {
+  if (!navigator.onLine) {
+    // If offline, return empty list or fallback to default templates in context
+    return [];
+  }
+  
+  // Select approved global drills OR drills created by/for the user's specific team
+  const { data, error } = await supabase
+    .from('drill_definitions')
+    .select('*')
+    .or(`team_id.is.null,team_id.eq.${teamId}`)
+    .order('created_at', { ascending: true });
+    
+  if (error) throw error;
+  return data || [];
+};
+
+export const insertDrill = async (drillData) => {
+  if (!navigator.onLine) throw new Error("Offline. Cannot create drills.");
+  
+  const { data, error } = await supabase
+    .from('drill_definitions')
+    .insert({
+      team_id: drillData.teamId,
+      created_by: drillData.createdBy,
+      name: drillData.name,
+      category: drillData.category,
+      flow_type: drillData.flowType || 'continuous',
+      metrics: drillData.metrics,
+      is_public: drillData.isPublic || false,
+      status: drillData.isPublic ? 'pending' : 'approved'
+    })
+    .select()
+    .single();
+    
+  if (error) throw error;
+  return data;
+};
+
+export const fetchPendingDrills = async () => {
+  if (!navigator.onLine) return [];
+  const { data, error } = await supabase
+    .from('drill_definitions')
+    .select('*, teams:team_id(name)')
+    .eq('is_public', true)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true });
+    
+  if (error) throw error;
+  return data || [];
+};
+
+export const updateDrillStatus = async (drillId, status) => {
+  if (!navigator.onLine) throw new Error("Offline. Cannot update drill status.");
+  const { data, error } = await supabase
+    .from('drill_definitions')
+    .update({ status })
+    .eq('id', drillId)
+    .select()
+    .single();
+    
+  if (error) throw error;
+  return data;
+};
+

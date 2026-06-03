@@ -141,7 +141,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
     setIsDropdownOpen(false);
   };
 
-  const { playerStats, timeline, score, teamSummary, connectionsMap, twoGameTrend, isMultiGame, teamStats, linesStats } = useMemo(() => {
+  const { playerStats, timeline, score, teamSummary, connectionsMap, twoGameTrend, isMultiGame, teamStats, linesStats, gameFormatLabel } = useMemo(() => {
     const isMultiGame = selectedGames.length > 1;
     const playersMap = {};
     const timelineData = [];
@@ -198,6 +198,18 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       }
       return { ...stat, player: normalizedName };
     });
+
+    const hasLineups = stats.some(s => s.stat_type === 'Lineup');
+    const detectedType = stats.find(s => s.game_type)?.game_type;
+    const isTrainingOrScrimmage = detectedType === 'training' || detectedType === 'training_match';
+
+    if (!hasLineups && isTrainingOrScrimmage && players && players.length > 0) {
+      players.forEach(p => {
+        if (p.name) {
+          ensurePlayer(p.name);
+        }
+      });
+    }
 
     normalizedStats.forEach((stat, index) => {
       const pointKey = `${stat.game_name}_${stat.point_number}`;
@@ -267,6 +279,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       if (stat.player === 'System' || stat.player === 'Opponent' || SYSTEM_EVENTS.includes(stat.stat_type)) return;
 
       const p = ensurePlayer(stat.player);
+      p.pointsPlayedSet.add(pointKey);
       if (!stat.stat_type.startsWith('Pull')) {
         p.touches += 1;
         teamTouchesCount += 1;
@@ -400,7 +413,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       const huckCompletions = p.huckPasses || 0;
       
       const totalHuckTurnovers = (p.huckThrowaways || 0) + (p.huckDrops || 0);
-      const nis = ((p.goals * 2) + (p.assists * 1.5) + (p.blocks * 2) + (p.passes * 0.3) + ((p.huckPasses || 0) * 0.7) - (turnovers * 2) + (totalHuckTurnovers * 0.5)) / pointsPlayed;
+      const nis = ((p.goals * 2) + (p.assists * 2.0) + (p.blocks * 2) + (p.passes * 0.3) + ((p.huckPasses || 0) * 0.7) - (turnovers * 2) + (totalHuckTurnovers * 0.5)) / pointsPlayed;
 
       let plusMinus = 0;
       let totalWeightedImpact = 0;
@@ -442,8 +455,17 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
 
       const oceRaw = p.possessionsPlayed > 0 ? (p.goalsOnPitch / p.possessionsPlayed) * 100 : 0;
       const oce = parseFloat(oceRaw.toFixed(1));
+
+      // Calculate games played dynamically from pointsPlayedSet
+      const playedGamesSet = new Set();
+      p.pointsPlayedSet.forEach(pointKey => {
+         const gameName = pointKey.substring(0, pointKey.lastIndexOf('_'));
+         playedGamesSet.add(gameName);
+      });
+      const gamesPlayed = Math.max(1, playedGamesSet.size);
       
-      const ova = (p.cleanHolds * 0.5) + (p.assists * 2.0) + (p.secondaryAssists * 1.5);
+      const rawOva = (1.0 * p.goals) + (1.0 * p.assists) + (0.5 * p.secondaryAssists) - (0.75 * turnovers) + (0.05 * p.passes);
+      const ova = parseFloat((rawOva / gamesPlayed).toFixed(2));
 
       let tags = [];
       if (!isMultiGame || p.pointsPlayedSet.size >= 10) {
@@ -466,6 +488,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
         systemImpact,
         oce,
         ova,
+        gamesPlayed,
         avgPullScore,
         pointsPlayed: p.holdsPlayed + p.breaksPlayed,
         passAttempts: passAttempts,
@@ -765,6 +788,46 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       };
     });
 
+    // Detect game and scrimmage format dynamically
+    let gameFormatLabel = '';
+    if (detectedType === 'training') {
+      gameFormatLabel = 'Drill Session';
+    } else if (detectedType === 'training_match') {
+      const point1Lineup = stats.filter(s => s.stat_type === 'Lineup' && s.point_number === 1);
+      const lineupNames = new Set(point1Lineup.map(s => s.player).filter(Boolean));
+      
+      let formatCount = 0;
+      if (lineupNames.size > 0) {
+        formatCount = lineupNames.size;
+      } else {
+        const uniquePlayers = new Set(
+          stats.map(s => s.player).filter(p => p && p !== 'System' && p !== 'Opponent')
+        );
+        formatCount = uniquePlayers.size;
+      }
+      
+      if (formatCount > 0) {
+        if (formatCount % 2 === 0) {
+          const side = formatCount / 2;
+          gameFormatLabel = `${side}v${side} Scrimmage`;
+        } else {
+          const side1 = Math.ceil(formatCount / 2);
+          const side2 = Math.floor(formatCount / 2);
+          gameFormatLabel = `${side1}v${side2} Scrimmage`;
+        }
+      } else {
+        gameFormatLabel = 'Scrimmage';
+      }
+    } else if (detectedType === 'beach') {
+      gameFormatLabel = '5v5 Beach';
+    } else if (detectedType === 'grass') {
+      gameFormatLabel = '7v7 Grass';
+    } else if (detectedType === 'indoor') {
+      gameFormatLabel = '5v5 Indoor';
+    } else {
+      gameFormatLabel = visualGameType === 'beach' ? '5v5 Beach' : '7v7 Grass';
+    }
+
     return {
       playerStats: calculatedPlayerStats,
       timeline: timelineData,
@@ -776,7 +839,8 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
       twoGameTrend,
       isMultiGame,
       teamStats,
-      linesStats: formattedLinesStats
+      linesStats: formattedLinesStats,
+      gameFormatLabel
     };
   }, [stats, selectedGames.length, players, teamLines]);
 
@@ -931,10 +995,21 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
           <div className="flex flex-wrap items-center gap-3 mt-2">
             {!isMultiGame && (
               <button 
-                onClick={() => setVisualGameType(visualGameType === 'beach' ? 'grass' : 'beach')}
-                className={`px-3 py-1 font-bold text-xs uppercase tracking-widest rounded-full ${visualGameType === 'beach' ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}`}
+                onClick={() => {
+                  if (visualGameType !== 'training' && visualGameType !== 'training_match') {
+                    setVisualGameType(visualGameType === 'beach' ? 'grass' : 'beach');
+                  }
+                }}
+                disabled={visualGameType === 'training' || visualGameType === 'training_match'}
+                className={`px-3 py-1 font-bold text-xs uppercase tracking-widest rounded-full ${
+                  visualGameType === 'training' || visualGameType === 'training_match'
+                    ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 cursor-default'
+                    : visualGameType === 'beach' 
+                      ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' 
+                      : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                }`}
               >
-                {visualGameType === 'beach' ? '5v5 Beach' : '7v7 Grass'}
+                {gameFormatLabel}
               </button>
             )}
             {!isMultiGame && selectedGames.length > 0 && (
@@ -982,17 +1057,25 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-4 bg-slate-950 px-6 py-4 rounded-2xl border border-white/5 shadow-inner">
-          <div className="text-center">
-            <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">Us</span>
-            <div className="text-4xl font-black text-indigo-400">{score.us}</div>
+        {visualGameType !== 'training' && visualGameType !== 'training_match' ? (
+          <div className="flex items-center gap-4 bg-slate-950 px-6 py-4 rounded-2xl border border-white/5 shadow-inner">
+            <div className="text-center">
+              <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">Us</span>
+              <div className="text-4xl font-black text-indigo-400">{score.us}</div>
+            </div>
+            <div className="text-slate-700 text-3xl font-light">-</div>
+            <div className="text-center">
+              <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">Them</span>
+              <div className="text-4xl font-black text-rose-500">{score.them}</div>
+            </div>
           </div>
-          <div className="text-slate-700 text-3xl font-light">-</div>
-          <div className="text-center">
-            <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">Them</span>
-            <div className="text-4xl font-black text-rose-500">{score.them}</div>
+        ) : (
+          <div className="flex items-center bg-slate-950 px-6 py-4 rounded-2xl border border-white/5 shadow-inner">
+            <span className="text-[10px] text-indigo-400 font-black uppercase tracking-widest bg-indigo-500/10 border border-indigo-500/20 px-3.5 py-1.5 rounded-xl">
+              🏋️ Scrimmage / Drill Mode
+            </span>
           </div>
-        </div>
+        )}
       </div>
 
       <AiAdvisorModule 
@@ -1012,82 +1095,108 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
           
 
 
-          {/* Pulse Chart */}
-          <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
-            <h3 className="text-lg font-bold text-white flex items-center justify-between mb-6">
-              <span className="flex items-center gap-2"><Zap className="w-5 h-5 text-amber-400" /> {isMultiGame ? 'Cumulative Tournament Pulse' : 'Match Pulse'}</span>
-              <span className="text-xs bg-slate-950 border border-slate-800 px-3 py-1 rounded-lg text-slate-500 font-medium text-right">
-                {isMultiGame ? 'Across all selected games sequentially' : 'Live Score Differential'}
-              </span>
-            </h3>
-            <div className="h-64 w-full">
-              {selectedGames.length === 2 && twoGameTrend ? (
-                <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center gap-4 border border-white/5 bg-slate-950/40 rounded-2xl">
-                  <div className="text-sm font-bold text-slate-400 uppercase tracking-widest">{twoGameTrend.g1Name} → {twoGameTrend.g2Name}</div>
-                  <div className="flex items-center gap-6">
-                    {twoGameTrend.delta > 0 ? (
-                       <TrendingUp className="w-20 h-20 text-emerald-500 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
-                    ) : (
-                       <TrendingDown className="w-20 h-20 text-rose-500 drop-shadow-[0_0_15px_rgba(244,63,94,0.5)]" />
-                    )}
-                    <div className="text-left flex flex-col">
-                       <span className={`text-4xl font-black tracking-tighter ${twoGameTrend.delta > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {twoGameTrend.delta > 0 ? '+' : ''}{twoGameTrend.delta.toFixed(1)}%
-                       </span>
-                       <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">OCE Shift</span>
+          {/* Pulse Chart or Connection Map */}
+          {visualGameType !== 'training' && visualGameType !== 'training_match' ? (
+            <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
+              <h3 className="text-lg font-bold text-white flex items-center justify-between mb-6">
+                <span className="flex items-center gap-2"><Zap className="w-5 h-5 text-amber-400" /> {isMultiGame ? 'Cumulative Tournament Pulse' : 'Match Pulse'}</span>
+                <span className="text-xs bg-slate-950 border border-slate-800 px-3 py-1 rounded-lg text-slate-500 font-medium text-right">
+                  {isMultiGame ? 'Across all selected games sequentially' : 'Live Score Differential'}
+                </span>
+              </h3>
+              <div className="h-64 w-full">
+                {selectedGames.length === 2 && twoGameTrend ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center gap-4 border border-white/5 bg-slate-950/40 rounded-2xl">
+                    <div className="text-sm font-bold text-slate-400 uppercase tracking-widest">{twoGameTrend.g1Name} → {twoGameTrend.g2Name}</div>
+                    <div className="flex items-center gap-6">
+                      {twoGameTrend.delta > 0 ? (
+                         <TrendingUp className="w-20 h-20 text-emerald-500 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]" />
+                      ) : (
+                         <TrendingDown className="w-20 h-20 text-rose-500 drop-shadow-[0_0_15px_rgba(244,63,94,0.5)]" />
+                      )}
+                      <div className="text-left flex flex-col">
+                         <span className={`text-4xl font-black tracking-tighter ${twoGameTrend.delta > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {twoGameTrend.delta > 0 ? '+' : ''}{twoGameTrend.delta.toFixed(1)}%
+                         </span>
+                         <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">OCE Shift</span>
+                      </div>
+                    </div>
+                    <div className="text-slate-400 mt-2 text-sm max-w-md">
+                       Team Offensive Conversion Efficiency shifted from <span className="text-white font-bold">{twoGameTrend.g1OCE.toFixed(1)}%</span> to <span className="text-white font-bold">{twoGameTrend.g2OCE.toFixed(1)}%</span> between these two matches.
                     </div>
                   </div>
-                  <div className="text-slate-400 mt-2 text-sm max-w-md">
-                     Team Offensive Conversion Efficiency shifted from <span className="text-white font-bold">{twoGameTrend.g1OCE.toFixed(1)}%</span> to <span className="text-white font-bold">{twoGameTrend.g2OCE.toFixed(1)}%</span> between these two matches.
+                ) : timeline.length > 1 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={timeline} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorUs" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#818cf8" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#818cf8" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorThem" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="point" stroke="#334155" tick={{fill: '#64748b', fontSize: 12}} />
+                      <YAxis stroke="#334155" tick={{fill: '#64748b', fontSize: 12}} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#020617', borderColor: '#1e293b', borderRadius: '12px' }}
+                        itemStyle={{ fontWeight: 'bold' }}
+                      />
+                      
+                      {/* Add Reference Area Highlights for highlighted player */}
+                      {highlightedPlayerName && (
+                        timeline.map((d, i) => {
+                           const playerObj = playerStats.find(p => p.name === highlightedPlayerName);
+                           if (playerObj && playerObj.pointsPlayedSet.has(d.pointKey)) {
+                              // Render a reference area from this point to the next
+                              const nextD = timeline[i + 1];
+                              const endPoint = nextD ? nextD.point : d.point + 1; // Approximate right edge
+                              return (
+                                 <ReferenceArea key={i} x1={d.point} x2={endPoint} fill="#f8fafc" fillOpacity={0.1} />
+                              )
+                           }
+                           return null;
+                        })
+                      )}
+                      
+                      <Area type="stepAfter" dataKey="Us" stroke="#818cf8" strokeWidth={3} fillOpacity={1} fill="url(#colorUs)" />
+                      <Area type="stepAfter" dataKey="Them" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorThem)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-600 font-medium border border-slate-800 rounded-xl bg-slate-950/50">
+                    Not enough scoring data to visualize timeline.
                   </div>
-                </div>
-              ) : timeline.length > 1 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={timeline} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorUs" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#818cf8" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#818cf8" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="colorThem" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="point" stroke="#334155" tick={{fill: '#64748b', fontSize: 12}} />
-                    <YAxis stroke="#334155" tick={{fill: '#64748b', fontSize: 12}} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#020617', borderColor: '#1e293b', borderRadius: '12px' }}
-                      itemStyle={{ fontWeight: 'bold' }}
-                    />
-                    
-                    {/* Add Reference Area Highlights for highlighted player */}
-                    {highlightedPlayerName && (
-                      timeline.map((d, i) => {
-                         const playerObj = playerStats.find(p => p.name === highlightedPlayerName);
-                         if (playerObj && playerObj.pointsPlayedSet.has(d.pointKey)) {
-                            // Render a reference area from this point to the next
-                            const nextD = timeline[i + 1];
-                            const endPoint = nextD ? nextD.point : d.point + 1; // Approximate right edge
-                            return (
-                               <ReferenceArea key={i} x1={d.point} x2={endPoint} fill="#f8fafc" fillOpacity={0.1} />
-                            )
-                         }
-                         return null;
-                      })
-                    )}
-                    
-                    <Area type="stepAfter" dataKey="Us" stroke="#818cf8" strokeWidth={3} fillOpacity={1} fill="url(#colorUs)" />
-                    <Area type="stepAfter" dataKey="Them" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorThem)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-slate-600 font-medium border border-slate-800 rounded-xl bg-slate-950/50">
-                  Not enough scoring data to visualize timeline.
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          ) : (
+            Object.keys(connectionsMap).length > 0 && (
+              <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-6">
+                  <Activity className="w-5 h-5 text-indigo-400" /> Connection Map (Assist Pairs)
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Object.entries(connectionsMap)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 6)
+                    .map(([pair, count], index) => (
+                      <div key={pair} className={`p-4 rounded-2xl border ${index === 0 ? 'bg-indigo-500/10 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'bg-slate-950/50 border-white/5'}`}>
+                        <div className="text-xs font-bold uppercase tracking-widest mb-2">
+                          {index === 0 ? <span className="text-indigo-400 flex items-center gap-1"><Zap className="w-3 h-3" /> Deadly Duo</span> : <span className="text-slate-500">Rank #{index + 1}</span>}
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="font-bold text-slate-200 text-sm truncate">{pair}</span>
+                          <span className="font-black text-xl text-emerald-400 shrink-0">{count}</span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )
+          )}
 
         </div>
 
@@ -1148,7 +1257,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
         <div className="space-y-6 sm:space-y-8 mt-6">
           
           {/* Connection Map UI */}
-          {Object.keys(connectionsMap).length > 0 && (
+          {visualGameType !== 'training' && visualGameType !== 'training_match' && Object.keys(connectionsMap).length > 0 && (
             <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 p-6 rounded-3xl shadow-xl">
               <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-6">
                 <Activity className="w-5 h-5 text-indigo-400" /> Connection Map (Assist Pairs)
@@ -1212,8 +1321,11 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-950/80 text-slate-400 text-[10px] uppercase tracking-widest cursor-pointer select-none">
-                    <th className="p-4 font-bold hover:text-white transition-colors" onClick={() => handleSort('name')}>
-                      Player {sortField === 'name' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                    <th className="p-4 font-bold text-left hover:text-white transition-colors" title="Player Name">
+                      Player
+                    </th>
+                    <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('gamesPlayed')} title="Games Played (Matches participated in)">
+                      GP {sortField === 'gamesPlayed' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
                     <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('pointsPlayed')} title="Total Points Played">
                       PP {sortField === 'pointsPlayed' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
@@ -1248,8 +1360,8 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                     <th className="p-4 font-bold text-center hover:text-white transition-colors whitespace-nowrap" onClick={() => handleSort('oce')} title="Team success rate at converting possessions into goals while this player is active.">
                       OCE % {sortField === 'oce' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
-                    <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('ova')} title="Weighted offensive contribution (Assists + Hockey Assists + Clean Holds).">
-                      OVA {sortField === 'ova' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                    <th className="p-4 font-bold text-center hover:text-white transition-colors whitespace-nowrap" onClick={() => handleSort('ova')} title="Offensive Value Added per Game: (Goals + Assists + 0.5 * Hockey Assists - 0.75 * Turnovers + 0.05 * Completions) / Games Played">
+                      OVA/G {sortField === 'ova' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                     </th>
                     <th className="p-4 font-bold text-center hover:text-white transition-colors" onClick={() => handleSort('avgPullScore')} title="Average Pull Impact (0-5 scale based on field position and pressure)">
                       Pull Impact {sortField === 'avgPullScore' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
@@ -1276,6 +1388,9 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                               </span>
                             </span>
                           </div>
+                        </td>
+                        <td className="p-4 text-center font-mono font-bold text-slate-200">
+                          {p.gamesPlayed}
                         </td>
                         <td className="p-4 text-center font-mono font-bold text-slate-200">
                           {p.pointsPlayed}
@@ -1346,7 +1461,7 @@ const CoachDashboard = ({ currentGame, currentTeam, targetTeamId, setCurrentTeam
                         <td className="p-4 text-center font-mono font-bold text-teal-300">
                           {p.oce}%
                         </td>
-                        <td className="p-4 text-center font-mono font-bold text-emerald-300">
+                        <td className={`p-4 text-center font-mono font-bold ${p.ova <= 0 ? 'text-rose-400' : 'text-emerald-300'}`}>
                           {p.ova.toFixed(1)}
                         </td>
                         <td className="p-4 text-center font-mono font-bold text-amber-300">

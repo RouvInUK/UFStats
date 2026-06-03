@@ -87,10 +87,10 @@ const StandardFooter = () => {
                 : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800'
             } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500`}
             aria-pressed={beachMode}
-            title="Toggle High Contrast Beach Mode for Outdoor Readability"
+            title="Toggle High Contrast Mode for Outdoor Readability"
           >
             <Compass className={`w-4 h-4 ${beachMode ? 'animate-spin' : ''}`} />
-            <span>Beach Mode: {beachMode ? 'ON' : 'OFF'}</span>
+            <span>High Contrast: {beachMode ? 'ON' : 'OFF'}</span>
           </button>
         </div>
 
