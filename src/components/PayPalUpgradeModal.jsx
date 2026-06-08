@@ -5,6 +5,7 @@ import { updateUserTier } from '../supabaseClient';
 
 const PayPalUpgradeModal = ({ isOpen, onClose }) => {
   const { user, profile, fetchProfile } = useAuth();
+  const [selectedTier, setSelectedTier] = useState('PRO'); // 'PRO' or 'PRO+'
   const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' or 'yearly'
   const [sdkLoaded, setSdkLoaded] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
@@ -17,6 +18,8 @@ const PayPalUpgradeModal = ({ isOpen, onClose }) => {
   // PayPal Sandbox Plan IDs (Customizable via environment variables)
   const MONTHLY_PLAN_ID = import.meta.env.VITE_PAYPAL_MONTHLY_PLAN_ID || 'P-5GBP-MONTHLY';
   const YEARLY_PLAN_ID = import.meta.env.VITE_PAYPAL_YEARLY_PLAN_ID || 'P-50GBP-YEARLY';
+  const PLUS_MONTHLY_PLAN_ID = import.meta.env.VITE_PAYPAL_PLUS_MONTHLY_PLAN_ID || 'P-7GBP-PLUS-MONTHLY';
+  const PLUS_YEARLY_PLAN_ID = import.meta.env.VITE_PAYPAL_PLUS_YEARLY_PLAN_ID || 'P-70GBP-PLUS-YEARLY';
   const CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || 'sb'; // Default to sandbox 'sb'
 
   useEffect(() => {
@@ -60,7 +63,7 @@ const PayPalUpgradeModal = ({ isOpen, onClose }) => {
     };
   }, [isOpen, CLIENT_ID]);
 
-  // Re-render buttons when SDK is loaded, container exists, or billing cycle swaps
+  // Re-render buttons when SDK is loaded, container exists, or tier/billing cycle swaps
   useEffect(() => {
     if (!sdkLoaded || !paypalContainerRef.current || !window.paypal || paymentSuccess) return;
 
@@ -74,7 +77,9 @@ const PayPalUpgradeModal = ({ isOpen, onClose }) => {
       buttonsInstanceRef.current = null;
     }
 
-    const activePlanId = billingCycle === 'monthly' ? MONTHLY_PLAN_ID : YEARLY_PLAN_ID;
+    const activePlanId = selectedTier === 'PRO+'
+      ? (billingCycle === 'monthly' ? PLUS_MONTHLY_PLAN_ID : PLUS_YEARLY_PLAN_ID)
+      : (billingCycle === 'monthly' ? MONTHLY_PLAN_ID : YEARLY_PLAN_ID);
 
     // Clear container
     paypalContainerRef.current.innerHTML = '';
@@ -97,9 +102,9 @@ const PayPalUpgradeModal = ({ isOpen, onClose }) => {
         onApprove: async (data, actions) => {
           setLoading(true);
           try {
-            // Securely activate PRO tier on the client for immediate visual feedback
+            // Securely activate tier on the client for immediate visual feedback
             // Webhooks will enforce recurring updates on the backend securely
-            await updateUserTier(user.id, 'PRO');
+            await updateUserTier(user.id, selectedTier);
             if (fetchProfile) {
               await fetchProfile(user.id);
             }
@@ -122,7 +127,7 @@ const PayPalUpgradeModal = ({ isOpen, onClose }) => {
       console.error('Error rendering PayPal buttons:', e);
       setError('Could not initialize payment buttons. Check your Sandbox client configuration.');
     }
-  }, [sdkLoaded, billingCycle, paymentSuccess, MONTHLY_PLAN_ID, YEARLY_PLAN_ID, user]);
+  }, [sdkLoaded, selectedTier, billingCycle, paymentSuccess, MONTHLY_PLAN_ID, YEARLY_PLAN_ID, PLUS_MONTHLY_PLAN_ID, PLUS_YEARLY_PLAN_ID, user]);
 
   if (!isOpen) return null;
 
@@ -159,16 +164,20 @@ const PayPalUpgradeModal = ({ isOpen, onClose }) => {
             /* Success Celebration state */
             <div className="text-center py-8 space-y-6">
               <div className="relative w-20 h-20 mx-auto">
-                <div className="absolute inset-0 bg-amber-500/20 rounded-full blur-xl animate-pulse"></div>
-                <div className="relative w-20 h-20 bg-gradient-to-tr from-amber-400 to-orange-500 rounded-full flex items-center justify-center border-2 border-amber-300 shadow-xl animate-[bounce_1s_infinite]">
-                  <Sparkles className="w-10 h-10 text-slate-950" />
+                <div className="absolute inset-0 bg-indigo-500/20 rounded-full blur-xl animate-pulse"></div>
+                <div className="relative w-20 h-20 bg-gradient-to-tr from-indigo-400 to-purple-650 rounded-full flex items-center justify-center border-2 border-indigo-300 shadow-xl animate-[bounce_1s_infinite]">
+                  <Sparkles className="w-10 h-10 text-white" />
                 </div>
               </div>
               
               <div className="space-y-2">
-                <h3 className="text-2xl font-black text-white uppercase tracking-wider">Welcome to Coach Pro!</h3>
+                <h3 className="text-2xl font-black text-white uppercase tracking-wider">
+                  Welcome to {selectedTier === 'PRO+' ? 'Coach Pro+' : 'Coach Pro'}!
+                </h3>
                 <p className="text-slate-400 text-sm max-w-xs mx-auto leading-relaxed">
-                  Your payment was completed successfully. All advanced sidelines intelligence, NIS stats, and 1 Club / 5 Teams capacity are unlocked!
+                  {selectedTier === 'PRO+' 
+                    ? 'Your payment was completed successfully. Unlimited Clubs/Teams, Trainings Desk, and all advanced sidelines intelligence are unlocked!'
+                    : 'Your payment was completed successfully. All advanced sidelines intelligence, NIS stats, and 1 Club / 5 Teams capacity are unlocked!'}
                 </p>
               </div>
 
@@ -177,6 +186,7 @@ const PayPalUpgradeModal = ({ isOpen, onClose }) => {
                   <Check className="w-4 h-4 text-emerald-400" /> Active Membership
                 </div>
                 <div>Account: <span className="font-mono text-slate-200">{user?.email}</span></div>
+                <div>Tier: <span className="font-bold text-indigo-400">{selectedTier === 'PRO+' ? 'Coach Pro+' : 'Coach Pro'}</span></div>
                 <div>Billing Period: <span className="capitalize text-slate-200">{billingCycle} recurring</span></div>
               </div>
 
@@ -190,23 +200,53 @@ const PayPalUpgradeModal = ({ isOpen, onClose }) => {
           ) : (
             /* Billing and PayPal flow */
             <>
+              {/* Tier Selection Toggles */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Select Plan:</h4>
+                <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-950/80 border border-slate-850 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTier('PRO')}
+                    className={`py-2 px-3 text-xs font-black rounded-lg transition-all uppercase tracking-wider ${selectedTier === 'PRO' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                    Coach Pro
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTier('PRO+')}
+                    className={`py-2 px-3 text-xs font-black rounded-lg transition-all uppercase tracking-wider flex items-center justify-center gap-1.5 ${selectedTier === 'PRO+' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                    Coach Pro+
+                    <span className="text-[8px] bg-indigo-500/30 text-indigo-200 border border-indigo-500/20 px-1 py-0.5 rounded-md">Plus</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Product Card */}
               <div className="bg-gradient-to-br from-indigo-950/30 to-slate-900 border border-indigo-500/20 rounded-2xl p-5 relative overflow-hidden">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <div>
-                      <span className="text-[10px] font-black bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Sideline Elite</span>
-                      <h3 className="text-xl font-black text-white mt-1 uppercase tracking-wide">Coach Pro Tier</h3>
+                      <span className="text-[10px] font-black bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                        {selectedTier === 'PRO+' ? 'Ultimate Sideline' : 'Sideline Elite'}
+                      </span>
+                      <h3 className="text-xl font-black text-white mt-1 uppercase tracking-wide">
+                        {selectedTier === 'PRO+' ? 'Coach Pro+' : 'Coach Pro'}
+                      </h3>
                     </div>
                     <div className="text-right">
                       {billingCycle === 'monthly' ? (
                         <div>
-                          <span className="text-3xl font-black text-white">£5</span>
+                          <span className="text-3xl font-black text-white">
+                            {selectedTier === 'PRO+' ? '£7' : '£5'}
+                          </span>
                           <span className="text-slate-400 text-xs font-semibold">/mo</span>
                         </div>
                       ) : (
                         <div>
-                          <span className="text-3xl font-black text-white">£50</span>
+                          <span className="text-3xl font-black text-white">
+                            {selectedTier === 'PRO+' ? '£70' : '£50'}
+                          </span>
                           <span className="text-slate-400 text-xs font-semibold">/yr</span>
                           <div className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mt-0.5">Save ~17%</div>
                         </div>
@@ -214,17 +254,17 @@ const PayPalUpgradeModal = ({ isOpen, onClose }) => {
                     </div>
                   </div>
 
-                  {/* Toggle Switch */}
+                  {/* Billing Cycle Toggle Switch */}
                   <div className="grid grid-cols-2 gap-1 p-1 bg-slate-950/80 border border-slate-800 rounded-xl">
                     <button
                       onClick={() => setBillingCycle('monthly')}
-                      className={`py-2 px-3 text-xs font-black rounded-lg transition-all uppercase tracking-wider ${billingCycle === 'monthly' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                      className={`py-2 px-3 text-xs font-black rounded-lg transition-all uppercase tracking-wider ${billingCycle === 'monthly' ? 'bg-indigo-650 text-white' : 'text-slate-500 hover:text-slate-300'}`}
                     >
                       Monthly
                     </button>
                     <button
                       onClick={() => setBillingCycle('yearly')}
-                      className={`py-2 px-3 text-xs font-black rounded-lg transition-all uppercase tracking-wider flex items-center justify-center gap-1.5 ${billingCycle === 'yearly' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                      className={`py-2 px-3 text-xs font-black rounded-lg transition-all uppercase tracking-wider flex items-center justify-center gap-1.5 ${billingCycle === 'yearly' ? 'bg-indigo-650 text-white' : 'text-slate-500 hover:text-slate-300'}`}
                     >
                       Yearly
                       <span className="text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1 py-0.5 rounded-md">Save</span>
@@ -237,11 +277,24 @@ const PayPalUpgradeModal = ({ isOpen, onClose }) => {
               <div className="space-y-3">
                 <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Included Features:</h4>
                 <div className="grid grid-cols-1 gap-2 text-xs font-medium text-slate-300">
-                  <BenefitItem text="Up to 5 Teams (Free tier: 2 Teams)" />
-                  <BenefitItem text="Advanced NIS (Net Impact Score) player metrics" />
-                  <BenefitItem text="Sideline Pull Quality tracking & grading dashboard" />
-                  <BenefitItem text="Dynamic Lineup resolution & majority attribution" />
-                  <BenefitItem text="Export stats directly to premium Coach Pro PDFs" />
+                  {selectedTier === 'PRO+' ? (
+                    <>
+                      <BenefitItem text="Unlimited Clubs & Teams (Free tier: 1 Club / 2 Teams)" />
+                      <BenefitItem text="Trainings Desk & Custom Drills planner (Full Access)" />
+                      <BenefitItem text="Advanced NIS (Net Impact Score) player metrics" />
+                      <BenefitItem text="Sideline Pull Quality tracking & grading dashboard" />
+                      <BenefitItem text="Dynamic Lineup resolution & majority attribution" />
+                      <BenefitItem text="Export stats directly to premium Coach Pro PDFs" />
+                    </>
+                  ) : (
+                    <>
+                      <BenefitItem text="Up to 5 Teams (Free tier: 2 Teams)" />
+                      <BenefitItem text="Advanced NIS (Net Impact Score) player metrics" />
+                      <BenefitItem text="Sideline Pull Quality tracking & grading dashboard" />
+                      <BenefitItem text="Dynamic Lineup resolution & majority attribution" />
+                      <BenefitItem text="Export stats directly to premium Coach Pro PDFs" />
+                    </>
+                  )}
                 </div>
               </div>
 

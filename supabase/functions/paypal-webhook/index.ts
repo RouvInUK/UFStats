@@ -102,19 +102,22 @@ serve(async (req) => {
       const planId = resource.plan_id;
       const isYearly = planId && planId.includes("YEARLY");
       const period = isYearly ? "yearly" : "monthly";
+      const isPlus = planId && (planId.includes("PLUS") || planId.includes("7GBP") || planId.includes("70GBP"));
+      const targetTier = isPlus ? "PRO+" : "PRO";
 
       const { error } = await supabase
         .from("profiles")
         .update({
-          tier: "PRO",
+          tier: targetTier,
           paypal_subscription_id: subscriptionId,
           subscription_status: "active",
-          subscription_period: period
+          subscription_period: period,
+          beta_trainings_tier: isPlus ? true : false
         })
         .eq("id", userId);
 
       if (error) throw error;
-      console.log(`User ${userId} successfully upgraded to PRO via Webhook.`);
+      console.log(`User ${userId} successfully upgraded to ${targetTier} via Webhook.`);
 
     } else if (
       eventType === "BILLING.SUBSCRIPTION.CANCELLED" || 
@@ -128,12 +131,13 @@ serve(async (req) => {
           tier: "FREE",
           paypal_subscription_id: null,
           subscription_status: status.toLowerCase(),
-          subscription_period: null
+          subscription_period: null,
+          beta_trainings_tier: false
         })
         .eq("id", userId);
 
       if (error) throw error;
-      console.log(`User ${userId} subscription status updated to ${status}. Tier reset to FREE.`);
+      console.log(`User ${userId} subscription status updated to ${status}. Tier reset to FREE and trainings deactivated.`);
     }
 
     return new Response(JSON.stringify({ success: true }), {

@@ -17,6 +17,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
   const [sessionTerminated, setSessionTerminated] = useState(false);
+  const [sessionConflict, setSessionConflict] = useState(false);
 
   const fetchProfile = async (userId, attempt = 1, authEvent = 'INITIAL_SESSION') => {
     try {
@@ -34,10 +35,13 @@ export const AuthProvider = ({ children }) => {
           localStorage.setItem('ufstats_session_id', localSessionId);
       }
 
-      if (authEvent === 'SIGNED_IN' || !data.current_session_id) {
+      if (!data.current_session_id || data.current_session_id === localSessionId) {
           // Take ownership
           await supabase.from('profiles').update({ current_session_id: localSessionId }).eq('id', userId);
           data.current_session_id = localSessionId;
+      } else if (authEvent === 'SIGNED_IN') {
+          // Conflict detected on login
+          setSessionConflict(true);
       } else if (data.current_session_id !== localSessionId) {
           // WE HAVE BEEN KICKED OUT BY ANOTHER DEVICE!
           const isIntentional = sessionStorage.getItem('ufstats_intentional_logout') === 'true';
@@ -239,6 +243,19 @@ export const AuthProvider = ({ children }) => {
 
   const signOut = async () => {
     sessionStorage.setItem('ufstats_intentional_logout', 'true');
+    
+    if (user) {
+      try {
+        const localSessionId = localStorage.getItem('ufstats_session_id');
+        const { data } = await supabase.from('profiles').select('current_session_id').eq('id', user.id).single();
+        if (data && data.current_session_id === localSessionId) {
+          await supabase.from('profiles').update({ current_session_id: null }).eq('id', user.id);
+        }
+      } catch (err) {
+        console.warn("AuthContext: Failed to clear session id", err);
+      }
+    }
+
     // Fire and forget the official signout so it doesn't hang the UI
     supabase.auth.signOut().catch(err => {
       console.warn("AuthContext: Background signout error:", err);
@@ -255,6 +272,14 @@ export const AuthProvider = ({ children }) => {
     window.location.reload();
   };
 
+  const takeOverSession = async () => {
+    if (!user) return;
+    const localSessionId = localStorage.getItem('ufstats_session_id');
+    await supabase.from('profiles').update({ current_session_id: localSessionId }).eq('id', user.id);
+    setSessionConflict(false);
+    fetchProfile(user.id, 1, 'PROFILE_REFRESH');
+  };
+
   const value = {
     user,
     profile,
@@ -262,6 +287,9 @@ export const AuthProvider = ({ children }) => {
     authError,
     sessionTerminated,
     setSessionTerminated,
+    sessionConflict,
+    setSessionConflict,
+    takeOverSession,
     signIn,
     signUp,
     signOut,

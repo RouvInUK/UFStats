@@ -154,7 +154,7 @@ function App() {
   const isDemoMode = path.includes('/demo');
   const isUpdatePassword = path.includes('/update-password');
 
-  const { user, profile, loading: authLoading, authError, sessionTerminated, setSessionTerminated, signOut } = useAuth();
+  const { user, profile, loading: authLoading, authError, sessionTerminated, setSessionTerminated, sessionConflict, takeOverSession, signOut, fetchProfile } = useAuth();
   const [currentView, setCurrentView] = useState('dashboard');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
@@ -269,8 +269,9 @@ function App() {
   }, [isVoiceEnabled]);
 
   useEffect(() => {
-    // Voice Pro is temporarily disabled for iOS compatibility updates, unless specifically granted beta access
-    if (isVoiceEnabled && !profile?.beta_voice_pro) {
+    const isPro = profile?.tier === 'PRO' || profile?.tier === 'PRO+' || profile?.tier === 'TOURNAMENT' || !!(profile?.pro_expires_at && new Date(profile.pro_expires_at) > new Date());
+    const voiceAccess = isPro || profile?.beta_voice_pro || profile?.is_system_admin;
+    if (isVoiceEnabled && !voiceAccess) {
       setIsVoiceEnabled(false);
     }
   }, [isVoiceEnabled, profile]);
@@ -492,6 +493,43 @@ function App() {
     );
   }
   
+  if (sessionConflict) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col font-sans relative">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="bg-slate-900 border border-indigo-500/50 p-8 rounded-3xl max-w-md w-full shadow-2xl relative overflow-hidden text-center">
+             <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-indigo-600 to-indigo-400"></div>
+             <div className="w-16 h-16 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <AlertTriangle className="w-8 h-8 text-indigo-500" />
+             </div>
+             <h2 className="text-2xl font-black text-white mb-4 tracking-tight uppercase">Active Session Found</h2>
+             <p className="text-slate-300 font-bold mb-8 leading-relaxed">
+               There is already an active session for this account on another device. Your tier supports 1 active device. Would you like to take over the session on this device?
+             </p>
+             <div className="flex flex-col gap-3">
+               <button 
+                  onClick={() => {
+                     takeOverSession();
+                  }}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 px-6 rounded-xl transition-all uppercase tracking-widest text-sm shadow-lg shadow-indigo-900/50"
+               >
+                  Yes, Take Over
+               </button>
+               <button 
+                  onClick={() => {
+                     signOut();
+                  }}
+                  className="w-full bg-transparent hover:bg-white/5 border border-slate-700 text-slate-300 hover:text-white font-bold py-4 px-6 rounded-xl transition-all uppercase tracking-widest text-sm"
+               >
+                  No, Cancel
+               </button>
+             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (sessionTerminated) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col font-sans relative">
@@ -507,8 +545,7 @@ function App() {
              </p>
              <button 
                 onClick={() => {
-                   setSessionTerminated(false);
-                   window.history.pushState({}, '', getLegalPath('/login'));
+                   signOut();
                 }}
                 className="w-full bg-rose-600 hover:bg-rose-500 text-white font-black py-4 px-6 rounded-xl transition-all uppercase tracking-widest text-sm shadow-lg shadow-rose-900/50"
              >
@@ -595,10 +632,18 @@ function App() {
   const activeLineup = players.filter(p => p.is_active).map(p => p.name);
 
   const isProTier = shadowTeam 
-    ? shadowTeam.tier === 'PRO' 
-    : (profile?.tier === 'PRO' || !!(profile?.pro_expires_at && new Date(profile.pro_expires_at) > new Date()));
-  const isVoiceBetaTier = shadowTeam ? shadowTeam.beta_voice_pro : profile?.beta_voice_pro;
+    ? (shadowTeam.tier === 'PRO' || shadowTeam.tier === 'PRO+' || shadowTeam.tier === 'TOURNAMENT') 
+    : (profile?.tier === 'PRO' || profile?.tier === 'PRO+' || profile?.tier === 'TOURNAMENT' || !!(profile?.pro_expires_at && new Date(profile.pro_expires_at) > new Date()));
   const isTrial = !shadowTeam && !!(profile?.pro_expires_at && new Date(profile.pro_expires_at) - new Date(profile.created_at || Date.now()) <= 8 * 24 * 60 * 60 * 1000);
+  
+  const hasVoiceAccess = isProTier || profile?.beta_voice_pro || profile?.is_system_admin;
+  const hasTrainingsAccess = shadowTeam
+    ? (shadowTeam.tier === 'PRO+' || shadowTeam.tier === 'TOURNAMENT')
+    : (profile?.tier === 'PRO+' || profile?.tier === 'TOURNAMENT' || profile?.beta_trainings_tier || profile?.is_system_admin);
+  const hasTournamentAccess = shadowTeam
+    ? (shadowTeam.tier === 'TOURNAMENT')
+    : (profile?.tier === 'TOURNAMENT' || profile?.beta_tournament_tier || profile?.is_system_admin);
+  const isVoiceBetaTier = hasVoiceAccess;
 
   return (
     <DrillStateProvider teamId={targetTeamId}>
@@ -622,7 +667,23 @@ function App() {
               <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-[0.25em] mt-1 leading-none">sideline intelligence</span>
             </div>
             {isProTier ? (
-              <span className="text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-md flex items-center gap-1"><Crown className="w-3 h-3" /> {isTrial ? "PRO TRIAL" : "PRO"}</span>
+              <span className={`text-[10px] font-bold border px-2 py-0.5 rounded-md flex items-center gap-1 ${
+                shadowTeam?.tier === 'TOURNAMENT' || profile?.tier === 'TOURNAMENT'
+                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                  : shadowTeam?.tier === 'PRO+' || profile?.tier === 'PRO+'
+                  ? 'bg-violet-500/20 text-violet-400 border-violet-500/30'
+                  : 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
+              }`}>
+                <Crown className="w-3 h-3" />
+                {isTrial 
+                  ? "PRO TRIAL" 
+                  : shadowTeam?.tier === 'TOURNAMENT' || profile?.tier === 'TOURNAMENT'
+                  ? "TOURNAMENT"
+                  : shadowTeam?.tier === 'PRO+' || profile?.tier === 'PRO+'
+                  ? "PRO+"
+                  : "PRO"
+                }
+              </span>
             ) : (
               <span className="text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">FREE</span>
             )}
@@ -643,7 +704,7 @@ function App() {
                 Admin Panel
              </button>
           )}
-          {(profile?.beta_tournament_tier || profile?.is_system_admin) && (
+          {hasTournamentAccess && (
              <button 
                 onClick={() => setCurrentView('tournament_setup')}
                 className="px-4 py-2 bg-slate-800 text-slate-300 hover:text-white font-bold rounded-xl transition-all uppercase tracking-wide text-xs"
@@ -652,7 +713,7 @@ function App() {
              </button>
           )}
           {/* Trainings Desk Entry Point */}
-          {(profile?.beta_trainings_tier || profile?.is_system_admin) && (
+          {hasTrainingsAccess && (
             <button 
                onClick={() => {
                  setCurrentView('training_setup');
@@ -705,8 +766,24 @@ function App() {
               <span className="text-sm font-black text-white lowercase tracking-widest leading-none">ustats.pro</span>
               <span className="text-[6.5px] font-black text-slate-400 uppercase tracking-[0.2em] mt-0.5 leading-none">sideline intelligence</span>
             </div>
-            {profile?.tier === 'PRO' ? (
-              <span className="text-[9px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-md"><Crown className="w-3 h-3 inline-block mr-0.5" /> PRO</span>
+            {isProTier ? (
+              <span className={`text-[9px] font-bold border px-1.5 py-0.5 rounded-md flex items-center gap-1 ${
+                shadowTeam?.tier === 'TOURNAMENT' || profile?.tier === 'TOURNAMENT'
+                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                  : shadowTeam?.tier === 'PRO+' || profile?.tier === 'PRO+'
+                  ? 'bg-violet-500/20 text-violet-400 border-violet-500/30'
+                  : 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
+              }`}>
+                <Crown className="w-2.5 h-2.5 inline-block" />
+                {isTrial 
+                  ? "PRO TRIAL" 
+                  : shadowTeam?.tier === 'TOURNAMENT' || profile?.tier === 'TOURNAMENT'
+                  ? "TOURNAMENT"
+                  : shadowTeam?.tier === 'PRO+' || profile?.tier === 'PRO+'
+                  ? "PRO+"
+                  : "PRO"
+                }
+              </span>
             ) : (
               <span className="text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded-md">FREE</span>
             )}
@@ -722,7 +799,7 @@ function App() {
                 <ShieldCheck className="w-5 h-5" />
              </button>
           )}
-          {(profile?.beta_tournament_tier || profile?.is_system_admin) && (
+          {hasTournamentAccess && (
              <button 
                 onClick={() => setCurrentView('tournament_setup')}
                 className={`p-2 rounded-lg transition-all ${currentView === 'tournament_setup' ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-400 hover:text-white'}`}
@@ -732,7 +809,7 @@ function App() {
              </button>
           )}
           {/* Trainings Desk Entry Point */}
-          {(profile?.beta_trainings_tier || profile?.is_system_admin) && (
+          {hasTrainingsAccess && (
              <button 
                 onClick={() => {
                   setCurrentView('training_setup');
@@ -898,14 +975,14 @@ function App() {
         />
       )}
 
-      {currentView === 'tournament_setup' && (profile?.beta_tournament_tier || profile?.is_system_admin) && (
+      {currentView === 'tournament_setup' && hasTournamentAccess && (
         <TournamentSetupScreen 
           profile={profile}
           onBack={() => setCurrentView('dashboard')}
         />
       )}
 
-      {currentView === 'tournament_matches' && (profile?.beta_tournament_tier || profile?.is_system_admin) && (
+      {currentView === 'tournament_matches' && hasTournamentAccess && (
         <TournamentMatchSelector 
           onBack={() => setCurrentView('dashboard')}
           onSelectMatch={(selectedMatch) => {
@@ -915,7 +992,7 @@ function App() {
         />
       )}
 
-      {currentView === 'tournament_recap' && (profile?.beta_tournament_tier || profile?.is_system_admin) && (
+      {currentView === 'tournament_recap' && hasTournamentAccess && (
         <AiRecapModule 
           match={activeMatch}
           onBack={() => setCurrentView('tournament_matches')}
@@ -936,7 +1013,7 @@ function App() {
         />
       )}
 
-      {currentView === 'training_setup' && (profile?.beta_trainings_tier || profile?.is_system_admin) && (
+      {currentView === 'training_setup' && hasTrainingsAccess && (
         <TrainingSetupScreen 
           user={user}
           players={players}
@@ -948,7 +1025,7 @@ function App() {
         />
       )}
 
-      {currentView === 'training_scorer' && (profile?.beta_trainings_tier || profile?.is_system_admin) && (
+      {currentView === 'training_scorer' && hasTrainingsAccess && (
         <TrainingScorer 
           players={players}
           setPlayers={setPlayers}
@@ -972,7 +1049,7 @@ function App() {
             <span className="text-[10px] uppercase tracking-wider">Admin</span>
           </button>
         )}
-        {(profile?.beta_tournament_tier || profile?.is_system_admin) && (
+        {hasTournamentAccess && (
           <button onClick={() => setCurrentView('tournament_setup')} className={`flex flex-col items-center gap-1.5 w-14 sm:w-16 transition-colors ${currentView === 'tournament_setup' ? 'text-indigo-400 font-extrabold' : 'text-slate-500 font-medium hover:text-slate-400'}`}>
             <span className={`text-xl leading-none transition-transform ${currentView === 'tournament_setup' ? 'scale-125' : 'scale-100'}`}>🏆</span>
             <span className="text-[10px] uppercase tracking-wider">Tourneys</span>

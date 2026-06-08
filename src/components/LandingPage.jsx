@@ -213,7 +213,7 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
       {/* ========== PRICING TIERS ========== */}
       <section id="pricing" className="relative py-24 sm:py-32 px-4 sm:px-8">
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-900/40 to-slate-950 pointer-events-none"></div>
-        <div className="relative z-10 max-w-5xl mx-auto">
+        <div className="relative z-10 max-w-7xl mx-auto">
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full mb-4">
               <Star className="w-3.5 h-3.5 text-indigo-400" />
@@ -245,9 +245,9 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Starter */}
-            <div className="bg-slate-900/60 border border-white/10 rounded-3xl p-8 flex flex-col">
+            <div className="bg-slate-900/60 border border-white/10 rounded-3xl p-6 flex flex-col hover:border-white/20 transition-all duration-300">
               <div className="mb-6">
                 <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Starter</div>
                 <div className="text-5xl font-black text-white mb-1">Free</div>
@@ -264,10 +264,7 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
               </button>
             </div>
             {/* Coach Pro */}
-            <div className="relative bg-gradient-to-br from-indigo-600/20 to-violet-600/10 border border-indigo-500/30 rounded-3xl p-8 flex flex-col shadow-2xl shadow-indigo-500/10">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <div className="px-4 py-1 bg-indigo-500 text-white text-xs font-black uppercase tracking-widest rounded-full shadow-lg">Most Popular</div>
-              </div>
+            <div className="relative bg-slate-900/60 border border-indigo-500/20 rounded-3xl p-6 flex flex-col shadow-xl hover:border-indigo-500/40 transition-all duration-300">
               <div className="mb-6">
                 <div className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-2">Coach Pro</div>
                 <div className="flex items-end gap-1 mb-1">
@@ -284,38 +281,93 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
               </div>
               <div className="space-y-3 flex-1 mb-8">
                 <TierFeature text="1 Club / up to 5 Teams" pro />
-                <TierFeature text="Advanced NIS (Net Impact Score) Analytics" pro />
-                <TierFeature text="Pull Quality Tracking & Pressure Reports" pro />
+                <TierFeature text="Advanced NIS Analytics" pro />
+                <TierFeature text="Pull Quality & Pressure Reports" pro />
                 <TierFeature text="Coach Pro Data Analytics Page" pro />
                 <TierFeature text="Season-long performance trends" pro />
                 <TierFeature text="Smart-Sync — Universal offline reliability" pro />
               </div>
-              <button onClick={onSignUp} className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl transition-all uppercase tracking-widest text-sm shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40">
-                Upgrade to Coach Pro
+              <button onClick={onSignUp} className="w-full py-3.5 bg-indigo-950/40 hover:bg-indigo-650/30 border border-indigo-500/30 text-indigo-300 hover:text-white font-black rounded-xl transition-all uppercase tracking-widest text-sm">
+                Upgrade to Pro
               </button>
+            </div>
+            {/* Coach Pro+ */}
+            <div className="relative bg-gradient-to-br from-indigo-600/20 to-violet-600/10 border border-indigo-500/45 rounded-3xl p-6 flex flex-col shadow-2xl shadow-indigo-500/10 hover:border-indigo-500/70 transition-all duration-300">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                <div className="px-4 py-1 bg-gradient-to-r from-indigo-550 to-violet-550 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg whitespace-nowrap">Recommended</div>
+              </div>
+              <div className="mb-6">
+                <div className="text-xs font-black text-violet-400 uppercase tracking-widest mb-2">Coach Pro+</div>
+                <div className="flex items-end gap-1 mb-1">
+                  <span className="text-5xl font-black text-white transition-all duration-300">
+                    {isYearly ? '£70' : '£7'}
+                  </span>
+                  <span className="text-slate-400 text-lg mb-1 transition-all duration-300">
+                    {isYearly ? '/year' : '/month'}
+                  </span>
+                </div>
+                <div className="text-slate-500 text-sm">
+                  Full intelligence + Trainings.
+                </div>
+              </div>
+              <div className="space-y-3 flex-1 mb-8">
+                <TierFeature text="Everything in Coach Pro" pro />
+                <TierFeature text="Training Mode Pro Desk Access" pro />
+                <TierFeature text="Custom Practice Drills Tracking" pro />
+                <TierFeature text="Scrimmage Light/Dark jersey-splits" pro />
+                <TierFeature text="MMP/FMP Auto-Split lineups" pro />
+                <TierFeature text="Practice rotation logs & trends" pro />
+              </div>
+              <button onClick={onSignUp} className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl transition-all uppercase tracking-widest text-sm shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40">
+                Upgrade to Pro+
+              </button>
+            </div>
+            {/* Tournament */}
+            <div className="relative bg-slate-900/60 border border-amber-500/25 rounded-3xl p-6 flex flex-col hover:border-amber-500/40 transition-all duration-300 shadow-xl shadow-amber-500/5">
+              <div className="mb-6">
+                <div className="text-xs font-black text-amber-400 uppercase tracking-widest mb-2">Tournament</div>
+                <div className="text-4xl font-black text-white mb-1">Custom</div>
+                <div className="text-slate-550 text-xs">For multi-pitch league/event operations.</div>
+              </div>
+              <div className="space-y-3 flex-1 mb-8">
+                <TierFeature text="Tournament Mode Only Workspace" pro />
+                <TierFeature text="Organize leagues & schedule pitches" pro />
+                <TierFeature text="Copy Pitch Codes for volunteers" pro />
+                <TierFeature text="Real-time multi-scorer sync" pro />
+                <TierFeature text="CSV Team Roster imports" pro />
+                <TierFeature text="Live bracket compilation" pro />
+              </div>
+              <a 
+                href="mailto:info@ustats.pro?subject=Tournament%20Tier%20Inquiry"
+                className="w-full py-3.5 bg-amber-500/10 hover:bg-amber-550/20 border border-amber-500/30 text-amber-300 hover:text-white font-black rounded-xl transition-all uppercase tracking-widest text-sm text-center block"
+              >
+                Contact Us
+              </a>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ========== COMING SOON TEASER ========== */}
+      {/* ========== ADVANCED MODULES TEASER ========== */}
       <section className="relative py-24 sm:py-32 px-4 sm:px-8">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-violet-600/8 rounded-full blur-[140px] pointer-events-none"></div>
         <div className="relative z-10 max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full mb-4">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-              <span className="text-xs font-bold text-amber-300 tracking-widest uppercase">Coming Soon</span>
+            <div className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full mb-4">
+              <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+              <span className="text-xs font-bold text-indigo-300 tracking-widest uppercase">Specialized Modes</span>
             </div>
             <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-4">
-              The Future of <span className="bg-gradient-to-r from-amber-400 to-violet-400 bg-clip-text text-transparent">Sideline Intelligence.</span>
+              Advanced Workspace <span className="bg-gradient-to-r from-amber-400 to-violet-400 bg-clip-text text-transparent">Modules.</span>
             </h2>
-            <p className="text-slate-400 max-w-xl mx-auto text-lg">The roadmap for what's coming next to Coach Pro.</p>
+            <p className="text-slate-400 max-w-xl mx-auto text-lg">Deep dive into our specialized premium workspaces.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <ComingSoonCard
+            <SpecializedModuleCard
               icon={<Trophy className="w-7 h-7" />}
               title="Tournament Mode"
+              badgeText="Tournament Tier"
+              badgeColor="bg-amber-500/10 border border-amber-500/20 text-amber-300"
               description={
                 <>
                   Organize leagues, schedule pitches, assign volunteer scorers, and compile live bracket recaps. If you are interested in trying our advanced multi-pitch tournament operations suite, contact us at{' '}
@@ -326,9 +378,11 @@ const LandingPage = ({ onLogin, onSignUp, onDemo }) => {
                 </>
               }
             />
-            <ComingSoonCard
+            <SpecializedModuleCard
               icon={<Dumbbell className="w-7 h-7" />}
               title="Training Mode Pro"
+              badgeText="Coach Pro+ Tier"
+              badgeColor="bg-violet-500/10 border border-violet-500/20 text-violet-300"
               description="Switch from game-day to practice-mode and coach every rep. Track individual drills, manage rotations, and measure training efficiency across your entire club hierarchy — with deep-dive analytics including rep-speed tracking, heat maps, and season-long trends to bridge the gap between practice and gameday."
             />
           </div>
@@ -416,17 +470,18 @@ const TierFeature = ({ text, pro }) => (
   </div>
 );
 
-const ComingSoonCard = ({ icon, title, description }) => (
+const SpecializedModuleCard = ({ icon, title, description, badgeText, badgeColor }) => (
   <div className="relative bg-slate-900/40 border border-white/5 rounded-2xl p-8 overflow-hidden group">
     <div className="absolute inset-0 bg-gradient-to-br from-slate-800/30 to-transparent pointer-events-none"></div>
-    <div className="absolute top-4 right-4">
-      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full">
-        <Lock className="w-3 h-3 text-amber-400" />
-        <span className="text-[10px] font-black text-amber-400 tracking-widest uppercase">Coming Soon</span>
+    {badgeText && (
+      <div className="absolute top-4 right-4">
+        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${badgeColor || 'bg-indigo-500/10 border border-indigo-500/20'} rounded-full`}>
+          <span className="text-[10px] font-black tracking-widest uppercase">{badgeText}</span>
+        </div>
       </div>
-    </div>
-    <div className="flex items-start gap-5 opacity-70 grayscale group-hover:opacity-90 group-hover:grayscale-0 transition-all duration-500">
-      <div className="flex-shrink-0 p-3 bg-white/5 rounded-xl text-slate-400">{icon}</div>
+    )}
+    <div className="flex items-start gap-5 opacity-90 transition-all duration-500">
+      <div className="flex-shrink-0 p-3 bg-white/5 rounded-xl text-indigo-400">{icon}</div>
       <div>
         <h3 className="text-xl font-black text-white mb-2 tracking-tight">{title}</h3>
         <p className="text-slate-400 text-sm leading-relaxed">{description}</p>

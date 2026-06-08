@@ -557,9 +557,24 @@ export const deletePoint = async (gameName, teamId, pointNumber) => {
 };
 
 export const updateUserTier = async (userId, tier) => {
+  const updates = { tier };
+  if (tier === 'PRO+') {
+    updates.beta_trainings_tier = true;
+    updates.beta_tournament_tier = false;
+  } else if (tier === 'TOURNAMENT') {
+    updates.beta_trainings_tier = true;
+    updates.beta_tournament_tier = true;
+  } else if (tier === 'PRO') {
+    updates.beta_trainings_tier = false;
+    updates.beta_tournament_tier = false;
+  } else if (tier === 'FREE') {
+    updates.beta_trainings_tier = false;
+    updates.beta_tournament_tier = false;
+  }
+
   const { data, error } = await supabase
     .from('profiles')
-    .update({ tier })
+    .update(updates)
     .eq('id', userId)
     .select();
 
@@ -666,7 +681,12 @@ export const checkTierLimits = async (userId) => {
     .single();
     
   if (pError) throw pError;
-  const isPro = profile.tier === 'PRO' || !!(profile.pro_expires_at && new Date(profile.pro_expires_at) > new Date());
+  
+  const tier = profile.tier;
+  const isExpiredPro = profile.pro_expires_at && new Date(profile.pro_expires_at) < new Date();
+  
+  const isUnlimited = tier === 'PRO+' || tier === 'TOURNAMENT';
+  const isPro = tier === 'PRO' || isUnlimited || (!!profile.pro_expires_at && !isExpiredPro);
   
   const { count: clubCount, error: cError } = await supabase
     .from('clubs')
@@ -679,6 +699,14 @@ export const checkTierLimits = async (userId) => {
     .eq('owner_id', userId);
     
   if (cError || tError) throw new Error("Failed to check tier limits");
+  
+  if (isUnlimited) {
+    return {
+      canAddClub: true, // Unlimited clubs
+      canAddTeam: true, // Unlimited teams
+      isPro: true
+    };
+  }
   
   if (isPro) {
     return {

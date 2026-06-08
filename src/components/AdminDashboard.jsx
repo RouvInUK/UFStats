@@ -20,6 +20,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
   const [searchTerm, setSearchTerm] = useState('');
   const [tierFilter, setTierFilter] = useState('ALL');
+  const [density, setDensity] = useState('comfortable'); // 'comfortable' | 'compact'
 
   const fetchAdminData = async () => {
     setLoading(true);
@@ -101,8 +102,13 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
   const handleUpdateTier = async (userId, tier) => {
     try {
       const { updateUserTier } = await import('../supabaseClient');
-      await updateUserTier(userId, tier);
-      setUsers(users.map(u => u.id === userId ? { ...u, tier } : u));
+      const updatedProfile = await updateUserTier(userId, tier);
+      setUsers(users.map(u => u.id === userId ? { 
+        ...u, 
+        tier,
+        beta_trainings_tier: updatedProfile.beta_trainings_tier,
+        beta_tournament_tier: updatedProfile.beta_tournament_tier
+      } : u));
     } catch (err) {
       console.error(err);
       alert(`Failed to update tier: ${err.message}`);
@@ -343,6 +349,10 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
         matchesTier = user.tier === 'FREE';
       } else if (tierFilter === 'PRO') {
         matchesTier = user.tier === 'PRO';
+      } else if (tierFilter === 'PRO+') {
+        matchesTier = user.tier === 'PRO+';
+      } else if (tierFilter === 'TOURNAMENT') {
+        matchesTier = user.tier === 'TOURNAMENT';
       } else if (tierFilter === 'PROMO') {
         matchesTier = !!user.pro_expires_at;
       }
@@ -354,12 +364,17 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
   // Global Health Calculations (Excluding QA / Test Accounts and Admins)
   const activeRegularUsers = users.filter(u => !u.is_test_account);
   const totalGamesTracked = activeRegularUsers.reduce((acc, u) => acc + u.gamesTracked, 0);
-  const paidProCount = activeRegularUsers.filter(u => u.tier === 'PRO' && !u.pro_expires_at).length;
+  const paidProCount = activeRegularUsers.filter(u => (u.tier === 'PRO' || u.tier === 'PRO+') && !u.pro_expires_at).length;
   const activePromoCount = activeRegularUsers.filter(u => u.pro_expires_at && new Date(u.pro_expires_at) > new Date()).length;
+
+  // Density Helpers
+  const cellPaddingClass = density === 'comfortable' ? 'p-4' : 'px-3 py-1.5';
+  const headerPaddingClass = density === 'comfortable' ? 'p-4' : 'px-3 py-2';
+  const textDensityClass = density === 'comfortable' ? 'text-sm' : 'text-xs';
 
   return (
     <div className="min-h-screen bg-slate-950 p-4 sm:p-8 pb-32">
-      <div className="max-w-6xl mx-auto space-y-8">
+      <div className="max-w-[95%] xl:max-w-[1600px] 2xl:max-w-[1850px] mx-auto space-y-8 transition-all duration-300">
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-slate-900/50 border border-white/10 p-6 rounded-3xl shadow-xl gap-6">
@@ -466,7 +481,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                   <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-6">
                     <BarChart2 className="w-5 h-5 text-indigo-400" /> Actions Logged (Last 30 Days)
                   </h3>
-                  <div className="h-64 w-full">
+                  <div className="h-64 md:h-80 lg:h-96 w-full">
                     {actionsData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={actionsData}>
@@ -489,9 +504,9 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
               <div className="space-y-6">
                 
                 {/* Search and Filters Controls */}
-                <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-900/40 border border-white/5 p-4 rounded-2xl">
+                <div className="flex flex-col xl:flex-row gap-4 items-stretch xl:items-center justify-between bg-slate-900/40 border border-white/5 p-4 rounded-2xl">
                   {/* Search Input */}
-                  <div className="relative w-full md:w-80">
+                  <div className="relative w-full xl:w-96">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       type="text"
@@ -502,22 +517,42 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                     />
                   </div>
                   
-                  {/* Tier Filter Segmented Controller */}
-                  <div className="flex gap-1.5 p-1 bg-slate-950/60 border border-white/10 rounded-xl w-full md:w-auto">
-                    {[
-                      { id: 'ALL', label: 'All Users' },
-                      { id: 'FREE', label: 'Free' },
-                      { id: 'PRO', label: 'Pro' },
-                      { id: 'PROMO', label: 'Promos' }
-                    ].map(f => (
-                      <button
-                        key={f.id}
-                        onClick={() => setTierFilter(f.id)}
-                        className={`flex-1 md:flex-none px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${tierFilter === f.id ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
+                  <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full xl:w-auto">
+                    {/* Tier Filter Segmented Controller */}
+                    <div className="flex gap-1.5 p-1 bg-slate-950/60 border border-white/10 rounded-xl flex-1 sm:flex-none">
+                      {[
+                        { id: 'ALL', label: 'All Users' },
+                        { id: 'FREE', label: 'Free' },
+                        { id: 'PRO', label: 'Pro' },
+                        { id: 'PRO+', label: 'Pro+' },
+                        { id: 'TOURNAMENT', label: 'Tournament' },
+                        { id: 'PROMO', label: 'Promos' }
+                      ].map(f => (
+                        <button
+                          key={f.id}
+                          onClick={() => setTierFilter(f.id)}
+                          className={`flex-1 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${tierFilter === f.id ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Layout Density Controller */}
+                    <div className="flex gap-1.5 p-1 bg-slate-950/60 border border-white/10 rounded-xl flex-1 sm:flex-none">
+                      {[
+                        { id: 'comfortable', label: 'Comfortable' },
+                        { id: 'compact', label: 'Compact' }
+                      ].map(d => (
+                        <button
+                          key={d.id}
+                          onClick={() => setDensity(d.id)}
+                          className={`flex-1 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${density === d.id ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                        >
+                          {d.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -528,11 +563,11 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                     </h3>
                   </div>
                   
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-slate-950/80 text-slate-400 text-xs uppercase tracking-widest selection:bg-transparent">
-                          <th className="p-4 font-bold select-none cursor-pointer hover:text-white transition-colors" onClick={() => requestSort('email')}>
+                  <div className="overflow-x-auto max-h-[75vh] rounded-b-3xl scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+                    <table className="w-full text-left border-collapse relative">
+                      <thead className="sticky top-0 bg-slate-950/95 backdrop-blur-md z-20 shadow-md">
+                        <tr className="text-slate-400 text-xs uppercase tracking-widest selection:bg-transparent border-b border-white/10">
+                          <th className={`${headerPaddingClass} font-bold select-none cursor-pointer hover:text-white transition-colors`} onClick={() => requestSort('email')}>
                             <div className="flex items-center gap-1.5">
                               User Email
                               {sortConfig.key === 'email' && (
@@ -540,7 +575,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                               )}
                             </div>
                           </th>
-                          <th className="p-4 font-bold select-none cursor-pointer hover:text-white transition-colors" onClick={() => requestSort('created_at')}>
+                          <th className={`${headerPaddingClass} font-bold select-none cursor-pointer hover:text-white transition-colors`} onClick={() => requestSort('created_at')}>
                             <div className="flex items-center gap-1.5">
                               Signed Up
                               {sortConfig.key === 'created_at' && (
@@ -548,7 +583,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                               )}
                             </div>
                           </th>
-                          <th className="p-4 font-bold text-center select-none cursor-pointer hover:text-white transition-colors" onClick={() => requestSort('clubs_teams')}>
+                          <th className={`${headerPaddingClass} font-bold text-center select-none cursor-pointer hover:text-white transition-colors`} onClick={() => requestSort('clubs_teams')}>
                             <div className="flex items-center justify-center gap-1.5">
                               Clubs / Teams
                               {sortConfig.key === 'clubs_teams' && (
@@ -556,7 +591,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                               )}
                             </div>
                           </th>
-                          <th className="p-4 font-bold text-center select-none cursor-pointer hover:text-white transition-colors" onClick={() => requestSort('games')}>
+                          <th className={`${headerPaddingClass} font-bold text-center select-none cursor-pointer hover:text-white transition-colors`} onClick={() => requestSort('games')}>
                             <div className="flex items-center justify-center gap-1.5">
                               Games
                               {sortConfig.key === 'games' && (
@@ -564,7 +599,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                               )}
                             </div>
                           </th>
-                          <th className="p-4 font-bold text-center select-none cursor-pointer hover:text-white transition-colors" onClick={() => requestSort('tier')}>
+                          <th className={`${headerPaddingClass} font-bold text-center select-none cursor-pointer hover:text-white transition-colors`} onClick={() => requestSort('tier')}>
                             <div className="flex items-center justify-center gap-1.5">
                               Tier
                               {sortConfig.key === 'tier' && (
@@ -572,26 +607,16 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                               )}
                             </div>
                           </th>
-                          <th className="p-4 font-bold text-center text-amber-400 select-none cursor-pointer hover:text-amber-300 transition-colors" onClick={() => requestSort('pro_expires_at')}>
-                            <div className="flex items-center justify-center gap-1.5">
-                              Promo Expiry
-                              {sortConfig.key === 'pro_expires_at' && (
-                                sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-amber-400" /> : <ChevronDown className="w-3.5 h-3.5 text-amber-400" />
-                              )}
-                            </div>
+                          <th className={`${headerPaddingClass} font-bold text-center select-none`}>
+                            Active Features
                           </th>
-                          <th className="p-4 font-bold text-center select-none">Test Account</th>
-                          <th className="p-4 font-bold text-center select-none">Voice Beta</th>
-                          <th className="p-4 font-bold text-center select-none">Tourney Beta</th>
-                          <th className="p-4 font-bold text-center select-none">Trainings Beta</th>
-                          <th className="p-4 font-bold text-center select-none">Disable Club Mode</th>
-                          <th className="p-4 font-bold text-right select-none">Actions</th>
+                          <th className={`${headerPaddingClass} font-bold text-right select-none`}>Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="text-sm">
+                      <tbody className={textDensityClass}>
                         {filteredUsers.length === 0 ? (
                           <tr>
-                            <td colSpan={11} className="p-12 text-center text-slate-500 font-medium">
+                            <td colSpan={7} className="p-12 text-center text-slate-500 font-medium">
                               No matching registered coaches found.
                             </td>
                           </tr>
@@ -602,14 +627,14 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                                 className={`border-b border-white/5 ${i % 2 === 0 ? 'bg-slate-900/30' : 'bg-slate-950/30'} hover:bg-slate-800 transition-colors cursor-pointer`} 
                                 onClick={() => setExpandedUser(expandedUser === user.id ? null : user.id)}
                               >
-                                <td className="p-4">
+                                <td className={cellPaddingClass}>
                                   <span className="font-bold text-white">{user.email}</span>
                                   {user.is_test_account && (
-                                    <span className="text-[8px] font-black text-rose-450 bg-rose-500/10 px-1 py-0.5 rounded border border-rose-500/20 uppercase tracking-wider ml-2.5 inline-block">Test Account</span>
+                                    <span className="text-[8px] font-black text-rose-400 bg-rose-500/10 px-1 py-0.5 rounded border border-rose-500/20 uppercase tracking-wider ml-2.5 inline-block">Test Account</span>
                                   )}
                                   <div className="text-[10px] text-slate-500 font-mono mt-1">{user.id}</div>
                                 </td>
-                                <td className="p-4">
+                                <td className={cellPaddingClass}>
                                   <div className="text-slate-300 font-medium" title={user.created_at ? new Date(user.created_at).toLocaleString() : 'N/A'}>
                                     {user.created_at ? new Date(user.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}
                                   </div>
@@ -623,125 +648,72 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                                     }
                                   })()}
                                 </td>
-                                <td className="p-4 text-center text-slate-300 font-bold">
+                                <td className={`${cellPaddingClass} text-center text-slate-300 font-bold`}>
                                   {user.clubs?.length || 0} / {user.teams?.length || 0}
                                 </td>
-                                <td className="p-4 text-center text-slate-300 font-bold">
+                                <td className={`${cellPaddingClass} text-center text-slate-300 font-bold`}>
                                   {user.gamesTracked}
                                 </td>
-                                <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
-                                  <select 
-                                    value={user.tier || 'FREE'} 
-                                    onChange={(e) => handleUpdateTier(user.id, e.target.value)}
-                                    className="bg-slate-900 border border-slate-700 text-xs font-bold rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                                  >
-                                    <option value="FREE">FREE</option>
-                                    <option value="PRO">PRO</option>
-                                  </select>
-                                </td>
-                                <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
-                                  <div className="flex flex-col gap-1 items-center">
-                                    <select
-                                      value={user.pro_expires_at ? 'custom' : 'none'}
-                                      onChange={(e) => {
-                                        const val = e.target.value;
-                                        if (val === 'none') {
-                                          handleUpdateProExpiration(user.id, null);
-                                        } else if (val === '1w') {
-                                          const d = new Date();
-                                          d.setDate(d.getDate() + 7);
-                                          handleUpdateProExpiration(user.id, d.toISOString());
-                                        } else if (val === '1m') {
-                                          const d = new Date();
-                                          d.setMonth(d.getMonth() + 1);
-                                          handleUpdateProExpiration(user.id, d.toISOString());
-                                        } else if (val === '6m') {
-                                          const d = new Date();
-                                          d.setMonth(d.getMonth() + 6);
-                                          handleUpdateProExpiration(user.id, d.toISOString());
+                                <td className={`${cellPaddingClass} text-center`}>
+                                  {user.tier === 'TOURNAMENT' ? (
+                                    <span className="text-[10px] font-black text-emerald-400 bg-slate-800 px-2 py-1 rounded border border-slate-700 uppercase tracking-wider">
+                                      TOURNAMENT
+                                    </span>
+                                  ) : user.tier === 'PRO+' ? (
+                                    <span className="text-[10px] font-black text-purple-400 bg-purple-500/10 px-2 py-1 rounded border border-purple-500/20 uppercase tracking-wider">
+                                      PRO+
+                                    </span>
+                                  ) : user.tier === 'PRO' ? (
+                                    user.pro_expires_at ? (
+                                      (() => {
+                                        const daysLeft = Math.ceil((new Date(user.pro_expires_at) - new Date()) / (1000 * 60 * 60 * 24));
+                                        if (daysLeft > 0) {
+                                          return (
+                                            <span className="text-[10px] font-black text-amber-400 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20 uppercase tracking-wider">
+                                              PROMO ({daysLeft}d)
+                                            </span>
+                                          );
+                                        } else {
+                                          return (
+                                            <span className="text-[10px] font-black text-rose-400 bg-rose-500/10 px-2 py-1 rounded border border-rose-500/20 uppercase tracking-wider">
+                                              EXPIRED PROMO
+                                            </span>
+                                          );
                                         }
-                                      }}
-                                      className="bg-slate-900 border border-slate-700 text-[10px] font-bold rounded-lg px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                                    >
-                                      <option value="none">No Promo</option>
-                                      <option value="1w">+1 Week</option>
-                                      <option value="1m">+1 Month</option>
-                                      <option value="6m">+6 Months</option>
-                                      <option value="custom">Custom (Select below)</option>
-                                    </select>
-                                    <div className="relative flex items-center bg-slate-900 border border-slate-700 hover:border-slate-600 rounded-lg px-2 py-1 w-32 focus-within:ring-1 focus-within:ring-indigo-500 cursor-pointer transition-all shadow-inner">
-                                      <Calendar className="w-3.5 h-3.5 text-indigo-400 mr-1.5 flex-shrink-0" />
-                                      <input 
-                                        type="date"
-                                        value={user.pro_expires_at ? new Date(user.pro_expires_at).toISOString().split('T')[0] : ''}
-                                        onChange={(e) => {
-                                          if (e.target.value) {
-                                            const d = new Date(e.target.value);
-                                            d.setHours(23, 59, 59, 999);
-                                            handleUpdateProExpiration(user.id, d.toISOString());
-                                          } else {
-                                            handleUpdateProExpiration(user.id, null);
-                                          }
-                                        }}
-                                        onClick={(e) => {
-                                          try { e.target.showPicker(); } catch {
-                                            // Fallback for browsers that do not support showPicker
-                                          }
-                                        }}
-                                        className="bg-transparent text-xs text-slate-300 font-semibold outline-none w-full cursor-pointer [color-scheme:dark]"
-                                      />
-                                    </div>
-                                    {user.pro_expires_at && (() => {
-                                      const daysLeft = Math.ceil((new Date(user.pro_expires_at) - new Date()) / (1000 * 60 * 60 * 24));
-                                      if (daysLeft > 0) {
-                                        return <span className="text-[8px] font-black text-amber-400 bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/20">{daysLeft} days left</span>;
-                                      } else {
-                                        return <span className="text-[8px] font-black text-rose-400 bg-rose-500/10 px-1 py-0.5 rounded border border-rose-500/20">Expired</span>;
-                                      }
-                                    })()}
-                                  </div>
+                                      })()
+                                    ) : (
+                                      <span className="text-[10px] font-black text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded border border-indigo-500/20 uppercase tracking-wider">
+                                        PRO
+                                      </span>
+                                    )
+                                  ) : (
+                                    <span className="text-[10px] font-semibold text-slate-400 bg-slate-800 px-2 py-1 rounded uppercase tracking-wider">
+                                      FREE
+                                    </span>
+                                  )}
                                 </td>
-                                <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
-                                  <input 
-                                    type="checkbox"
-                                    checked={user.is_test_account || false}
-                                    onChange={(e) => handleUpdateIsTestAccount(user.id, e.target.checked)}
-                                    className="w-4 h-4 text-indigo-650 rounded bg-slate-900 border-slate-700 focus:ring-indigo-500 cursor-pointer"
-                                  />
+                                <td className={`${cellPaddingClass} text-center`}>
+                                  {(() => {
+                                    const activeFlags = [];
+                                    if (user.is_test_account) activeFlags.push({ label: 'TEST', color: 'text-rose-400 bg-rose-500/10 border-rose-500/20' });
+                                    if (user.beta_voice_pro) activeFlags.push({ label: 'VOICE', color: 'text-violet-400 bg-violet-500/10 border-violet-500/20' });
+                                    if (user.beta_tournament_tier) activeFlags.push({ label: 'TOURNEY', color: 'text-sky-400 bg-sky-500/10 border-sky-500/20' });
+                                    if (user.beta_trainings_tier) activeFlags.push({ label: 'TRAININGS', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' });
+                                    if (user.disable_club_track) activeFlags.push({ label: 'NO-CLUB', color: 'text-orange-400 bg-orange-500/10 border-orange-500/20' });
+                                    
+                                    if (activeFlags.length === 0) return <span className="text-slate-600 font-bold">-</span>;
+                                    return (
+                                      <div className="flex flex-wrap gap-1 justify-center max-w-[200px] mx-auto">
+                                        {activeFlags.map(flag => (
+                                          <span key={flag.label} className={`text-[8px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wider ${flag.color}`}>
+                                            {flag.label}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    );
+                                  })()}
                                 </td>
-                                <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
-                                  <input 
-                                    type="checkbox"
-                                    checked={user.beta_voice_pro || false}
-                                    onChange={(e) => handleUpdateBetaVoicePro(user.id, e.target.checked)}
-                                    className="w-4 h-4 text-indigo-600 rounded bg-slate-900 border-slate-700 focus:ring-indigo-500 cursor-pointer animate-none"
-                                  />
-                                </td>
-                                <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
-                                  <input 
-                                    type="checkbox"
-                                    checked={user.beta_tournament_tier || false}
-                                    onChange={(e) => handleUpdateBetaTournamentTier(user.id, e.target.checked)}
-                                    className="w-4 h-4 text-indigo-600 rounded bg-slate-900 border-slate-700 focus:ring-indigo-500 cursor-pointer animate-none"
-                                  />
-                                </td>
-                                <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
-                                  <input 
-                                    type="checkbox"
-                                    checked={user.beta_trainings_tier || false}
-                                    onChange={(e) => handleUpdateBetaTrainingsTier(user.id, e.target.checked)}
-                                    className="w-4 h-4 text-indigo-600 rounded bg-slate-900 border-slate-700 focus:ring-indigo-500 cursor-pointer animate-none"
-                                  />
-                                </td>
-                                <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
-                                  <input 
-                                    type="checkbox"
-                                    checked={user.disable_club_track || false}
-                                    onChange={(e) => handleUpdateDisableClubTrack(user.id, e.target.checked)}
-                                    className="w-4 h-4 text-rose-500 rounded bg-slate-900 border-slate-700 focus:ring-rose-500 cursor-pointer animate-none"
-                                  />
-                                </td>
-                                <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                <td className={`${cellPaddingClass} text-right`} onClick={(e) => e.stopPropagation()}>
                                   <div className="flex items-center justify-end gap-2.5">
                                     {user.teams?.length === 1 && (
                                       <button
@@ -773,35 +745,207 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                                 </td>
                               </tr>
                               {expandedUser === user.id && (
-                                <tr className="bg-slate-950/50">
-                                  <td colSpan={10} className="p-6 border-b border-white/5">
-                                    <h4 className="text-slate-300 font-bold mb-4 uppercase tracking-widest text-xs">Clubs & Teams Hierarchy</h4>
-                                    {(!user.clubs || user.clubs.length === 0) && <p className="text-slate-500 text-sm">No clubs created.</p>}
-                                    <div className="space-y-4">
-                                      {user.clubs?.map(club => (
-                                        <div key={club.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-                                          <h5 className="font-black text-white text-lg mb-3">{club.name}</h5>
-                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            {user.teams?.filter(t => t.club_id === club.id).map(team => (
-                                              <div key={team.id} className="flex items-center justify-between bg-slate-950 p-3 rounded-lg border border-slate-800">
-                                                <span className="font-bold text-slate-300">{team.name}</span>
-                                                <button 
-                                                  onClick={() => {
-                                                    onShadowTeam({ id: team.id, name: team.name, tier: user.tier, beta_voice_pro: user.beta_voice_pro });
-                                                    onNavigate('dashboard');
-                                                  }}
-                                                  className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 font-bold rounded-lg border border-indigo-500/20 transition-all text-[10px] flex items-center justify-center gap-1 uppercase tracking-widest"
-                                                >
-                                                  <Shield className="w-3 h-3" /> Shadow Team
-                                                </button>
+                                <tr className="bg-slate-950/80">
+                                  <td colSpan={7} className="p-6 border-b border-white/5">
+                                    <div className="flex flex-col lg:flex-row gap-8">
+                                      
+                                      {/* Left Pane: Clubs & Teams Hierarchy */}
+                                      <div className="flex-1 space-y-4">
+                                        <h4 className="text-indigo-400 font-black uppercase tracking-widest text-xs border-b border-white/10 pb-2 flex items-center gap-2">
+                                          <Users className="w-4 h-4" /> Clubs & Teams Hierarchy
+                                        </h4>
+                                        {(!user.clubs || user.clubs.length === 0) ? (
+                                          <p className="text-slate-500 text-xs italic">No clubs created yet.</p>
+                                        ) : (
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {user.clubs.map(club => (
+                                              <div key={club.id} className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-inner">
+                                                <div>
+                                                  <h5 className="font-extrabold text-white text-sm mb-3 border-b border-white/5 pb-1.5">{club.name}</h5>
+                                                  <div className="space-y-2">
+                                                    {user.teams?.filter(t => t.club_id === club.id).map(team => (
+                                                      <div key={team.id} className="flex items-center justify-between bg-slate-950 p-2 rounded-lg border border-slate-850">
+                                                        <span className="font-semibold text-xs text-slate-300 truncate pr-2" title={team.name}>{team.name}</span>
+                                                        <button 
+                                                          onClick={() => {
+                                                            onShadowTeam({ id: team.id, name: team.name, tier: user.tier, beta_voice_pro: user.beta_voice_pro });
+                                                            onNavigate('dashboard');
+                                                          }}
+                                                          className="px-2.5 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 font-bold rounded-lg border border-indigo-500/20 transition-all text-[9px] flex items-center justify-center gap-1 uppercase tracking-widest flex-shrink-0"
+                                                        >
+                                                          <Shield className="w-2.5 h-2.5" /> Shadow
+                                                        </button>
+                                                      </div>
+                                                    ))}
+                                                    {(!user.teams || user.teams.filter(t => t.club_id === club.id).length === 0) && (
+                                                      <div className="text-slate-500 text-xs italic">No teams in this club.</div>
+                                                    )}
+                                                  </div>
+                                                </div>
                                               </div>
                                             ))}
-                                            {(!user.teams || user.teams.filter(t => t.club_id === club.id).length === 0) && (
-                                              <div className="text-slate-500 text-sm font-medium">No teams in this club.</div>
-                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Right Pane: Settings & Permissions Console */}
+                                      <div className="w-full lg:w-[450px] space-y-6 bg-slate-900/40 border border-white/5 p-6 rounded-2xl">
+                                        <h4 className="text-indigo-400 font-black uppercase tracking-widest text-xs border-b border-white/10 pb-2 flex items-center gap-2">
+                                          <Shield className="w-4 h-4" /> Admin Settings & Permissions
+                                        </h4>
+
+                                        {/* Tier Selector */}
+                                        <div className="space-y-2">
+                                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            Subscription Tier
+                                          </label>
+                                          <select 
+                                            value={user.tier || 'FREE'} 
+                                            onChange={(e) => handleUpdateTier(user.id, e.target.value)}
+                                            className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs font-bold rounded-xl px-3 py-2.5 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                                          >
+                                            <option value="FREE">FREE</option>
+                                            <option value="PRO">PRO</option>
+                                            <option value="PRO+">PRO+</option>
+                                            <option value="TOURNAMENT">TOURNAMENT</option>
+                                          </select>
+                                        </div>
+
+                                        {/* Promo Expiry Selector */}
+                                        <div className="space-y-2">
+                                          <div className="flex justify-between items-center">
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                              Promo Expiration
+                                            </label>
+                                            {user.pro_expires_at && (() => {
+                                              const daysLeft = Math.ceil((new Date(user.pro_expires_at) - new Date()) / (1000 * 60 * 60 * 24));
+                                              if (daysLeft > 0) {
+                                                return <span className="text-[9px] font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">{daysLeft} days left</span>;
+                                              } else {
+                                                return <span className="text-[9px] font-black text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">Expired</span>;
+                                              }
+                                            })()}
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-2">
+                                            <select
+                                              value={user.pro_expires_at ? 'custom' : 'none'}
+                                              onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === 'none') {
+                                                  handleUpdateProExpiration(user.id, null);
+                                                } else if (val === '1w') {
+                                                  const d = new Date();
+                                                  d.setDate(d.getDate() + 7);
+                                                  handleUpdateProExpiration(user.id, d.toISOString());
+                                                } else if (val === '1m') {
+                                                  const d = new Date();
+                                                  d.setMonth(d.getMonth() + 1);
+                                                  handleUpdateProExpiration(user.id, d.toISOString());
+                                                } else if (val === '6m') {
+                                                  const d = new Date();
+                                                  d.setMonth(d.getMonth() + 6);
+                                                  handleUpdateProExpiration(user.id, d.toISOString());
+                                                }
+                                              }}
+                                              className="bg-slate-950 border border-slate-800 text-slate-200 text-xs font-bold rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                                            >
+                                              <option value="none">No Promo</option>
+                                              <option value="1w">+1 Week</option>
+                                              <option value="1m">+1 Month</option>
+                                              <option value="6m">+6 Months</option>
+                                              <option value="custom">Custom (Date Select)</option>
+                                            </select>
+                                            <div className="relative flex items-center bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl px-3 py-2 cursor-pointer transition-all shadow-inner">
+                                              <Calendar className="w-4 h-4 text-indigo-400 mr-2 flex-shrink-0" />
+                                              <input 
+                                                type="date"
+                                                value={user.pro_expires_at ? new Date(user.pro_expires_at).toISOString().split('T')[0] : ''}
+                                                onChange={(e) => {
+                                                  if (e.target.value) {
+                                                    const d = new Date(e.target.value);
+                                                    d.setHours(23, 59, 59, 999);
+                                                    handleUpdateProExpiration(user.id, d.toISOString());
+                                                  } else {
+                                                    handleUpdateProExpiration(user.id, null);
+                                                  }
+                                                }}
+                                                onClick={(e) => {
+                                                  try { e.target.showPicker(); } catch {
+                                                    // Fallback for browsers that do not support showPicker
+                                                  }
+                                                }}
+                                                className="bg-transparent text-xs text-slate-300 font-semibold outline-none w-full cursor-pointer [color-scheme:dark]"
+                                              />
+                                            </div>
                                           </div>
                                         </div>
-                                      ))}
+
+                                        {/* Permissions & Beta Flags */}
+                                        <div className="space-y-3 pt-2">
+                                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-white/5 pb-1">
+                                            Privileges & Beta Features
+                                          </label>
+                                          <div className="space-y-2.5">
+                                            {[
+                                              { 
+                                                id: 'is_test_account', 
+                                                label: 'Test Account', 
+                                                description: 'Excludes metrics from health stats',
+                                                checked: user.is_test_account || false,
+                                                onChange: (val) => handleUpdateIsTestAccount(user.id, val),
+                                                accentColor: 'focus:ring-rose-500 checked:bg-rose-500 border-rose-500/20'
+                                              },
+                                              { 
+                                                id: 'beta_voice_pro', 
+                                                label: 'Voice Tracking', 
+                                                description: 'Access to advanced voice stats features',
+                                                checked: user.beta_voice_pro || false,
+                                                onChange: (val) => handleUpdateBetaVoicePro(user.id, val),
+                                                accentColor: 'focus:ring-indigo-500 checked:bg-indigo-500'
+                                              },
+                                              { 
+                                                id: 'beta_tournament_tier', 
+                                                label: 'Tournament Access', 
+                                                description: 'Enable tournament tracking modes',
+                                                checked: user.beta_tournament_tier || false,
+                                                onChange: (val) => handleUpdateBetaTournamentTier(user.id, val),
+                                                accentColor: 'focus:ring-indigo-500 checked:bg-indigo-500'
+                                              },
+                                              { 
+                                                id: 'beta_trainings_tier', 
+                                                label: 'Trainings Access', 
+                                                description: 'Enable custom drill/training schedules',
+                                                checked: user.beta_trainings_tier || false,
+                                                onChange: (val) => handleUpdateBetaTrainingsTier(user.id, val),
+                                                accentColor: 'focus:ring-indigo-500 checked:bg-indigo-500'
+                                              },
+                                              { 
+                                                id: 'disable_club_track', 
+                                                label: 'Disable Club Mode', 
+                                                description: 'Restrict tenant to single-team layout',
+                                                checked: user.disable_club_track || false,
+                                                onChange: (val) => handleUpdateDisableClubTrack(user.id, val),
+                                                accentColor: 'focus:ring-rose-500 checked:bg-rose-500'
+                                              }
+                                            ].map(item => (
+                                              <label key={item.id} className="flex items-start gap-3 p-2.5 bg-slate-950/50 hover:bg-slate-950 border border-slate-800/80 hover:border-slate-800 rounded-xl cursor-pointer transition-all">
+                                                <input 
+                                                  type="checkbox"
+                                                  checked={item.checked}
+                                                  onChange={(e) => item.onChange(e.target.checked)}
+                                                  className={`w-4 h-4 rounded bg-slate-900 border-slate-700 cursor-pointer mt-0.5 ${item.accentColor}`}
+                                                />
+                                                <div>
+                                                  <div className="text-xs font-bold text-white">{item.label}</div>
+                                                  <div className="text-[10px] text-slate-500 font-medium">{item.description}</div>
+                                                </div>
+                                              </label>
+                                            ))}
+                                          </div>
+                                        </div>
+
+                                      </div>
+
                                     </div>
                                   </td>
                                 </tr>
@@ -866,7 +1010,7 @@ const AdminDashboard = ({ onNavigate, onShadowTeam }) => {
                       No pending public drills submitted for admin review.
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {pendingDrills.map(drill => (
                         <div key={drill.id} className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between shadow-lg relative overflow-hidden">
                           <div className="absolute top-0 left-0 right-0 h-1 bg-indigo-500/50"></div>

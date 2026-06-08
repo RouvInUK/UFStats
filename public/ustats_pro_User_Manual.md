@@ -248,11 +248,62 @@ The Coach Dashboard is the central analytical hub of ustats.pro, compiling sidel
 
 ---
 
-## 5. Pricing: Free vs. Coach Pro
+## 5. Tournament Desk (Multi-Pitch Organizer & Scorer Portal)
+
+For larger events and tournament organizers, ustats.pro offers the **Tournament Desk** (available for accounts provisioned with the Tournament Tier). This portal allows organizers to manage complex matches, team rosters, and coordinate with multiple sideline volunteer scorers.
+
+### 5.1 Organizer Management
+From the Tournament Desk, tournament administrators have access to:
+*   **Tournament Creation:** Set up your tournament by specifying the name, date range, and game formats (**Grass** 7v7, **Beach** 5v5, or **Indoor** 5v5).
+*   **Teams & Division Warning Settings:** Add competing teams and configure roster ratios (e.g., *Standard Mixed*, *Light Mixed*, *Open*, *Women's*, or *Not Applicable*) to enable gender-ratio safety warnings on lineups.
+*   **CSV Roster Uploads:** Rapidly populate a team's player roster by dragging and dropping a CSV file containing player names and shirt numbers.
+*   **Match Scheduler:** Define matchups between registered teams, assign them to specific pitches, set scheduled times, and automatically generate a secure, unique **Pitch Code** (e.g., `P1-E74A`) for each field.
+*   **Volunteer Scorer Links:** Instantly copy and share pitch scorer login links directly with sideline volunteers.
+*   **Reset Tournament Data:** Clear and purge all match scores, active lineups, and stats to prepare fields before play begins.
+
+### 5.2 Volunteer Scorer Console
+Sideline volunteer scorers can access the logging dashboard without signing up or creating an account:
+1.  **Access:** Enter the unique 6-digit **Pitch Code** on the Volunteer Scorer Login page (`/volunteer-login`).
+2.  **Unlock:** Validating the code opens a dedicated, neutral scoring console pre-configured for that specific matchup and pitch.
+3.  **Real-Time Sync:** As volunteers log game events, stats are streamed back to the central database, updating live tournament scoreboards.
+
+---
+
+## 6. Trainings Desk (Drills & Scrimmages)
+
+Catalog team practice performance and individual player development using the **Trainings Desk** (available for accounts provisioned with the Trainings Tier).
+
+### 6.1 Practice Drills Mode
+Track custom repetition cycles and compile utility metrics during focused team training drills:
+*   **Drill Specifications Library:** Browse through standard training exercises or tap **Custom** to create your own.
+*   **Custom Drill Creation:** Define the category, description, and flow type:
+    *   *Rep-by-Rep:* Accumulates passes up to a set length (e.g., a 3-throw sequence) before registering a completed repetition and resetting the thrower queue.
+    *   *Continuous:* Logs a continuous sequence of passes.
+*   **Dynamic Telemetry Mapping:** Map up to 4 custom drill actions (e.g., "Overthrow", "Good Catch", "Leading Pass", "High Release") to standard game statistics categories (*Pass*, *Catch*, *Drop*, *Throwaway*, *Defence*, *Point*, *Stall Out*) to guarantee correct NIS calculations.
+*   **Roster Rotation:** Select which roster members are active in the drill rotation queue.
+*   **Live Drill Scorer:** 
+    *   Single-tap a player to pass the disc or record an action.
+    *   Double-tap a player to set them as the locked/static thrower.
+    *   Easily record pulls, drops, throwaways, defense blocks, and catches using the simplified sideline buttons.
+
+### 6.2 Trainings Scrimmage Match Mode
+Run and track informal practice games or scrimmage matches:
+*   **Jersey Split:** Quickly partition your roster into **Light Shirts** vs. **Dark Shirts** teams.
+*   **Smart Auto-Split:** Use the Auto-Split engine to automatically partition your MMP (Male Matching Players) and FMP (Female Matching Players) roster groups, shuffle them, and divide them equally between both teams to balance game ratios.
+*   **Live Scrimmage Scorer:**
+    *   Allows simultaneous tracking of possession chains for both shirts teams on a single screen.
+    *   **Dynamic Intercepts:** Tapping a player from the opposing team registers a defensive block (**Defence**), resets the possession chain, and flips the live possession color on the scoreboard.
+    *   **Role Locking:** Set locked offensive or defensive roles for scrimmage periods.
+    *   Includes full support for halftime tracking and match completion.
+*   **Recorded Sessions History:** Review, edit, or delete logged scrimmage and drill statistics directly from your training workspace.
+
+---
+
+## 7. Pricing Tiers
 
 ustats.pro is designed to be accessible to grassroots teams while offering elite tools for professional coaches.
 
-### 🟢 Free Tier
+### 🟢 Starter (Free)
 Everything you need to track a team for a season.
 - **1 Club** per user.
 - **Up to 2 Teams** inside your club.
@@ -260,16 +311,26 @@ Everything you need to track a team for a season.
 - Full access to the Offline Sync Engine.
 - Standard Coach Dashboard analytics.
 
-### 🟣 Coach Pro Tier
+### 🟣 Coach Pro (£5/month or £50/year)
 Built for club directors, university programs, and power users.
 - **1 Club** per user.
 - **Up to 5 Teams** inside your club.
 - **Advanced Coach's Dashboard & Analytics**: True Impact Net Impact Score (NIS) player metrics, sideline pull quality grading, and dynamic lineup resolution.
 - Advanced export capabilities and priority support.
 
+### ⚡ Coach Pro+ (£7/month or £70/year)
+The ultimate coaching suite combining game-day intelligence with structured practices.
+- **Everything in Coach Pro** tier.
+- **Trainings Mode Pro**: Access to the Trainings Desk, custom practice drills tracking, scrimmage jersey-splits (light vs. dark), MMR/FMP auto-splits, rotation logs, and practice-to-game performance trend analysis.
+
+### 🏆 Tournament (Contact for pricing)
+Dedicated workspace for tournament directors and event managers.
+- **Tournament Mode only**: Access to the Tournament Desk, multi-pitch schedule setup, csv roster uploads, pitch-specific scorer codes for volunteer scoring, and real-time live bracket updates.
+- For pricing and setups, contact us at [info@ustats.pro](mailto:info@ustats.pro).
+
 ---
 
-## 6. Best Practices for Sideline Tracking
+## 8. Best Practices for Sideline Tracking
 1. **Always select the player *first***, then tap the action. (e.g., Tap "Sarah", then tap "Drop").
 2. **Possession Chains:** To track passes, simply tap players in the order they catch the disc. (e.g., Tap "John", tap "Sarah", tap "Mike"). The app automatically builds the assist and secondary assist chains based on this sequence.
 3. Keep the device in **Portrait Mode** for the best layout experience.
