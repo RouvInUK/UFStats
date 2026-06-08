@@ -220,16 +220,29 @@ const SettingsModal = ({ isOpen, onClose, isVoiceEnabled, setIsVoiceEnabled, onU
                       <span>{profile?.tier === 'PRO+' ? 'Active via recurring billing (£7/mo or £70/yr)' : profile?.tier === 'TOURNAMENT' ? 'Custom Enterprise Licensing' : 'Active via recurring billing (£5/mo or £50/yr)'}</span>
                     )}
                   </div>
-                  {!profile?.pro_expires_at && profile?.tier !== 'TOURNAMENT' && (
-                    <a 
-                      href={import.meta.env.VITE_PAYPAL_CLIENT_ID === 'sb' || !import.meta.env.VITE_PAYPAL_CLIENT_ID ? "https://www.sandbox.paypal.com/myaccount/autopay/" : "https://www.paypal.com/myaccount/autopay/"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-block mt-2 text-[10px] font-black text-rose-400 hover:text-rose-300 hover:underline uppercase tracking-wider transition-colors"
-                    >
-                      Manage / Cancel Subscription ↗
-                    </a>
-                  )}
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2 items-center">
+                    {!profile?.pro_expires_at && profile?.tier !== 'TOURNAMENT' && (
+                      <a 
+                        href={import.meta.env.VITE_PAYPAL_CLIENT_ID === 'sb' || !import.meta.env.VITE_PAYPAL_CLIENT_ID ? "https://www.sandbox.paypal.com/myaccount/autopay/" : "https://www.paypal.com/myaccount/autopay/"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block text-[10px] font-black text-rose-400 hover:text-rose-300 hover:underline uppercase tracking-wider transition-colors"
+                      >
+                        Manage / Cancel Subscription ↗
+                      </a>
+                    )}
+                    {profile?.tier !== 'PRO+' && profile?.tier !== 'TOURNAMENT' && (
+                      <button
+                        onClick={() => {
+                          onClose();
+                          if (onUpgradeClick) onUpgradeClick();
+                        }}
+                        className="px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-[9px] font-black rounded-lg transition-all shadow-md uppercase tracking-wider"
+                      >
+                        {profile?.tier === 'PRO' ? 'Upgrade to Pro+ ★' : 'Upgrade Options ★'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ) : (
