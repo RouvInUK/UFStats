@@ -23,6 +23,18 @@ const PayPalUpgradeModal = ({ isOpen, onClose }) => {
   const CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || 'sb'; // Default to sandbox 'sb'
 
   useEffect(() => {
+    if (isOpen) {
+      if (!import.meta.env.VITE_PAYPAL_PLUS_MONTHLY_PLAN_ID || !import.meta.env.VITE_PAYPAL_PLUS_YEARLY_PLAN_ID) {
+        console.warn(
+          "PayPal Developer Notice: VITE_PAYPAL_PLUS_MONTHLY_PLAN_ID and VITE_PAYPAL_PLUS_YEARLY_PLAN_ID are not set in your .env configuration. " +
+          "Vite is falling back to default mock Plan IDs ('P-7GBP-PLUS-MONTHLY' and 'P-70GBP-PLUS-YEARLY'). " +
+          "To test successfully in sandbox, please create subscription products in your PayPal Developer Sandbox Dashboard (£7/mo and £70/yr) and add their plan IDs to your .env / .env.local files."
+        );
+      }
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (!isOpen) return;
 
     // Reset states on reopen
