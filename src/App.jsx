@@ -728,12 +728,12 @@ function App() {
           <button 
             onClick={() => {
               if (!isProTier) {
-                alert("Coach Pro is exclusively available on the Coach Pro Tier. Please upgrade to access advanced analytics and data.");
+                setIsUpgradeOpen(true);
                 return;
               }
               setCurrentView('coach');
             }}
-            className={`px-6 py-2.5 font-extrabold rounded-xl transition-all flex items-center gap-2 uppercase tracking-wide text-sm ${isProTier ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-[0_0_25px_rgba(245,158,11,0.2)] hover:shadow-[0_0_35px_rgba(245,158,11,0.4)] scale-100 hover:scale-[1.02]' : 'bg-slate-800 text-slate-600 border border-slate-700/50 cursor-not-allowed opacity-75'}`}
+            className={`px-6 py-2.5 font-extrabold rounded-xl transition-all flex items-center gap-2 uppercase tracking-wide text-sm ${isProTier ? 'bg-gradient-to-r from-amber-500 to-orange-650 hover:from-amber-400 hover:to-orange-555 text-white shadow-[0_0_25px_rgba(245,158,11,0.2)] hover:shadow-[0_0_35px_rgba(245,158,11,0.4)] scale-100 hover:scale-[1.02]' : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-750 transition-colors cursor-pointer'}`}
           >
             {profile?.disable_club_track ? 'Tournament Pro ★' : 'Coach Pro ★'}
           </button>
@@ -823,13 +823,13 @@ function App() {
           <button 
             onClick={() => {
               if (!isProTier) {
-                alert("Coach Pro is exclusively available on the Coach Pro Tier.");
+                setIsUpgradeOpen(true);
                 return;
               }
               setCurrentView('coach');
             }}
-            className={`p-2 rounded-lg transition-all ${currentView === 'coach' ? 'text-amber-400 bg-amber-500/10' : isProTier ? 'text-slate-400 hover:text-amber-400' : 'text-slate-600 cursor-not-allowed opacity-50'}`}
-            title={profile?.disable_club_track ? 'Tournament Pro' : 'Coach Pro'}
+            className={`p-2 rounded-lg transition-all ${currentView === 'coach' ? 'text-amber-400 bg-amber-500/10' : isProTier ? 'text-slate-400 hover:text-amber-400' : 'text-slate-500 hover:text-amber-400 cursor-pointer'}`}
+            title={profile?.disable_club_track ? 'Upgrade to Tournament Pro' : 'Upgrade to Coach Pro'}
           >
             <Star className="w-5 h-5" />
           </button>
