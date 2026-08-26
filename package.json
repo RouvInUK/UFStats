@@ -7,11 +7,14 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:uat": "playwright test --project='Mobile Safari (iPhone 12)' --project='Mobile Chrome (Pixel 5)'",
+    "test:uat:ui": "playwright test --ui",
+    "test:uat:mock": "playwright test --project='Mocked Mobile Safari (iPhone 12)' --project='Mocked Mobile Chrome (Pixel 5)'"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.100.1",
     "@google/generative-ai": "^0.21.0",
+    "@supabase/supabase-js": "^2.100.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
@@ -28,6 +31,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.62.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",

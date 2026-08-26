@@ -33,3 +33,9 @@ DEFECTS.md
 FEATURES.md
 .vercel
 .env*.local
+
+# Playwright & Testing
+test-results/
+playwright-report/
+playwright/.auth/
+scratch/
