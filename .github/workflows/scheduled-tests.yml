@@ -2,7 +2,7 @@ name: Scheduled Automated Test Suite
 
 on:
   schedule:
-    # Runs at 07:00 UTC every Monday, Wednesday, and Friday
+    # Runs at 07:00 UTC (08:00 AM UK / BST) every Monday, Wednesday, and Friday
     - cron: '0 7 * * 1,3,5'
   workflow_dispatch: # Allows manual trigger from GitHub Actions tab
 
