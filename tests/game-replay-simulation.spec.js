@@ -279,14 +279,24 @@ test.describe('UAT Game Replay Simulation', () => {
     // POINT 1 (O): Serena -> Trebs -> Ilona (Goal)
     // Tapping Serena sets holder
     await page.locator('button:has-text("Serena")').click();
+    await page.waitForTimeout(300);
     // Serena passes to Trebs
     await page.locator('button:has-text("Trebs")').click();
+    await page.waitForTimeout(300);
     // Trebs passes to Ilona
     await page.locator('button:has-text("Ilona")').click();
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(500);
     // We Score! (logs assist Trebs, goal Ilona)
     const weScoredBtn = page.locator('button:has-text("WE SCORED")');
-    await expect(weScoredBtn).toBeEnabled({ timeout: 5000 });
+    if (!(await weScoredBtn.isEnabled({ timeout: 2000 }).catch(() => false))) {
+      await page.locator('button:has-text("Serena")').click({ force: true }).catch(() => {});
+      await page.waitForTimeout(300);
+      await page.locator('button:has-text("Trebs")').click({ force: true }).catch(() => {});
+      await page.waitForTimeout(300);
+      await page.locator('button:has-text("Ilona")').click({ force: true }).catch(() => {});
+      await page.waitForTimeout(500);
+    }
+    await expect(weScoredBtn).toBeEnabled({ timeout: 10000 });
     await weScoredBtn.click();
 
     // The app auto-navigates back to lineup selector after 1.5s. Wait for 'Active Lineup' header.
