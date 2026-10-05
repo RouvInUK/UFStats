@@ -276,6 +276,9 @@ test.describe('UAT Game Replay Simulation', () => {
 
     // 6. Match Replay Simulation
     console.log('🎮 Replaying point events...');
+    // Ensure Dashboard view has mounted before tapping players
+    await expect(page.locator('button:has-text("THEY SCORED")')).toBeVisible({ timeout: 15000 });
+
     // POINT 1 (O): Serena -> Trebs -> Ilona (Goal)
     // Tapping Serena sets holder
     await page.locator('button:has-text("Serena")').click();
@@ -316,6 +319,7 @@ test.describe('UAT Game Replay Simulation', () => {
     const skipPullBtn = page.locator('button[title="Skip Pull Tracking"]');
     await expect(skipPullBtn).toBeVisible({ timeout: 5000 });
     await skipPullBtn.click();
+    await expect(page.locator('button:has-text("THEY SCORED")')).toBeVisible({ timeout: 15000 });
 
     // Serena gets defensive block (first tap Serena to claim disc, then click Defence)
     await page.locator('button:has-text("Serena")').click();
@@ -341,6 +345,7 @@ test.describe('UAT Game Replay Simulation', () => {
     await page.locator('button:has-text("Start Point")').click();
     await expect(skipPullBtn).toBeVisible({ timeout: 5000 });
     await skipPullBtn.click();
+    await expect(page.locator('button:has-text("THEY SCORED")')).toBeVisible({ timeout: 15000 });
 
     // Click THEY SCORED
     await page.locator('button:has-text("THEY SCORED")').click();

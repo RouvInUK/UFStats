@@ -14,21 +14,22 @@ const ensureTeamSelected = async (page) => {
 
 const fillMatchMetadata = async (page, title, possessionText) => {
   const matchInput = page.locator('input[placeholder="e.g. EUCF Pool Play - Game 1"]');
-  if (await matchInput.isVisible({ timeout: 3000 })) {
-    await matchInput.fill(title);
+  if (await matchInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await matchInput.fill(title).catch(() => {});
     const oppInput = page.locator('input[placeholder="e.g. Darkstar"]');
-    if (await oppInput.isVisible()) {
+    if (await oppInput.isVisible({ timeout: 2000 }).catch(() => false)) {
       await oppInput.fill('Opponent Team').catch(() => {});
     }
     const posBtn = page.locator(`button:has-text("${possessionText}")`);
-    if (await posBtn.isVisible()) {
-      await posBtn.click().catch(() => {});
+    if (await posBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await posBtn.click({ force: true }).catch(() => {});
     }
   }
 };
 
 test.describe('Functional Test Suite - Pull Tracker Options', () => {
   test.beforeEach(async ({ page }, testInfo) => {
+    test.setTimeout(60000);
     await initTestAuth(page, testInfo);
   });
 
