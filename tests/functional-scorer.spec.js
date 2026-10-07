@@ -3,12 +3,13 @@ import { initTestAuth } from './helpers/mocks';
 
 const ensureTeamSelected = async (page) => {
   const takeOverBtn = page.locator('button:has-text("Yes, Take Over")');
-  if (await takeOverBtn.isVisible({ timeout: 2000 })) {
-    await takeOverBtn.click();
+  if (await takeOverBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await takeOverBtn.click().catch(() => {});
   }
-  const teamBtn = page.locator('button:has-text("South Circular")');
-  if (await teamBtn.isVisible({ timeout: 3000 })) {
-    await teamBtn.click().catch(() => {});
+  const teamBtn = page.locator('button:has-text("South Circular")').first();
+  if (await teamBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await teamBtn.click({ force: true }).catch(() => {});
+    await page.waitForTimeout(300);
   }
 };
 
