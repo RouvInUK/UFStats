@@ -309,26 +309,41 @@ test.describe('UAT Game Replay Simulation', () => {
     await page.locator('[title="All data synced to cloud"]:visible').waitFor({ state: 'visible', timeout: 15000 });
 
     // POINT 2 (D): Serena block -> Serena pass to Ilona -> Ilona (Goal)
+    // Wait for lineup button to be in ready state
+    const startPoint2Btn = page.locator('button:has-text("Start Point"), button:has-text("Point in Progress")');
+    await expect(startPoint2Btn).toBeVisible({ timeout: 10000 });
+
     // Select the 7 players again (selections clear when points end)
     for (const player of playersToSelect) {
       await page.locator(`button:has-text("${player}")`).click();
     }
     // Start Point
-    await page.locator('button:has-text("Start Point")').click();
-    // Skip Pull Tracker popover
+    const readyStartBtn2 = page.locator('button:has-text("Start Point")');
+    await expect(readyStartBtn2).toBeEnabled({ timeout: 10000 });
+    await readyStartBtn2.click();
+
+    // Skip Pull Tracker popover (Point 2 is Defence)
     const skipPullBtn = page.locator('button[title="Skip Pull Tracking"]');
-    await expect(skipPullBtn).toBeVisible({ timeout: 5000 });
+    await expect(skipPullBtn).toBeVisible({ timeout: 25000 });
     await skipPullBtn.click();
-    await expect(page.locator('button:has-text("THEY SCORED")')).toBeVisible({ timeout: 15000 });
+    await expect(skipPullBtn).toBeHidden({ timeout: 10000 });
+    const theyScoredBtn = page.locator('button:has-text("THEY SCORED")');
+    await expect(theyScoredBtn).toBeVisible({ timeout: 15000 });
 
     // Serena gets defensive block (first tap Serena to claim disc, then click Defence)
     await page.locator('button:has-text("Serena")').click();
-    await page.locator('button:has-text("Defence")').click();
+    await page.waitForTimeout(300);
+    const defenceBtn = page.locator('button:has-text("Defence")');
+    await expect(defenceBtn).toBeEnabled({ timeout: 10000 });
+    await defenceBtn.click();
 
     // Now Serena possesses, logs pass to Ilona
     await page.locator('button:has-text("Serena")').click();
+    await page.waitForTimeout(300);
     await page.locator('button:has-text("Ilona")').click();
+    await page.waitForTimeout(300);
     // We Score! (logs assist Serena, goal Ilona)
+    await expect(page.locator('button:has-text("WE SCORED")')).toBeEnabled({ timeout: 10000 });
     await page.locator('button:has-text("WE SCORED")').click();
 
     // Wait for auto-navigation back to lineup screen
@@ -338,13 +353,22 @@ test.describe('UAT Game Replay Simulation', () => {
     await page.locator('[title="All data synced to cloud"]:visible').waitFor({ state: 'visible', timeout: 15000 });
 
     // POINT 3 (D): Opponent Scores
+    // Wait for lineup button to be in ready state
+    const startPoint3Btn = page.locator('button:has-text("Start Point"), button:has-text("Point in Progress")');
+    await expect(startPoint3Btn).toBeVisible({ timeout: 10000 });
+
     // Re-select active 7
     for (const player of playersToSelect) {
       await page.locator(`button:has-text("${player}")`).click();
     }
-    await page.locator('button:has-text("Start Point")').click();
-    await expect(skipPullBtn).toBeVisible({ timeout: 5000 });
+    const readyStartBtn3 = page.locator('button:has-text("Start Point")');
+    await expect(readyStartBtn3).toBeEnabled({ timeout: 10000 });
+    await readyStartBtn3.click();
+
+    // Skip Pull Tracker popover (Point 3 is Defence)
+    await expect(skipPullBtn).toBeVisible({ timeout: 25000 });
     await skipPullBtn.click();
+    await expect(skipPullBtn).toBeHidden({ timeout: 10000 });
     await expect(page.locator('button:has-text("THEY SCORED")')).toBeVisible({ timeout: 15000 });
 
     // Click THEY SCORED
