@@ -402,4 +402,14 @@ export async function setupMocks(page, useDynamic = false) {
       }
     }
   });
+
+  // 7. Intercept drill_definitions queries
+  await page.route('**/rest/v1/drill_definitions*', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: { 'content-range': '0-0/0' },
+      body: JSON.stringify([])
+    });
+  });
 }
