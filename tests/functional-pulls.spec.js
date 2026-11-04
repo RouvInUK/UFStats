@@ -53,7 +53,7 @@ test.describe('Functional Test Suite - Pull Tracker Options', () => {
     }
 
     // Verify main app navigation or Pull Tracker popover skip button
-    const trackingView = page.locator('button:has-text("THEY SCORED"), button[title="Skip Pull Tracking"], button:has-text("Skip"), nav');
+    const trackingView = page.locator('button:has-text("THEY SCORED"), button[title="Skip Pull Tracking"], button:has-text("Skip"), nav, button:has-text("Start Point")');
     await expect(trackingView.first()).toBeVisible({ timeout: 15000 });
   });
 });
