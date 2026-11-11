@@ -263,7 +263,21 @@ test.describe('UAT Game Replay Simulation', () => {
     // Select all 7 players
     const playersToSelect = ['Serena', 'Trebs', 'Ilona', 'Alex', 'Casey', 'Taylor', 'Jordan'];
     for (const player of playersToSelect) {
-      await page.locator(`button:has-text("${player}")`).click();
+      const pBtn = page.locator(`button:has-text("${player}")`).first();
+      await pBtn.click();
+      await page.waitForTimeout(150);
+    }
+    // Ensure all 7 are selected before proceeding
+    const startPointCountBtn = page.locator('button:has-text("Start Point (7)")');
+    if (!(await startPointCountBtn.isVisible({ timeout: 2000 }).catch(() => false))) {
+      for (const player of playersToSelect) {
+        const pBtn = page.locator(`button:has-text("${player}")`).first();
+        const borderCls = (await pBtn.getAttribute('class')) || '';
+        if (!borderCls.includes('emerald') && !borderCls.includes('indigo') && !borderCls.includes('bg-indigo') && !borderCls.includes('ring-2')) {
+          await pBtn.click({ force: true }).catch(() => {});
+          await page.waitForTimeout(150);
+        }
+      }
     }
 
     // Configure Game details
